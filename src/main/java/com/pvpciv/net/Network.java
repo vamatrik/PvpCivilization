@@ -84,6 +84,15 @@ public final class Network {
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    /** Сервер → клиент: что потеряно при смерти (для экрана смерти). */
+    public record DeathInfo(long lostMoney, long lostXp, boolean pvp, String killer) implements CustomPacketPayload {
+        public static final Type<DeathInfo> TYPE = new Type<>(PvpCiv.id("death_info"));
+        public static final StreamCodec<ByteBuf, DeathInfo> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_LONG, DeathInfo::lostMoney, ByteBufCodecs.VAR_LONG, DeathInfo::lostXp,
+                ByteBufCodecs.BOOL, DeathInfo::pvp, ByteBufCodecs.STRING_UTF8, DeathInfo::killer, DeathInfo::new);
+        @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     /** Клиент → сервер: открыть RPG-инвентарь. */
     public record OpenInventory() implements CustomPacketPayload {
         public static final Type<OpenInventory> TYPE = new Type<>(PvpCiv.id("open_inventory"));
@@ -99,6 +108,7 @@ public final class Network {
         r.playToServer(DialogueChoice.TYPE, DialogueChoice.CODEC, (p, ctx) -> {
             if (ctx.player() instanceof ServerPlayer sp) DialogueManager.choose(sp, p.index());
         });
+        r.playToClient(DeathInfo.TYPE, DeathInfo.CODEC, (p, ctx) -> com.pvpciv.client.ClientPayloads.death(p));
         r.playToClient(TraderOffers.TYPE, TraderOffers.CODEC, (p, ctx) -> com.pvpciv.client.ClientPayloads.offers(p));
         r.playToServer(OpenInventory.TYPE, OpenInventory.CODEC, (p, ctx) -> {
             if (ctx.player() instanceof ServerPlayer sp && !sp.isCreative() && !sp.isSpectator())

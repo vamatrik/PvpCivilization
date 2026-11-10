@@ -13,6 +13,8 @@ public final class ClientState {
     public static long moneyFlashUntil = 0;
     public static java.util.List<com.pvpciv.net.Network.OfferView> offers = java.util.List.of();
     public static long shopRotationAt = 0;
+    public static long zoneChangedAt = 0;
+    public static com.pvpciv.net.Network.DeathInfo death = null;
 
     public static void reset() {
         stage = 0; objective = ""; level = 1; xp = 0; money = 0; zone = ""; zoneType = 0; bossSeconds = -1; dashReadyAt = 0;

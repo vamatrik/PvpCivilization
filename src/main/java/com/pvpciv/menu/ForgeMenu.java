@@ -43,17 +43,17 @@ public class ForgeMenu extends CivMenu {
         this.pos = pos;
         addDataSlot(level); addDataSlot(progress); addDataSlot(result);
         level.set(inv.player instanceof ServerPlayer sp ? Progress.d(sp).forgeLvl : 1);
-        addSlot(new Slot(box, 0, 30, 46) {
+        addSlot(new Slot(box, 0, 77, 33) {
             @Override public boolean mayPlace(ItemStack st) { return st.getItem() instanceof CivWeaponItem && progress.get() == 0; }
             @Override public boolean mayPickup(Player p) { return progress.get() == 0; }
             @Override public int getMaxStackSize() { return 1; }
         });
-        addSlot(new Slot(box, 1, 30, 90) {
+        addSlot(new Slot(box, 1, 25, 51) {
             @Override public boolean mayPlace(ItemStack st) { return (st.is(ModRegistry.STAR_W1.get()) || st.is(ModRegistry.BLESSED_STAR_W1.get())) && progress.get() == 0; }
             @Override public boolean mayPickup(Player p) { return progress.get() == 0; }
         });
-        addBag(150, 30, () -> true);
-        addHotbar(inv, 150, 166);
+        addBag(169, 37, () -> true);
+        addHotbar(inv, 169, 181);
     }
 
     public int stationLevel() { return level.get(); }

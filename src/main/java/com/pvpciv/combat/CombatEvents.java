@@ -103,7 +103,10 @@ public final class CombatEvents {
         if (dead instanceof ServerPlayer p) {
             Entity killer = e.getSource().getEntity();
             boolean pvp = killer instanceof ServerPlayer k && k != p;
+            long xpBefore = Progress.d(p).xp;
             long lost = Progress.deathPenalty(p, pvp ? 0.25 : 0.10);
+            String killerName = killer == null ? "" : killer.getName().getString();
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.pvpciv.net.Network.DeathInfo(lost, xpBefore - Progress.d(p).xp, pvp, killerName));
             if (pvp && lost > 0) {
                 ItemEntity drop = new ItemEntity(p.level(), p.getX(), p.getY() + 0.5, p.getZ(), new ItemStack(ModRegistry.SPARKS.get(), (int) Math.min(lost, 64 * 36)));
                 p.level().addFreshEntity(drop);

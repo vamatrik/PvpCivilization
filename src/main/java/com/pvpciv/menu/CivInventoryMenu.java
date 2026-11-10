@@ -25,19 +25,19 @@ public class CivInventoryMenu extends CivMenu {
     public CivInventoryMenu(int id, Inventory inv) {
         super(ModRegistry.INV_MENU.get(), id, inv);
         addDataSlot(tab);
-        addBag(10, 30, () -> tab.get() == TAB_BAG);
-        addHotbar(inv, 10, 166);
+        addBag(13, 39, () -> tab.get() == TAB_BAG);
+        addHotbar(inv, 13, 181);
         armorStart = slots.size();
         EquipmentSlot[] eq = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
         for (int i = 0; i < 4; i++) {
             EquipmentSlot es = eq[i];
-            addSlot(new Slot(inv, 39 - i, 96, 34 + i * 20) {
+            addSlot(new Slot(inv, 39 - i, 113, 45 + i * 22) {
                 @Override public boolean mayPlace(ItemStack st) { return st.canEquip(es, inv.player); }
                 @Override public int getMaxStackSize() { return 1; }
                 @Override public boolean isActive() { return tab.get() == TAB_EQUIP; }
             });
         }
-        addSlot(new Slot(inv, 40, 96, 120) { @Override public boolean isActive() { return tab.get() == TAB_EQUIP; } });
+        addSlot(new Slot(inv, 40, 113, 141) { @Override public boolean isActive() { return tab.get() == TAB_EQUIP; } });
     }
 
     public int tab() { return tab.get(); }

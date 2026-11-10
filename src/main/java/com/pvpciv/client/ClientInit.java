@@ -38,6 +38,21 @@ public final class ClientInit {
                 e.setCanceled(true);
                 PacketDistributor.sendToServer(new Network.OpenInventory());
             }
+            if (e.getNewScreen() instanceof net.minecraft.client.gui.screens.DeathScreen) e.setNewScreen(new com.pvpciv.client.screen.CivDeathScreen());
+        });
+        NeoForge.EVENT_BUS.addListener((CustomizeGuiOverlayEvent.BossEventProgress e) -> {
+            e.setCanceled(true);
+            e.setIncrement(Hud.bossBar(e.getGuiGraphics(), e.getBossEvent(), e.getX(), e.getY() + 6));
+        });
+        NeoForge.EVENT_BUS.addListener((CustomizeGuiOverlayEvent.Chat e) -> e.setPosY(e.getPosY() - 12));
+        NeoForge.EVENT_BUS.addListener((RenderTooltipEvent.Color e) -> {
+            var st = e.getItemStack();
+            e.setBackground(0xF2100D18);
+            if (st.getItem() instanceof com.pvpciv.item.CivWeaponItem w) {
+                int c = (com.pvpciv.loot.Gear.rarity(st).ordinal() < w.minRarity.ordinal() ? w.minRarity : com.pvpciv.loot.Gear.rarity(st)).color;
+                e.setBorderStart(0xFF000000 | c);
+                e.setBorderEnd(0xFF000000 | ((c >> 1) & 0x7F7F7F));
+            } else { e.setBorderStart(0xFFD9A441); e.setBorderEnd(0xFF7A5420); }
         });
         NeoForge.EVENT_BUS.addListener((ToastAddEvent e) -> {
             if (e.getToast() instanceof net.minecraft.client.gui.components.toasts.RecipeToast
@@ -47,7 +62,7 @@ public final class ClientInit {
         NeoForge.EVENT_BUS.addListener((RenderGuiLayerEvent.Pre e) -> {
             var n = e.getName();
             if (n.equals(VanillaGuiLayers.HOTBAR) || n.equals(VanillaGuiLayers.PLAYER_HEALTH) || n.equals(VanillaGuiLayers.FOOD_LEVEL) || n.equals(VanillaGuiLayers.ARMOR_LEVEL)
-                    || n.equals(VanillaGuiLayers.EXPERIENCE_BAR) || n.equals(VanillaGuiLayers.EXPERIENCE_LEVEL) || n.equals(VanillaGuiLayers.AIR_LEVEL))
+                    || n.equals(VanillaGuiLayers.EXPERIENCE_BAR) || n.equals(VanillaGuiLayers.EXPERIENCE_LEVEL) || n.equals(VanillaGuiLayers.AIR_LEVEL) || n.equals(VanillaGuiLayers.VEHICLE_HEALTH))
                 e.setCanceled(true);
         });
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> onTick());

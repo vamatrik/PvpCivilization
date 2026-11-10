@@ -20,6 +20,8 @@ public final class ClientPayloads {
         ClientState.shopRotationAt = System.currentTimeMillis() + p.msLeft();
     }
 
+    public static void death(Network.DeathInfo p) { ClientState.death = p; }
+
     public static void sync(Network.SyncState p) {
         Minecraft mc = Minecraft.getInstance();
         long now = mc.level != null ? mc.level.getGameTime() : 0;
@@ -31,6 +33,7 @@ public final class ClientPayloads {
         ClientState.xp = p.xp();
         ClientState.xpNext = p.xpNext();
         ClientState.money = p.money();
+        if (!p.zone().equals(ClientState.zone) && !ClientState.zone.isEmpty() && !p.zone().equals("Бездна")) ClientState.zoneChangedAt = System.currentTimeMillis();
         ClientState.zone = p.zone();
         ClientState.zoneType = p.zoneType();
         ClientState.bossSeconds = p.bossSeconds();

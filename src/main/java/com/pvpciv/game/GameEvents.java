@@ -105,7 +105,7 @@ public final class GameEvents {
         r.getRule(GameRules.RULE_SPAWN_RADIUS).set(0, server);
         r.getRule(GameRules.RULE_ANNOUNCE_ADVANCEMENTS).set(false, server);
         r.getRule(GameRules.RULE_WEATHER_CYCLE).set(false, server);
-        r.getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).set(true, server);
+        r.getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).set(false, server);
         r.getRule(GameRules.RULE_LIMITED_CRAFTING).set(true, server);
         lvl.setWeatherParameters(6000000, 0, false, false);
         lvl.setDefaultSpawnPos(DormBuilder.ATRIUM_CENTER, 0);

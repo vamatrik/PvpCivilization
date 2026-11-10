@@ -32,11 +32,11 @@ public class DismantleMenu extends CivMenu {
         super(ModRegistry.DISMANTLE_MENU.get(), id, inv);
         addDataSlot(level);
         level.set(inv.player instanceof ServerPlayer sp ? Progress.d(sp).dismLvl : 1);
-        addSlot(new Slot(box, 0, 30, 60) {
+        addSlot(new Slot(box, 0, 77, 33) {
             @Override public boolean mayPlace(ItemStack st) { return canDismantle(st); }
         });
-        addBag(150, 30, () -> true);
-        addHotbar(inv, 150, 166);
+        addBag(169, 37, () -> true);
+        addHotbar(inv, 169, 181);
     }
 
     public int stationLevel() { return level.get(); }

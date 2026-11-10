@@ -59,13 +59,6 @@ public final class Story {
     public static void tickPlayer(ServerPlayer p) {
         Zones.Zone z = Zones.at(p.position());
         Zones.Zone last = LAST_ZONE.put(p.getUUID(), z);
-        if (last != null && last != z && z != Zones.ABYSS) {
-            String sub = switch (z.type()) { case SAFE -> "Безопасная зона"; case PVE -> "PvE-зона"; case PVP -> "⚔ PvP-зона: игроки могут атаковать!"; };
-            p.connection.send(new ClientboundSetTitlesAnimationPacket(5, 40, 15));
-            p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(sub).withStyle(z.type() == com.pvpciv.floor.Zones.Type.PVP ? ChatFormatting.RED : ChatFormatting.GRAY)));
-            String shortName = z.name().contains("· ") ? z.name().substring(z.name().lastIndexOf("· ") + 2) : z.name();
-            p.connection.send(new ClientboundSetTitleTextPacket(Component.literal(shortName).withStyle(s -> s.withColor(0xFFD9A0))));
-        }
         sync(p);
     }
 

@@ -1,6 +1,7 @@
 package com.pvpciv.client;
 
 import com.pvpciv.net.Network;
+import com.pvpciv.client.ui.Skin;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
@@ -71,7 +72,7 @@ public class DialogueScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
         renderBackground(g, mx, my, pt);
-        int x0 = 20, x1 = width - 20, y1 = height - 12, y0 = y1 - 86;
+        int x0 = 24, x1 = width - 24, y1 = height - 10, y0 = y1 - 82;
 
         // портрет говорящего
         Entity e = minecraft.level != null && entityId >= 0 ? minecraft.level.getEntity(entityId) : null;
@@ -89,46 +90,45 @@ public class DialogueScreen extends Screen {
         g.pose().translate(0, 0, 400);
 
         // панель
-        g.fill(x0, y0, x1, y1, 0xEC0D0F1C);
-        int border = 0xFF000000 | color;
-        g.fill(x0, y0, x1, y0 + 1, border);
-        g.fill(x0, y1 - 1, x1, y1, 0x60FFFFFF & border);
-        g.fill(x0, y0, x0 + 1, y1, border);
-        g.fill(x1 - 1, y0, x1, y1, border);
-
-        // плашка с именем
-        int nw = font.width(speaker) + 20;
-        g.fill(x0 + 12, y0 - 14, x0 + 12 + nw, y0 + 2, 0xFF000000 | darken(color));
-        g.fill(x0 + 12, y0 - 14, x0 + 12 + nw, y0 - 13, 0xFFFFFFFF);
-        g.drawString(font, Component.literal(speaker).withStyle(s -> s.withBold(true)), x0 + 22, y0 - 10, 0xFFFFFF, true);
+        Skin.panel(g, x0, y0, x1 - x0, y1 - y0);
+        int nw = Math.max(80, font.width(speaker) + 44);
+        Skin.spr(g, "header", x0 + 14, y0 - 10, nw, 18);
+        g.drawCenteredString(font, speaker, x0 + 14 + nw / 2, y0 - 5, 0xFF000000 | brighten(color));
 
         // текст
         String vis = text.substring(0, (int) shown);
-        int ty = y0 + 12;
-        for (FormattedCharSequence l : font.split(Component.literal(vis), x1 - x0 - 32)) {
-            g.drawString(font, l, x0 + 16, ty, 0xF2F2F7, false);
+        int ty = y0 + 16;
+        for (FormattedCharSequence l : font.split(Component.literal(vis), x1 - x0 - 36)) {
+            g.drawString(font, l, x0 + 18, ty, 0xFFF2EEF8, true);
             ty += 11;
         }
 
         // варианты ответа
         optRects.clear();
         if (!typing() && !waiting) {
-            int ow = 170;
-            for (String o : options) ow = Math.max(ow, font.width(o) + 34);
-            int oy = y0 - 8 - options.size() * 20;
+            int ow = 150;
+            for (String o : options) ow = Math.max(ow, font.width(o) + 36);
+            int oy = y0 - 12 - options.size() * 18;
             for (int i = 0; i < options.size(); i++) {
-                int ox = x1 - ow, by = oy + i * 20;
-                boolean hover = mx >= ox && mx <= x1 && my >= by && my <= by + 17;
-                g.fill(ox, by, x1, by + 17, hover ? (0xF0000000 | color) : 0xE0151827);
-                g.fill(ox, by, ox + 2, by + 17, 0xFF000000 | color);
-                g.drawString(font, (i + 1) + ".", ox + 8, by + 5, hover ? 0x101010 : 0x8FA3B8, false);
-                g.drawString(font, options.get(i), ox + 22, by + 5, hover ? 0x101010 : 0xFFFFFF, false);
-                optRects.add(new int[]{ox, by, x1, by + 17});
+                int ox = x1 - ow, by = oy + i * 18;
+                boolean hover = mx >= ox && mx <= x1 && my >= by && my < by + 16;
+                Skin.spr(g, hover ? "button_hover" : "button", ox, by, ow, 16);
+                g.drawString(font, String.valueOf(i + 1), ox + 8, by + 4, Skin.GOLD, false);
+                g.drawString(font, options.get(i), ox + 20, by + 4, hover ? 0xFFFFFFFF : 0xFFF0E8DC, false);
+                optRects.add(new int[]{ox, by, x1, by + 16});
             }
-            if ((System.currentTimeMillis() / 400) % 2 == 0) g.drawString(font, "▼", x1 - 16, y1 - 14, border, false);
+            float bob = (float) Math.sin(System.currentTimeMillis() / 200.0) * 1.5f;
+            g.pose().pushPose(); g.pose().translate(0, bob, 0);
+            Skin.gem(g, "amber", x1 - 26, y1 - 22);
+            g.pose().popPose();
         }
-        g.drawString(font, "[ЛКМ/Пробел] — дальше   [1-9] — ответ   [Esc] — уйти", x0 + 16, y1 - 12, 0x5A6478, false);
+        g.drawString(font, "ЛКМ / Пробел — дальше · 1–9 — ответ · Esc — уйти", x0 + 18, y1 - 19, Skin.FAINT, false);
         g.pose().popPose();
+    }
+
+    private static int brighten(int c) {
+        int r = Math.min(255, (c >> 16 & 255) + 60), gg = Math.min(255, (c >> 8 & 255) + 60), b = Math.min(255, (c & 255) + 60);
+        return r << 16 | gg << 8 | b;
     }
 
     private static int darken(int c) {

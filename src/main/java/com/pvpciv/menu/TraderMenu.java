@@ -16,8 +16,8 @@ public class TraderMenu extends CivMenu {
 
     public TraderMenu(int id, Inventory inv) {
         super(ModRegistry.TRADER_MENU.get(), id, inv);
-        addBag(176, 30, () -> true);
-        addHotbar(inv, 176, 166);
+        addBag(181, 37, () -> true);
+        addHotbar(inv, 181, 181);
     }
 
     @Override
