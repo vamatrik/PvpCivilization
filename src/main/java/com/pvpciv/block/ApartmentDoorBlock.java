@@ -61,6 +61,7 @@ public class ApartmentDoorBlock extends DoorBlock {
         level.playSound(null, pos, SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.BLOCKS, 0.6f, open ? 1.6f : 1.2f);
         this.setOpen(player, level, lowState, low, open);
         if (open) level.scheduleTick(low, this, 60);
+        if (open && player instanceof net.minecraft.server.level.ServerPlayer sp) com.pvpciv.entity.GuardEntity.onDoorOpened(sp, low);
         return ItemInteractionResult.CONSUME;
     }
 

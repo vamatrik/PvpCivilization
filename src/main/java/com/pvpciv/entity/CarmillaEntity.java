@@ -28,7 +28,7 @@ import java.util.UUID;
 /** Кармилла — вампирша, хозяйка подвала общежития. Сидит на троне, раздаёт кровавые контракты. */
 public class CarmillaEntity extends GeoNpc {
     public static final int COLOR = 0xD23A54;
-    public static final Vec3 THRONE = new Vec3(Basement.CARMILLA_SPOT.getX() + 0.5, Basement.FY + 1.75, Basement.Z0 + 1.9);
+    public static final Vec3 THRONE = new Vec3(Basement.CARMILLA_SPOT.getX() + 0.5, Basement.FY + 0.75, Basement.Z0 + 1.5);   // сидит на сиденье трона (верх сиденья — FY+1, коврик)
     /** Пока занята (уводит должника) — не возвращается на трон. */
     public int busy = 0;
     /** Сколько ещё тиков держать крылья раскрытыми. */

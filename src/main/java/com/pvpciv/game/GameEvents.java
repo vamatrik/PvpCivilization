@@ -73,6 +73,7 @@ public final class GameEvents {
         MinecraftServer server = e.getServer();
         ServerLevel lvl = com.pvpciv.world.CivWorld.level(server);
         CivData data = CivData.get(server);
+        if (data.version >= 10 && data.version < com.pvpciv.world.WorldBuild.VERSION) com.pvpciv.world.WorldBuild.patch(server, data.version);
         if (data.version < com.pvpciv.world.WorldBuild.VERSION) {
             com.mojang.logging.LogUtils.getLogger().info("[PvpCiv] Building world 1 in dimension pvpciv:world1 (v{} -> v{})", data.version, com.pvpciv.world.WorldBuild.VERSION);
             com.pvpciv.world.WorldBuild.buildAll(server, false);
@@ -219,7 +220,29 @@ public final class GameEvents {
         }
     }
 
+    /** /beta текст — пожелания и баги в файл pvpciv_beta.txt рядом с сервером/игрой. */
+    private static int beta(com.mojang.brigadier.context.CommandContext<net.minecraft.commands.CommandSourceStack> c) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer p = c.getSource().getPlayerOrException();
+        String text = com.mojang.brigadier.arguments.StringArgumentType.getString(c, "text").replace('\n', ' ').trim();
+        if (text.isEmpty()) return 0;
+        java.nio.file.Path f = p.server.getServerDirectory().resolve("pvpciv_beta.txt");
+        String line = String.format("[%s] %s | v%s | ур.%d | %s | %d %d %d | %s%n",
+                java.time.LocalDateTime.now().withNano(0).toString().replace('T', ' '), p.getGameProfile().getName(),
+                net.neoforged.fml.ModList.get().getModFileById(com.pvpciv.PvpCiv.MODID).versionString(),
+                Progress.d(p).level, com.pvpciv.floor.Zones.at(p.position()).name(), p.getBlockX(), p.getBlockY(), p.getBlockZ(), text);
+        try {
+            java.nio.file.Files.writeString(f, line, java.nio.charset.StandardCharsets.UTF_8, java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+        } catch (java.io.IOException ex) {
+            p.sendSystemMessage(Component.literal("Не удалось записать: " + ex.getMessage()).withStyle(ChatFormatting.RED));
+            return 0;
+        }
+        p.sendSystemMessage(Component.literal("✎ Записано в бета-журнал. Спасибо!").withStyle(ChatFormatting.AQUA));
+        return 1;
+    }
+
     private static void onCommands(RegisterCommandsEvent e) {
+        e.getDispatcher().register(Commands.literal("beta")
+                .then(Commands.argument("text", com.mojang.brigadier.arguments.StringArgumentType.greedyString()).executes(GameEvents::beta)));
         e.getDispatcher().register(Commands.literal("civ")
                 .then(Commands.literal("home").executes(c -> {
                     ServerPlayer p = c.getSource().getPlayerOrException();

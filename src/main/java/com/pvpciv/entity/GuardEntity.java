@@ -26,6 +26,7 @@ public class GuardEntity extends StoryNpc {
     private UUID target;
     private BlockPos doorPos;
     private int knock = 40, cooldown = 0, leave = -1, tries = 0;
+    private boolean doorOpened = false;
 
     public GuardEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level, "Тимофей Глыба", COLOR);
@@ -66,10 +67,11 @@ public class GuardEntity extends StoryNpc {
         this.getLookControl().setLookAt(p);
         if (cooldown > 0) cooldown--;
         double dist = distanceTo(p);
-        if (dist <= 4.0 && cooldown == 0 && !DialogueManager.inDialogue(p)) {
+        // разговор начинается, только когда игрок сам открыл дверь (а не сквозь стену)
+        if (doorOpened && dist <= 5.0 && cooldown == 0 && !DialogueManager.inDialogue(p)) {
             cooldown = 120;
             DialogueManager.open(p, this, Dialogues.guardIntro(this));
-        } else if (dist > 4.0 && --knock <= 0) {
+        } else if (!doorOpened && --knock <= 0) {
             knock = 120;
             if (doorPos != null)
                 level().playSound(null, doorPos, SoundEvents.ZOMBIE_ATTACK_WOODEN_DOOR, SoundSource.NEUTRAL, 0.35f, 1.4f);
@@ -85,14 +87,22 @@ public class GuardEntity extends StoryNpc {
 
     public void leaveSoon() { leave = 50; }
 
+    /** Игрок открыл дверь квартиры ключ-картой: охранник у порога заговаривает. */
+    public static void onDoorOpened(ServerPlayer p, BlockPos door) {
+        for (GuardEntity g : p.serverLevel().getEntitiesOfClass(GuardEntity.class, new AABB(door).inflate(8)))
+            if (p.getUUID().equals(g.target) && !g.doorOpened) { g.doorOpened = true; g.cooldown = 8; }
+    }
+
     @Override
     protected void onTalk(ServerPlayer p) {
         if (Story.data(p).stage == Story.NEW && !p.getUUID().equals(target)) {
             Story.say(p, "Тимофей", COLOR, "Я не к тебе, у меня тут другой новенький. Иди спи.");
             return;
         }
-        if (Story.data(p).stage == Story.NEW && !DialogueManager.inDialogue(p))
+        if (Story.data(p).stage == Story.NEW && !DialogueManager.inDialogue(p)) {
+            if (!doorOpened) { Story.say(p, "Тимофей", COLOR, "Сначала дверь открой, гений. Ключ-карта, ПКМ по двери."); return; }
             DialogueManager.open(p, this, Dialogues.guardIntro(this));
+        }
     }
 
     @Override

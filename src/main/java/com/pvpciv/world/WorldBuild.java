@@ -12,7 +12,16 @@ import java.util.Map;
 
 /** Полная сборка мира 1 в его измерении: общежитие, подвал, обе локации этажа 1, трассы. */
 public final class WorldBuild {
-    public static final int VERSION = 10;
+    public static final int VERSION = 11;
+
+    /** Мелкие правки уже построенного мира (без полной перестройки). */
+    public static void patch(MinecraftServer server, int from) {
+        ServerLevel lvl = CivWorld.level(server);
+        if (from < 11) Basement.rebuildThrone(lvl);
+        CivData d = CivData.get(server);
+        d.version = VERSION;
+        d.setDirty();
+    }
 
     public static void buildAll(MinecraftServer server, boolean clear) {
         var log = com.mojang.logging.LogUtils.getLogger();

@@ -100,21 +100,32 @@ public final class Basement extends Builder {
         sign(new BlockPos(-15, Y0 + 2, 22), Direction.SOUTH, DyeColor.RED, "ПОДВАЛ", "Не входить.", "— Комендант", "(там кто-то есть)");
     }
 
-    private void throne() {
+    /** Трон: спинка у стены (z0), сиденье на ступень вперёд (z0+1) с подлокотниками, ступенька-полублок перед ним. */
+    private void throne() { buildThrone(this); }
+
+    public static void rebuildThrone(ServerLevel level) { buildThrone(new Basement(level)); }
+
+    private static void buildThrone(Basement b) {
         int x = CARMILLA_SPOT.getX(), z = Z0;
+        for (int dx = -2; dx <= 2; dx++) for (int dz = 0; dz <= 3; dz++)
+            for (int y = FY; y <= FY + 4; y++) if (!(dz == 0 && Math.abs(dx) >= 2)) b.set(x + dx, y, z + dz, Blocks.AIR);
         for (int dx = -2; dx <= 2; dx++) {
-            set(x + dx, FY, z, Blocks.POLISHED_BLACKSTONE_BRICKS);
-            set(x + dx, FY, z + 1, Blocks.POLISHED_BLACKSTONE_BRICK_SLAB);
+            b.set(x + dx, FY, z, Blocks.POLISHED_BLACKSTONE_BRICKS);
+            b.set(x + dx, FY, z + 1, Blocks.POLISHED_BLACKSTONE_BRICKS);
+            b.set(x + dx, FY, z + 2, Blocks.POLISHED_BLACKSTONE_BRICK_SLAB);
         }
-        set(x, FY + 1, z, Blocks.BLACKSTONE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.NORTH));
-        for (int y = FY + 1; y <= FY + 4; y++) { set(x - 1, y, z, Blocks.POLISHED_BLACKSTONE_BRICK_WALL); set(x + 1, y, z, Blocks.POLISHED_BLACKSTONE_BRICK_WALL); }
-        set(x, FY + 2, z, Blocks.RED_WOOL); set(x, FY + 3, z, Blocks.RED_WOOL); set(x, FY + 4, z, Blocks.CRIMSON_PLANKS);
-        setLit(x - 1, FY + 5, z, Blocks.SOUL_LANTERN.defaultBlockState()); setLit(x + 1, FY + 5, z, Blocks.SOUL_LANTERN.defaultBlockState());
-        for (int dx : new int[]{-2, 2}) setLit(x + dx, FY + 1, z, Blocks.RED_CANDLE.defaultBlockState().setValue(CandleBlock.LIT, true).setValue(CandleBlock.CANDLES, 3));
-        setLit(x, FY + 2, z + 3, Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, 15));
-        setLit(x, FY + 4, z + 1, Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, 12));
+        // спинка
+        for (int y = FY + 1; y <= FY + 4; y++) { b.set(x - 1, y, z, Blocks.POLISHED_BLACKSTONE_BRICK_WALL); b.set(x + 1, y, z, Blocks.POLISHED_BLACKSTONE_BRICK_WALL); }
+        b.set(x, FY + 1, z, Blocks.RED_WOOL); b.set(x, FY + 2, z, Blocks.RED_WOOL); b.set(x, FY + 3, z, Blocks.RED_WOOL); b.set(x, FY + 4, z, Blocks.CRIMSON_PLANKS);
+        // сиденье и подлокотники
+        b.set(x, FY + 1, z + 1, Blocks.RED_CARPET);
+        b.set(x - 1, FY + 1, z + 1, Blocks.POLISHED_BLACKSTONE_BRICK_WALL); b.set(x + 1, FY + 1, z + 1, Blocks.POLISHED_BLACKSTONE_BRICK_WALL);
+        b.setLit(x - 1, FY + 5, z, Blocks.SOUL_LANTERN.defaultBlockState()); b.setLit(x + 1, FY + 5, z, Blocks.SOUL_LANTERN.defaultBlockState());
+        for (int dx : new int[]{-2, 2}) b.setLit(x + dx, FY + 1, z + 1, Blocks.RED_CANDLE.defaultBlockState().setValue(CandleBlock.LIT, true).setValue(CandleBlock.CANDLES, 3));
+        b.setLit(x, FY + 2, z + 4, Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, 15));
+        b.setLit(x, FY + 4, z + 2, Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, 12));
         // знамёна по бокам
-        for (int dx : new int[]{-4, 4}) { set(x + dx, FY + 3, z, Blocks.RED_WOOL); set(x + dx, FY + 2, z, Blocks.RED_WOOL); set(x + dx, FY + 1, z, Blocks.BLACK_WOOL); }
+        for (int dx : new int[]{-4, 4}) { b.set(x + dx, FY + 3, z, Blocks.RED_WOOL); b.set(x + dx, FY + 2, z, Blocks.RED_WOOL); b.set(x + dx, FY + 1, z, Blocks.BLACK_WOOL); }
     }
 
     /** Клетка должников. open=false — дверь из решёток закрыта. */
