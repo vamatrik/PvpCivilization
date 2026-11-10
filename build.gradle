@@ -17,7 +17,7 @@ neoForge {
             gameDirectory = project.file('run-client')
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
             if (project.hasProperty('autoConnect')) {
-                programArguments.addAll('--quickPlayMultiplayer', 'localhost:25565')
+                programArguments.addAll('--quickPlayMultiplayer', 'localhost:25565', '--username', 'Vamatr')
             }
         }
         server {

@@ -67,7 +67,7 @@ public class CivWeaponItem extends SwordItem {
     }
 
     @Override
-    public boolean isFoil(ItemStack st) { return Gear.stars(st) >= 4 || super.isFoil(st); }
+    public boolean isFoil(ItemStack st) { return false; } // свечение заточки рисует сама модель
 
     @Override
     public void appendHoverText(ItemStack st, TooltipContext ctx, List<Component> tip, TooltipFlag flag) {

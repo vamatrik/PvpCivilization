@@ -1,6 +1,7 @@
 #!/bin/bash
 # перезапуск сервера и клиента для теста
 pkill -f clientRunProgramArgs; pkill -f serverRunProgramArgs; sleep 3; pkill -f "gradle-wrapper.jar run"; sleep 1
+pgrep Xvfb >/dev/null || (Xvfb :99 -screen 0 1280x720x24 >/tmp/xvfb.log 2>&1 &); sleep 1
 cd /home/claude/civ
 : > run/logs/latest.log
 (nohup ./gradlew runServer --console=plain > /tmp/server.log 2>&1 &)

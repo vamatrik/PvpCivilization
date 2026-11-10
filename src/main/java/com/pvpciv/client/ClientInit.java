@@ -20,6 +20,12 @@ public final class ClientInit {
 
     public static void init(IEventBus modBus) {
         modBus.addListener((RegisterKeyMappingsEvent e) -> e.register(DASH));
+        modBus.addListener((net.neoforged.fml.event.lifecycle.FMLClientSetupEvent e) -> e.enqueueWork(() -> {
+            for (var h : ModRegistry.ITEMS.getEntries())
+                if (h.get() instanceof com.pvpciv.item.CivWeaponItem)
+                    net.minecraft.client.renderer.item.ItemProperties.register(h.get(), PvpCiv.id("stars"),
+                            (st, lvl, ent, seed) -> com.pvpciv.loot.Gear.stars(st) / 16f);
+        }));
         modBus.addListener((EntityRenderersEvent.RegisterRenderers e) -> {
             e.registerEntityRenderer(ModRegistry.GUARD.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/guard.png")));
             e.registerEntityRenderer(ModRegistry.LUNA.get(), ctx -> new NpcRenderer<>(ctx, true, PvpCiv.id("textures/entity/luna.png")));
