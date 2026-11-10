@@ -27,7 +27,7 @@ public class TraderEntity extends StoryNpc {
     }
 
     public static void ensure(MinecraftServer server) {
-        ServerLevel lvl = server.overworld();
+        ServerLevel lvl = com.pvpciv.world.CivWorld.level(server);
         if (!lvl.areEntitiesLoaded(ChunkPos.asLong(SPOT))) return;
         List<TraderEntity> all = lvl.getEntitiesOfClass(TraderEntity.class, new AABB(SPOT).inflate(40));
         for (int i = 1; i < all.size(); i++) all.get(i).discard();

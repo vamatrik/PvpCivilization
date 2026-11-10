@@ -36,20 +36,39 @@ public final class Network {
     }
 
     /** Сервер → клиент: состояние HUD. */
-    public record SyncState(int stage, String objective, int level, long xp, long xpNext, long money, String zone, int zoneType, int bossSeconds) implements CustomPacketPayload {
+    public record SyncState(int stage, String objective, int level, long xp, long xpNext, long money, String zone, int zoneType, int bossSeconds,
+                            String quest, int questSeconds, int jailSeconds, String titles, String activeTitle) implements CustomPacketPayload {
         public static final Type<SyncState> TYPE = new Type<>(PvpCiv.id("sync_state"));
         public static final StreamCodec<ByteBuf, SyncState> CODEC = new StreamCodec<>() {
             @Override public SyncState decode(ByteBuf b) {
                 return new SyncState(ByteBufCodecs.VAR_INT.decode(b), ByteBufCodecs.STRING_UTF8.decode(b), ByteBufCodecs.VAR_INT.decode(b),
                         ByteBufCodecs.VAR_LONG.decode(b), ByteBufCodecs.VAR_LONG.decode(b), ByteBufCodecs.VAR_LONG.decode(b),
-                        ByteBufCodecs.STRING_UTF8.decode(b), ByteBufCodecs.VAR_INT.decode(b), ByteBufCodecs.INT.decode(b));
+                        ByteBufCodecs.STRING_UTF8.decode(b), ByteBufCodecs.VAR_INT.decode(b), ByteBufCodecs.INT.decode(b),
+                        ByteBufCodecs.STRING_UTF8.decode(b), ByteBufCodecs.INT.decode(b), ByteBufCodecs.INT.decode(b), ByteBufCodecs.STRING_UTF8.decode(b), ByteBufCodecs.STRING_UTF8.decode(b));
             }
             @Override public void encode(ByteBuf b, SyncState s) {
                 ByteBufCodecs.VAR_INT.encode(b, s.stage); ByteBufCodecs.STRING_UTF8.encode(b, s.objective); ByteBufCodecs.VAR_INT.encode(b, s.level);
                 ByteBufCodecs.VAR_LONG.encode(b, s.xp); ByteBufCodecs.VAR_LONG.encode(b, s.xpNext); ByteBufCodecs.VAR_LONG.encode(b, s.money);
                 ByteBufCodecs.STRING_UTF8.encode(b, s.zone); ByteBufCodecs.VAR_INT.encode(b, s.zoneType); ByteBufCodecs.INT.encode(b, s.bossSeconds);
+                ByteBufCodecs.STRING_UTF8.encode(b, s.quest); ByteBufCodecs.INT.encode(b, s.questSeconds); ByteBufCodecs.INT.encode(b, s.jailSeconds);
+                ByteBufCodecs.STRING_UTF8.encode(b, s.titles); ByteBufCodecs.STRING_UTF8.encode(b, s.activeTitle);
             }
         };
+        @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    /** Сервер → клиент: катсцена (1 — Кармилла уводит, 2 — укус). */
+    public record Cinematic(int kind, int ticks, String text) implements CustomPacketPayload {
+        public static final Type<Cinematic> TYPE = new Type<>(PvpCiv.id("cinematic"));
+        public static final StreamCodec<ByteBuf, Cinematic> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_INT, Cinematic::kind, ByteBufCodecs.VAR_INT, Cinematic::ticks, ByteBufCodecs.STRING_UTF8, Cinematic::text, Cinematic::new);
+        @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    /** Клиент → сервер: выбрать активный титул ("" — снять). */
+    public record SelectTitle(String id) implements CustomPacketPayload {
+        public static final Type<SelectTitle> TYPE = new Type<>(PvpCiv.id("select_title"));
+        public static final StreamCodec<ByteBuf, SelectTitle> CODEC = StreamCodec.composite(ByteBufCodecs.STRING_UTF8, SelectTitle::id, SelectTitle::new);
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
@@ -109,6 +128,10 @@ public final class Network {
             if (ctx.player() instanceof ServerPlayer sp) DialogueManager.choose(sp, p.index());
         });
         r.playToClient(DeathInfo.TYPE, DeathInfo.CODEC, (p, ctx) -> com.pvpciv.client.ClientPayloads.death(p));
+        r.playToClient(Cinematic.TYPE, Cinematic.CODEC, (p, ctx) -> com.pvpciv.client.ClientPayloads.cinematic(p));
+        r.playToServer(SelectTitle.TYPE, SelectTitle.CODEC, (p, ctx) -> {
+            if (ctx.player() instanceof net.minecraft.server.level.ServerPlayer sp) com.pvpciv.progress.Titles.select(sp, p.id());
+        });
         r.playToClient(TraderOffers.TYPE, TraderOffers.CODEC, (p, ctx) -> com.pvpciv.client.ClientPayloads.offers(p));
         r.playToServer(OpenInventory.TYPE, OpenInventory.CODEC, (p, ctx) -> {
             if (ctx.player() instanceof ServerPlayer sp && !sp.isCreative() && !sp.isSpectator())

@@ -27,7 +27,7 @@ public class DismantleScreen extends CivScreen<DismantleMenu> {
         ItemStack in = menu.box.getItem(0);
         Skin.inset(g, x + 10, y + 24, 152, 70);
         Skin.glow(g, x + 85, y + 41, 20, in.isEmpty() ? 0x20FFFFFF : 0x60FF8C42);
-        g.drawCenteredString(font, "обломки или оружие", x + 86, y + 58, Skin.DIM);
+        g.drawCenteredString(font, "обломки, оружие, броня", x + 86, y + 58, Skin.DIM);
         Skin.divider(g, x + 86, y + 71);
         g.drawCenteredString(font, "кроме меча новичка", x + 86, y + 81, Skin.FAINT);
         Skin.inset(g, x + 10, y + 98, 152, 54);
@@ -45,11 +45,15 @@ public class DismantleScreen extends CivScreen<DismantleMenu> {
                 out(g, x + 14, ly, ModRegistry.STAR_W1.get(), "Звезда", "шанс " + pct(1 - Math.pow(1 - Math.min(1, 0.04 * m), n)));
             } else if (in.getItem() instanceof CivWeaponItem w) {
                 int rr = Gear.rarity(in).ordinal(), s = Gear.stars(in);
-                ly = out(g, x + 14, ly, ModRegistry.ASH_DUST.get(), "Пыль", "×" + Math.round((2 + rr * 2 + w.tier) * m));
-                ly = out(g, x + 14, ly, ModRegistry.SPARKS.get(), "Искры", "×" + Math.round(10 * (rr + 1) * w.tier * m));
+                ly = out(g, x + 14, ly, w.plus ? ModRegistry.RIME_SHARD.get() : ModRegistry.ASH_DUST.get(), w.plus ? "Пыль, осколки" : "Пыль", "×" + Math.round((2 + rr * 2 + w.tier) * m));
+                ly = out(g, x + 14, ly, ModRegistry.SPARKS.get(), "Искры", "×" + Math.round(10 * (rr + 1) * w.tierValue() * m));
                 String st = "шанс " + pct(Math.min(1, 0.10 * (rr + 1) * m)) + (s > 0 ? " +" + s + "×" + pct(Math.min(1, 0.3 * m)) : "");
-                if (rr >= 3) st += ", благ. " + pct(Math.min(1, 0.10 * (rr - 2) * m));
                 out(g, x + 14, ly, ModRegistry.STAR_W1.get(), "Звезда", st);
+            } else if (in.getItem() instanceof com.pvpciv.item.CivArmorItem) {
+                int rr = Gear.rarity(in).ordinal();
+                ly = out(g, x + 14, ly, ModRegistry.RIME_SHARD.get(), "Осколки", "×" + Math.round((2 + rr * 2) * m));
+                ly = out(g, x + 14, ly, ModRegistry.SPARKS.get(), "Искры", "×" + Math.round(12 * (rr + 1) * m));
+                out(g, x + 14, ly, ModRegistry.STAR_W1.get(), "Звезда", "шанс " + pct(Math.min(1, 0.06 * (rr + 1) * m)));
             }
         }
         Skin.button(g, font, x + 10, y + 154, 152, "Разобрать", mx, my, !in.isEmpty(), true);

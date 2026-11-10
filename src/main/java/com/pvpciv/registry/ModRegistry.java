@@ -101,6 +101,22 @@ public final class ModRegistry {
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> BRUTE_TROPHY = simple("brute_trophy", 0, true, 1, "Трофей: Гнилой Громила повержен.", "Для витрины в квартире (скоро).");
     public static final DeferredItem<com.pvpciv.item.BoatSummonItem> OAK_BOAT_T1 = ITEMS.register("oak_boat_t1",
             () -> new com.pvpciv.item.BoatSummonItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<com.pvpciv.item.BoatSummonItem> RIME_BOAT_T2 = ITEMS.register("rime_boat_t2",
+            () -> new com.pvpciv.item.BoatSummonItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE), 2, net.minecraft.world.entity.vehicle.Boat.Type.BIRCH,
+                    "Инеевая", "«Скользит так, будто лёд сам её толкает.» — Ледоруб"));
+
+    // --- Тир 1+ (Инеевый Кряж)
+    public static final DeferredItem<com.pvpciv.item.CivWeaponItem> RIME_BLADE = ITEMS.register("rime_blade",
+            () -> new com.pvpciv.item.CivWeaponItem(1, true, com.pvpciv.item.CivWeaponItem.WClass.SWORD, com.pvpciv.loot.Rarity.COMMON, "Клинок изо льда, который не тает. Даже в руках."));
+    public static final DeferredItem<com.pvpciv.item.CivWeaponItem> FROST_RAPIER = ITEMS.register("frost_rapier",
+            () -> new com.pvpciv.item.CivWeaponItem(1, true, com.pvpciv.item.CivWeaponItem.WClass.SABER, com.pvpciv.loot.Rarity.COMMON, "Тонкая, звенящая. Колет быстрее, чем ты моргнёшь."));
+    public static final DeferredItem<com.pvpciv.item.CivWeaponItem> ICICLE_DAGGER = ITEMS.register("icicle_dagger",
+            () -> new com.pvpciv.item.CivWeaponItem(1, true, com.pvpciv.item.CivWeaponItem.WClass.DAGGER, com.pvpciv.loot.Rarity.COMMON, "Сосулька, заточенная с любовью."));
+    public static final DeferredItem<com.pvpciv.item.CivWeaponItem> GLACIER_AXE = ITEMS.register("glacier_axe",
+            () -> new com.pvpciv.item.CivWeaponItem(1, true, com.pvpciv.item.CivWeaponItem.WClass.AXE, com.pvpciv.loot.Rarity.COMMON, "Им рубили лёд на Трассе. Потом — тех, кто мешал."));
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> RIME_SHARD = simple("rime_shard", 4, false, 64, "Материал брони тира 1+.", "Остаётся от инеевых мобов и брони.");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> FROZEN_LOCKET = simple("frozen_locket", 45, true, 16, "Медальон, вмёрзший в лёд.", "Внутри чей-то портрет. Ценный хлам.");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> LUNA_PLUSH = simple("luna_plush", 120, true, 1, "Плюшевый Пепел. Подозрительно похож на тебя.", "Из шкатулки Луны. Она точно не заметит.");
 
     private static DeferredItem<com.pvpciv.item.SimpleCivItem> simple(String id, int price, boolean foil, int stack, String... lines) {
         return ITEMS.register(id, () -> new com.pvpciv.item.SimpleCivItem(new Item.Properties().stacksTo(stack), price, foil, lines));
@@ -117,6 +133,26 @@ public final class ModRegistry {
             () -> EntityType.Builder.of(com.pvpciv.entity.TraderEntity::new, MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("trader"));
     public static final DeferredHolder<EntityType<?>, EntityType<LunaEntity>> LUNA = ENTITIES.register("luna",
             () -> EntityType.Builder.of(LunaEntity::new, MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("luna"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.CarmillaEntity>> CARMILLA = ENTITIES.register("carmilla",
+            () -> EntityType.Builder.of(com.pvpciv.entity.CarmillaEntity::new, MobCategory.MISC).sized(0.6F, 1.95F).clientTrackingRange(10).build("carmilla"));
+    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.EleonoraEntity>> ELEONORA = ENTITIES.register("eleonora",
+            () -> EntityType.Builder.of(com.pvpciv.entity.EleonoraEntity::new, MobCategory.MISC).sized(0.6F, 1.95F).clientTrackingRange(10).build("eleonora"));
+
+    // --- Броня
+    public static final DeferredRegister<net.minecraft.world.item.ArmorMaterial> ARMOR_MATERIALS = DeferredRegister.create(Registries.ARMOR_MATERIAL, PvpCiv.MODID);
+    public static final DeferredHolder<net.minecraft.world.item.ArmorMaterial, net.minecraft.world.item.ArmorMaterial> RIME = ARMOR_MATERIALS.register("rime",
+            () -> new net.minecraft.world.item.ArmorMaterial(java.util.Map.of(ArmorItem.Type.HELMET, 0, ArmorItem.Type.CHESTPLATE, 0, ArmorItem.Type.LEGGINGS, 0, ArmorItem.Type.BOOTS, 0, ArmorItem.Type.BODY, 0),
+                    0, net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_CHAIN, () -> net.minecraft.world.item.crafting.Ingredient.EMPTY,
+                    java.util.List.of(new net.minecraft.world.item.ArmorMaterial.Layer(PvpCiv.id("rime"))), 0f, 0f));
+    public static final DeferredItem<com.pvpciv.item.CivArmorItem> RIME_HELMET = armor("rime_helmet", ArmorItem.Type.HELMET, "Капюшон со стальным ободом. Уши не мёрзнут.");
+    public static final DeferredItem<com.pvpciv.item.CivArmorItem> RIME_CHEST = armor("rime_chestplate", ArmorItem.Type.CHESTPLATE, "Кираса с инеем, который не тает.");
+    public static final DeferredItem<com.pvpciv.item.CivArmorItem> RIME_LEGS = armor("rime_leggings", ArmorItem.Type.LEGGINGS, "Поножи на меху. Шуршат на ходу.");
+    public static final DeferredItem<com.pvpciv.item.CivArmorItem> RIME_BOOTS = armor("rime_boots", ArmorItem.Type.BOOTS, "Подошва с шипами — для льда и чужих спин.");
+
+    private static DeferredItem<com.pvpciv.item.CivArmorItem> armor(String id, ArmorItem.Type t, String lore) {
+        return ITEMS.register(id, () -> new com.pvpciv.item.CivArmorItem(RIME, t, 1.5, "Инеевый комплект", lore));
+    }
 
     // --- Attachments
     public static final Supplier<AttachmentType<StoryData>> STORY = ATTACHMENTS.register("story",
@@ -150,6 +186,7 @@ public final class ModRegistry {
             }).build());
 
     public static void register(IEventBus bus) {
+        ModMobs.init();
         BLOCKS.register(bus);
         ITEMS.register(bus);
         ENTITIES.register(bus);
@@ -157,11 +194,14 @@ public final class ModRegistry {
         TABS.register(bus);
         COMPONENTS.register(bus);
         MENUS.register(bus);
+        ARMOR_MATERIALS.register(bus);
     }
 
     public static void onAttributes(EntityAttributeCreationEvent e) {
         e.put(GUARD.get(), StoryNpc.createAttributes().build());
         e.put(LUNA.get(), StoryNpc.createAttributes().build());
         e.put(TRADER.get(), StoryNpc.createAttributes().build());
+        e.put(CARMILLA.get(), StoryNpc.createAttributes().build());
+        e.put(ELEONORA.get(), StoryNpc.createAttributes().build());
     }
 }

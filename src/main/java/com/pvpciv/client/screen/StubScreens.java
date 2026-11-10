@@ -11,27 +11,41 @@ public final class StubScreens {
         g.drawCenteredString(f, "Появится в следующих версиях", cx, y + 10, Skin.FAINT);
     }
 
+    /** Титулы: список из progress.Titles.DEFS. Открытый — щелчок делает активным (виден над ником, даёт бонус). */
     public static class Titles extends PlainScreen {
-        private static final String[][] T = {
-                {"Чёрная звезда", "заточи оружие до +11", "чёрная аура"},
-                {"Ломатель", "сломай 10 оружий", "+20% материалов с разбора"},
-                {"Ледяной гонщик", "рекорд на сложном пути", "+8% скорости лодки"},
-                {"Охотник за головами", "50 убийств в PvP", "+5% Искр с игроков"},
-                {"Король барахолки", "продай на 100 000 ✦", "+5% к цене продажи"},
-                {"Слито Луне ×100", "проиграй Луне 100 раз", "до +10% урона"},
-        };
+        private final java.util.List<com.pvpciv.progress.Titles.Def> list = new java.util.ArrayList<>(com.pvpciv.progress.Titles.DEFS.values());
         public Titles() { super("Титулы", 300, 196, true); }
         @Override protected void drawContent(GuiGraphics g, int mx, int my, float pt) {
-            g.drawString(font, "Активен один титул: он виден над ником", left + 14, top + 20, Skin.DIM, false);
-            for (int i = 0; i < T.length; i++) {
+            g.drawString(font, "Активен один титул: он виден над ником и даёт бонус", left + 14, top + 20, Skin.DIM, false);
+            for (int i = 0; i < Math.min(6, list.size()); i++) {
+                var d = list.get(i);
                 int y = top + 34 + i * 22;
+                boolean open = ClientState.titles.contains(d.id()), act = d.id().equals(ClientState.activeTitle);
+                boolean hover = open && in(mx, my, 12, 34 + i * 22, 276, 20);
                 Skin.inset(g, left + 12, y, 276, 20);
-                Skin.icon(g, "lock", left + 17, y + 5);
-                g.drawString(font, T[i][0], left + 32, y + 2, Skin.GOLD_L, false);
-                g.drawString(font, T[i][1], left + 32, y + 11, Skin.FAINT, false);
-                g.drawString(font, T[i][2], left + 284 - font.width(T[i][2]), y + 6, Skin.DIM, false);
+                if (act) g.fill(left + 13, y + 1, left + 287, y + 19, 0x30FFD166);
+                else if (hover) g.fill(left + 13, y + 1, left + 287, y + 19, 0x18FFFFFF);
+                Skin.icon(g, open ? (act ? "spark" : "arrow") : "lock", left + 17, y + 5);
+                g.drawString(font, d.name(), left + 32, y + 2, open ? (0xFF000000 | d.color()) : Skin.GOLD_D, false);
+                g.drawString(font, Skin.fit(font, d.how(), 150), left + 32, y + 11, Skin.FAINT, false);
+                String b = act ? "активен • " + d.bonusText() : d.bonusText();
+                g.drawString(font, Skin.fit(font, b, 110), left + 284 - Math.min(110, font.width(b)), y + 6, act ? Skin.GOOD : Skin.DIM, false);
             }
-            soon(g, font, left + w / 2, top + 170);
+            Skin.divider(g, left + w / 2, top + 170);
+            g.drawCenteredString(font, "Щёлкни по открытому титулу, чтобы надеть или снять", left + w / 2, top + 180, Skin.FAINT);
+        }
+        @Override public boolean mouseClicked(double mx, double my, int b) {
+            for (int i = 0; i < Math.min(6, list.size()); i++) {
+                var d = list.get(i);
+                if (ClientState.titles.contains(d.id()) && in(mx, my, 12, 34 + i * 22, 276, 20)) {
+                    String id = d.id().equals(ClientState.activeTitle) ? "" : d.id();
+                    ClientState.activeTitle = id;
+                    net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.pvpciv.net.Network.SelectTitle(id));
+                    minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1f));
+                    return true;
+                }
+            }
+            return super.mouseClicked(mx, my, b);
         }
     }
 

@@ -29,13 +29,20 @@ public class CivWeaponItem extends SwordItem {
     public final WClass cls;
     public final String lore;
     public final Rarity minRarity;
+    /** «Тир N+» — оружие второй локации этажа: на полтира сильнее. */
+    public final boolean plus;
 
-    public CivWeaponItem(int tier, WClass cls, Rarity minRarity, String lore) {
+    public CivWeaponItem(int tier, WClass cls, Rarity minRarity, String lore) { this(tier, false, cls, minRarity, lore); }
+
+    public CivWeaponItem(int tier, boolean plus, WClass cls, Rarity minRarity, String lore) {
         super(Tiers.IRON, new Item.Properties().stacksTo(1).component(DataComponents.UNBREAKABLE, new Unbreakable(false)));
-        this.tier = tier; this.cls = cls; this.lore = lore; this.minRarity = minRarity;
+        this.tier = tier; this.plus = plus; this.cls = cls; this.lore = lore; this.minRarity = minRarity;
     }
 
-    public static double damage(int tier, WClass cls, Rarity r, int stars) {
+    public double tierValue() { return tier + (plus ? 0.5 : 0); }
+    public String tierName() { return tier + (plus ? "+" : ""); }
+
+    public static double damage(double tier, WClass cls, Rarity r, int stars) {
         double starMul = stars >= 11 ? 2.2 : 1 + 0.1 * stars;
         return 4 * Math.pow(1.35, tier - 1) * cls.dmg * r.mult * starMul;
     }
@@ -43,7 +50,7 @@ public class CivWeaponItem extends SwordItem {
     public double damage(ItemStack st) {
         Rarity r = Gear.rarity(st);
         if (r.ordinal() < minRarity.ordinal()) r = minRarity;
-        return damage(tier, cls, r, Gear.stars(st));
+        return damage(tierValue(), cls, r, Gear.stars(st));
     }
 
     @Override
@@ -74,7 +81,7 @@ public class CivWeaponItem extends SwordItem {
         Rarity r = Gear.rarity(st);
         if (r.ordinal() < minRarity.ordinal()) r = minRarity;
         int rc = r.color;
-        tip.add(Component.literal(r.title + " • " + cls.title + " • Тир " + tier).withStyle(x -> x.withColor(rc)));
+        tip.add(Component.literal(r.title + " • " + cls.title + " • Тир " + tierName()).withStyle(x -> x.withColor(rc)));
         int s = Gear.stars(st);
         StringBuilder stars = new StringBuilder();
         for (int i = 0; i < Gear.MAX_STARS; i++) stars.append(i < s ? "★" : "☆");

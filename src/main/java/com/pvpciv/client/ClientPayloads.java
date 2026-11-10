@@ -37,5 +37,17 @@ public final class ClientPayloads {
         ClientState.zone = p.zone();
         ClientState.zoneType = p.zoneType();
         ClientState.bossSeconds = p.bossSeconds();
+        ClientState.quest = p.quest();
+        ClientState.questSeconds = p.questSeconds();
+        ClientState.jailSeconds = p.jailSeconds();
+        ClientState.titles = new java.util.HashSet<>(java.util.Arrays.asList(p.titles().split(",")));
+        ClientState.activeTitle = p.activeTitle();
+    }
+
+    public static void cinematic(Network.Cinematic p) {
+        ClientState.cineKind = p.kind();
+        ClientState.cineStart = System.currentTimeMillis();
+        ClientState.cineLen = p.ticks() * 50L;
+        ClientState.cineText = p.text();
     }
 }

@@ -28,7 +28,10 @@ public final class ClientInit {
         }));
         modBus.addListener((EntityRenderersEvent.RegisterRenderers e) -> {
             e.registerEntityRenderer(ModRegistry.GUARD.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/guard.png")));
-            e.registerEntityRenderer(ModRegistry.LUNA.get(), ctx -> new NpcRenderer<>(ctx, true, PvpCiv.id("textures/entity/luna.png")));
+            e.registerEntityRenderer(ModRegistry.LUNA.get(), GeoNpcRenderer::new);
+            e.registerEntityRenderer(ModRegistry.CARMILLA.get(), GeoNpcRenderer::new);
+            e.registerEntityRenderer(ModRegistry.ELEONORA.get(), GeoNpcRenderer::new);
+            MobRenderers.register(e);
             e.registerEntityRenderer(ModRegistry.TRADER.get(), ctx -> new NpcRenderer<>(ctx, true, PvpCiv.id("textures/entity/trader.png")));
         });
         modBus.addListener((RegisterGuiLayersEvent e) -> e.registerAbove(VanillaGuiLayers.HOTBAR, PvpCiv.id("hud"), Hud::render));
@@ -54,7 +57,11 @@ public final class ClientInit {
         NeoForge.EVENT_BUS.addListener((RenderTooltipEvent.Color e) -> {
             var st = e.getItemStack();
             e.setBackground(0xF2100D18);
-            if (st.getItem() instanceof com.pvpciv.item.CivWeaponItem w) {
+            if (st.getItem() instanceof com.pvpciv.item.CivArmorItem) {
+                int c = com.pvpciv.loot.Gear.rarity(st).color;
+                e.setBorderStart(0xFF000000 | c);
+                e.setBorderEnd(0xFF000000 | ((c >> 1) & 0x7F7F7F));
+            } else if (st.getItem() instanceof com.pvpciv.item.CivWeaponItem w) {
                 int c = (com.pvpciv.loot.Gear.rarity(st).ordinal() < w.minRarity.ordinal() ? w.minRarity : com.pvpciv.loot.Gear.rarity(st)).color;
                 e.setBorderStart(0xFF000000 | c);
                 e.setBorderEnd(0xFF000000 | ((c >> 1) & 0x7F7F7F));
@@ -75,8 +82,21 @@ public final class ClientInit {
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> ClientState.reset());
     }
 
+    /** Лодки выше тира 1 и титул «Ледяной гонщик» — меньше трения на льду (лодкой управляет клиент). */
+    private static void boatBoost(Minecraft mc) {
+        if (mc.player == null || !(mc.player.getVehicle() instanceof net.minecraft.world.entity.vehicle.Boat b) || b.getControllingPassenger() != mc.player) return;
+        double bonus = b.getVariant() == net.minecraft.world.entity.vehicle.Boat.Type.BIRCH ? com.pvpciv.item.BoatSummonItem.speedBonus(2) : 0;
+        if ("ice_racer".equals(ClientState.activeTitle)) bonus += 0.06;
+        if (bonus <= 0 || !b.onGround()) return;
+        var v = b.getDeltaMovement();
+        if (v.x * v.x + v.z * v.z < 0.0025) return;
+        double k = 1 + 0.012 * bonus / 0.1;
+        b.setDeltaMovement(v.x * k, v.y, v.z * k);
+    }
+
     private static void onTick() {
         Minecraft mc = Minecraft.getInstance();
+        boatBoost(mc);
         while (DASH.consumeClick()) {
             if (mc.player == null || mc.level == null) continue;
             long now = mc.level.getGameTime();

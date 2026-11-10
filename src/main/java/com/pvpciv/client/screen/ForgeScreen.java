@@ -81,7 +81,7 @@ public class ForgeScreen extends CivScreen<ForgeMenu> {
             Skin.stars(g, font, x + 16, y + 114, s, 0xFF000000 | Gear.starColor(Math.max(1, s)));
             if (maxed) g.drawString(font, "Предел: +10", x + 16, y + 126, Skin.BAD, false);
             else {
-                double now = CivWeaponItem.damage(cw.tier, cw.cls, r, s), next = CivWeaponItem.damage(cw.tier, cw.cls, r, s + 1);
+                double now = CivWeaponItem.damage(cw.tierValue(), cw.cls, r, s), next = CivWeaponItem.damage(cw.tierValue(), cw.cls, r, s + 1);
                 String a = String.format("Урон %.1f", now);
                 g.drawString(font, a, x + 16, y + 126, Skin.TEXT, false);
                 Skin.icon(g, "arrow", x + 18 + font.width(a), y + 125);

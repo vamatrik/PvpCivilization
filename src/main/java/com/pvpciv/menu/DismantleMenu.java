@@ -44,12 +44,12 @@ public class DismantleMenu extends CivMenu {
 
     public static boolean canDismantle(ItemStack st) {
         if (st.is(ModRegistry.WEAPON_SHARDS.get())) return true;
-        return st.getItem() instanceof CivWeaponItem && !st.is(ModRegistry.NOVICE_SWORD.get());
+        return (st.getItem() instanceof CivWeaponItem && !st.is(ModRegistry.NOVICE_SWORD.get())) || st.getItem() instanceof com.pvpciv.item.CivArmorItem;
     }
 
     public static List<ItemStack> yield(ItemStack st, double mult, RandomSource r) {
         List<ItemStack> out = new ArrayList<>();
-        int dust = 0, sparks = 0, stars = 0, blessed = 0;
+        int dust = 0, sparks = 0, stars = 0, shards = 0;
         if (st.is(ModRegistry.WEAPON_SHARDS.get())) {
             for (int i = 0; i < st.getCount(); i++) {
                 dust += 1 + r.nextInt(2);
@@ -60,17 +60,24 @@ public class DismantleMenu extends CivMenu {
             int rr = Gear.rarity(st).ordinal();
             int s = Gear.stars(st);
             dust = 2 + rr * 2 + w.tier;
-            sparks = 10 * (rr + 1) * w.tier;
+            sparks = (int) Math.round(10 * (rr + 1) * w.tierValue());
             if (r.nextDouble() < 0.10 * (rr + 1) * mult) stars++;
-            if (rr >= 3 && r.nextDouble() < 0.10 * (rr - 2) * mult) blessed++;
+            // благословенные звёзды разбор не даёт: они только из контрактов, тайников и боссов (позже — стол инфузии)
             for (int i = 0; i < s; i++) if (r.nextDouble() < 0.3 * mult) stars++;
+            if (w.plus) shards = 1 + rr;
+        } else if (st.getItem() instanceof com.pvpciv.item.CivArmorItem a) {
+            int rr = Gear.rarity(st).ordinal();
+            shards = 2 + rr * 2;
+            sparks = 12 * (rr + 1);
+            if (r.nextDouble() < 0.06 * (rr + 1) * mult) stars++;
         }
         dust = (int) Math.round(dust * mult);
         sparks = (int) Math.round(sparks * mult);
         if (dust > 0) out.add(new ItemStack(ModRegistry.ASH_DUST.get(), dust));
         if (sparks > 0) out.add(new ItemStack(ModRegistry.SPARKS.get(), sparks));
         if (stars > 0) out.add(new ItemStack(ModRegistry.STAR_W1.get(), stars));
-        if (blessed > 0) out.add(new ItemStack(ModRegistry.BLESSED_STAR_W1.get(), blessed));
+        shards = (int) Math.round(shards * mult);
+        if (shards > 0) out.add(new ItemStack(ModRegistry.RIME_SHARD.get(), shards));
         return out;
     }
 

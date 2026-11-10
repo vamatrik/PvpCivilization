@@ -70,11 +70,47 @@ public final class Dialogues {
         return new Dialogue("a").node("a", LUNA, LC, l, opt("[Уйти]", null));
     }
 
+    // --------------------------------------------------------------- комната Луны
+    private static final String[] DIARY = {
+            "День 1. Новый сосед. Выглядит как пепел, пахнет как пепел. Буду звать его Пеплом. Ему подходит.",
+            "День 4. Пепел опять умер у Громилы. Я видела из окна. Не смеялась. Ну, немножко.",
+            "День 9. Заточила меч до +7. Никому не скажу. Пусть думают, что +10. (Пеплу особенно.)",
+            "День 12. Сорока продала мне «редкую» шестерёнку за 200 Искр. Она ржавая. Я её храню. Не спрашивай.",
+            "День 15. Снилась Бездна. Там внизу кто-то смотрел наверх. Он знал моё имя. …Надо меньше пить какао на ночь.",
+            "День 20. Если Пепел когда-нибудь это прочтёт — ты ИДИОТ, и это не комплимент. ЗАКРОЙ ДНЕВНИК.",
+            "День 23. Подвал. Там кто-то поёт по ночам. Красивым голосом. Комендант сказала «трубы». Трубы не поют на латыни.",
+            "День 31. Обогнала всех на Ледяной Трассе. Пепел даже не стартовал. Лузер. (Надо будет научить его. Просто чтобы было с кем соревноваться.)",
+    };
+
+    public static Dialogue lunaDiary(ServerPlayer p) {
+        Dialogue d = new Dialogue("p0");
+        for (int i = 0; i < DIARY.length; i++) {
+            String next = i + 1 < DIARY.length ? "p" + (i + 1) : null;
+            if (next != null) d.node("p" + i, "Дневник Луны", LC, DIARY[i], opt("Перевернуть страницу", next), opt("[Закрыть]", null));
+            else d.node("p" + i, "Дневник Луны", LC, DIARY[i], opt("[Закрыть]", null));
+        }
+        return d;
+    }
+
+    public static void lunaBox(ServerPlayer p) {
+        com.pvpciv.data.StoryData d = Progress.d(p);
+        if (d.lunaBox) {
+            Story.say(p, "Шкатулка", LC, "Пусто. Только записка: «Я ЗНАЮ, ЧТО ЭТО БЫЛ ТЫ».");
+            return;
+        }
+        d.lunaBox = true;
+        p.setData(ModRegistry.STORY.get(), d);
+        com.pvpciv.inv.Bag.give(p, new ItemStack(ModRegistry.LUNA_PLUSH.get()));
+        com.pvpciv.inv.Bag.give(p, new ItemStack(ModRegistry.STAR_W1.get(), 2));
+        Story.say(p, "Шкатулка", LC, "Внутри — плюшевая игрушка, подозрительно похожая на тебя, и две звезды заточки. Луна точно не заметит. Наверное.");
+        p.level().playSound(null, p.blockPosition(), SoundEvents.CHEST_OPEN, SoundSource.BLOCKS, 0.8f, 1.3f);
+    }
+
     // --------------------------------------------------------------- Сорока
     private static final Set<Item> JUNK = Set.of();
 
     private static boolean isJunk(Item it) {
-        return it == ModRegistry.RUSTY_GEAR.get() || it == ModRegistry.CHARRED_COIN.get() || it == ModRegistry.ASH_RELIC.get() || it == ModRegistry.WEAPON_SHARDS.get();
+        return it == ModRegistry.RUSTY_GEAR.get() || it == ModRegistry.CHARRED_COIN.get() || it == ModRegistry.ASH_RELIC.get() || it == ModRegistry.WEAPON_SHARDS.get() || it == ModRegistry.FROZEN_LOCKET.get();
     }
 
     private static long valueOf(ServerPlayer p, boolean withDust) {

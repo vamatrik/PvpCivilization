@@ -65,6 +65,9 @@ public class CivData extends SavedData {
     public final List<Apartment> apartments = new ArrayList<>();
     public long bossNext = -1;
     public final Map<String, Long> stash = new HashMap<>();
+    public final Map<UUID, Long> trackBest = new HashMap<>();
+    public long trackRecord = 0;
+    public String trackRecordName = "";
 
     public static CivData get(MinecraftServer server) {
         ServerLevel level = server.overworld();
@@ -80,6 +83,10 @@ public class CivData extends SavedData {
         d.bossNext = tag.contains("bossNext") ? tag.getLong("bossNext") : -1;
         CompoundTag st = tag.getCompound("stash");
         for (String k : st.getAllKeys()) d.stash.put(k, st.getLong(k));
+        CompoundTag tb = tag.getCompound("trackBest");
+        for (String k : tb.getAllKeys()) d.trackBest.put(UUID.fromString(k), tb.getLong(k));
+        d.trackRecord = tag.getLong("trackRecord");
+        d.trackRecordName = tag.getString("trackRecordName");
         return d;
     }
 
@@ -94,6 +101,11 @@ public class CivData extends SavedData {
         CompoundTag st = new CompoundTag();
         stash.forEach(st::putLong);
         tag.put("stash", st);
+        CompoundTag tb = new CompoundTag();
+        trackBest.forEach((k, v) -> tb.putLong(k.toString(), v));
+        tag.put("trackBest", tb);
+        tag.putLong("trackRecord", trackRecord);
+        tag.putString("trackRecordName", trackRecordName);
         return tag;
     }
 

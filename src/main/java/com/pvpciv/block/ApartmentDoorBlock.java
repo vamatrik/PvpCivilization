@@ -71,6 +71,21 @@ public class ApartmentDoorBlock extends DoorBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        // изнутри квартиры дверь открывается без карты — выйти можно всегда
+        BlockPos low = lower(state, pos);
+        BlockState lowState = level.getBlockState(low);
+        if (lowState.is(this)) {
+            net.minecraft.core.Direction f = lowState.getValue(FACING);
+            double dot = (player.getX() - (low.getX() + 0.5)) * f.getStepX() + (player.getZ() - (low.getZ() + 0.5)) * f.getStepZ();
+            if (dot < -0.4) {
+                if (!level.isClientSide && !lowState.getValue(OPEN)) {
+                    level.playSound(null, pos, SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.BLOCKS, 0.6f, 1.6f);
+                    this.setOpen(player, level, lowState, low, true);
+                    level.scheduleTick(low, this, 60);
+                }
+                return InteractionResult.sidedSuccess(level.isClientSide);
+            }
+        }
         if (!level.isClientSide) {
             level.playSound(null, pos, SoundEvents.NOTE_BLOCK_BASS.value(), SoundSource.BLOCKS, 0.6f, 0.6f);
             player.displayClientMessage(Component.literal("🔒 Нужна ключ-карта (ПКМ картой по двери)").withStyle(ChatFormatting.AQUA), true);

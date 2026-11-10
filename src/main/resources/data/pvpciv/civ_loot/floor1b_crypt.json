@@ -1,0 +1,54 @@
+{
+ "entries": [
+  {
+   "item": "pvpciv:sparks",
+   "chance": 1.0,
+   "min": 25,
+   "max": 50
+  },
+  {
+   "item": "pvpciv:rime_shard",
+   "chance": 1.0,
+   "min": 3,
+   "max": 6
+  },
+  {
+   "item": "pvpciv:frozen_locket",
+   "chance": 0.5,
+   "min": 1,
+   "max": 2
+  },
+  {
+   "item": "pvpciv:star_w1",
+   "chance": 0.35
+  },
+  {
+   "item": "pvpciv:blessed_star_w1",
+   "chance": 0.04
+  },
+  {
+   "weapons": [
+    "pvpciv:rime_blade",
+    "pvpciv:frost_rapier",
+    "pvpciv:icicle_dagger",
+    "pvpciv:glacier_axe"
+   ],
+   "chance": 0.2,
+   "min_rarity": "RARE"
+  },
+  {
+   "weapons": [
+    "pvpciv:rime_helmet",
+    "pvpciv:rime_chestplate",
+    "pvpciv:rime_leggings",
+    "pvpciv:rime_boots"
+   ],
+   "chance": 0.25,
+   "min_rarity": "RARE"
+  },
+  {
+   "item": "pvpciv:rime_boat_t2",
+   "chance": 0.03
+  }
+ ]
+}

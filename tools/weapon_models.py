@@ -111,6 +111,11 @@ WEAPONS = [
     dagger('bone_dagger'),
     axe('charred_axe'),
     hammer('brute_cleaver'),
+    # тир 1+ — Инеевый Кряж
+    sword('rime_blade', length=15, width=2.8, core='#7FC8EC', edge='#E8FAFF', guard_w=5.6, guard_c='#C8D6E0', wood='#2A3A4A', pommel='#9ADFFF'),
+    saber('frost_rapier', length=18, width=1.4, curve=1.2, core='#9ADFFF', edge='#F4FDFF', guard_c='#3A5A7A', wood='#22303E', pommel='#E8FAFF'),
+    dagger('icicle_dagger', length=8.5, width=1.8, core='#B8ECFF', edge='#FFFFFF', guard_c='#5A7A9A', wood='#2A3A4A'),
+    axe('glacier_axe', head='#4A6A8A', edge='#9ADFFF', wood='#3A2E2A', band='#C8D6E0', double=True),
 ]
 
 # ---------------------------------------------------------------- вывод

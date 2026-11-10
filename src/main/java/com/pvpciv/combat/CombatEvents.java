@@ -120,6 +120,7 @@ public final class CombatEvents {
             String kind = Mobs.lootKind(mob);
             double mult = kind.endsWith("_elite") ? 3.0 : 1.0;
             Progress.addXp(p, Progress.xpFor(Progress.d(p).level, Mobs.level(mob), mult));
+            com.pvpciv.game.Vampire.onKill(p, mob, kind.endsWith("_elite"));
         }
     }
 

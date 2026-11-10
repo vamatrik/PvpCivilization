@@ -44,7 +44,7 @@ public final class Story {
 
     public static String objective(int stage) {
         if (stage == NEW) return "Кто-то стучит в дверь. Открой её ключ-картой (ПКМ картой по двери) и выйди к гостю.";
-        return "Этаж 1 на юге по Ледяному Тракту: мобы, тайники в руинах, данж-арена и босс Громила. Звёзды точи в кузнице своей квартиры. Хлам продавай Сороке в атриуме.";
+        return "Этаж 1: на юге — Пепельная пустошь (ур. 1–3), на севере за Ледяной Трассой — Инеевый Кряж (ур. 3–5, броня). В подвале — контракты Кармиллы. Хлам продавай Сороке.";
     }
 
     public static void sync(ServerPlayer p) {
@@ -52,11 +52,13 @@ public final class Story {
         Zones.Zone z = Zones.at(p.position());
         int boss = BossManager.secondsLeft(p.server);
         PacketDistributor.sendToPlayer(p, new Network.SyncState(d.stage, objective(d.stage), d.level, d.xp, Progress.xpToNext(d.level),
-                d.money, z.name(), z.type().ordinal(), boss));
+                d.money, z.name(), z.type().ordinal(), boss, Vampire.hudLine(d), Vampire.hudSeconds(p, d), Vampire.jailSeconds(p),
+                String.join(",", d.titles), d.activeTitle));
     }
 
     /** Раз в секунду: зона, таймер босса. */
     public static void tickPlayer(ServerPlayer p) {
+        Vampire.tick(p);
         Zones.Zone z = Zones.at(p.position());
         Zones.Zone last = LAST_ZONE.put(p.getUUID(), z);
         sync(p);
@@ -83,8 +85,8 @@ public final class Story {
     /** Объявление на весь сервер о редком дропе. */
     public static void announceRareDrop(Level level, ItemStack st) {
         if (!(level instanceof ServerLevel sl)) return;
-        boolean rare = st.getItem() instanceof CivWeaponItem && Gear.rarity(st).ordinal() >= Rarity.EPIC.ordinal();
-        boolean blessed = st.is(ModRegistry.BLESSED_STAR_W1.get());
+        boolean rare = (st.getItem() instanceof CivWeaponItem || st.getItem() instanceof com.pvpciv.item.CivArmorItem) && Gear.rarity(st).ordinal() >= Rarity.EPIC.ordinal();
+        boolean blessed = st.is(ModRegistry.BLESSED_STAR_W1.get()) || st.is(ModRegistry.RIME_BOAT_T2.get());
         if (!rare && !blessed) return;
         Component msg = Component.literal("✦ Выпал редкий предмет: ").withStyle(ChatFormatting.GOLD).append(st.getHoverName());
         for (ServerPlayer p : sl.getServer().getPlayerList().getPlayers()) p.sendSystemMessage(msg);
@@ -139,23 +141,25 @@ public final class Story {
             civ.setDirty();
             d.apartment = apt.id;
             p.setData(ModRegistry.STORY.get(), d);
-            DormBuilder.updateApartmentSign(p.serverLevel(), apt);
+            DormBuilder.updateApartmentSign(com.pvpciv.world.CivWorld.level(p.server), apt);
             toApartment(p, apt);
             title(p, "PvP ЦИВИЛИЗАЦИЯ", "Нижний Шпиль • Этаж 1: Пепельная пустошь", 0x7FDBFF);
             p.sendSystemMessage(Component.literal("Ты открываешь глаза. Незнакомый потолок. Квартира №" + apt.number + ".")
                     .withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
         }
-        p.setRespawnPosition(Level.OVERWORLD, apt.spawn, apt.yaw, true, false);
+        p.setRespawnPosition(com.pvpciv.world.CivWorld.WORLD1, apt.spawn, apt.yaw, true, false);
         ensureKit(p);
         ItemStack pending = Forge.PENDING.remove(p.getUUID());
         if (pending != null && !p.getInventory().add(pending)) p.drop(pending, false);
         Progress.applyStats(p);
+        if (!com.pvpciv.world.CivWorld.is(p.level())) toApartment(p, apt);
         if (d.stage == NEW) GuardEntity.ensureFor(p, apt);
+        Vampire.onLogin(p);
         sync(p);
     }
 
     public static void toApartment(ServerPlayer p, CivData.Apartment apt) {
-        ServerLevel lvl = p.server.overworld();
+        ServerLevel lvl = com.pvpciv.world.CivWorld.level(p.server);
         BlockPos s = apt.spawn;
         p.resetFallDistance();
         p.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
@@ -167,7 +171,7 @@ public final class Story {
         StoryData d = data(p);
         CivData.Apartment apt = CivData.get(p.server).byId(d.apartment);
         if (apt == null) return;
-        toApartment(p, apt);
+        if (Vampire.jailed(p)) Vampire.toCell(p); else toApartment(p, apt);
         d.deaths++;
         p.setData(ModRegistry.STORY.get(), d);
         ensureKit(p);

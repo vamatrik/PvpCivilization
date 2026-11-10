@@ -25,7 +25,19 @@ import java.util.UUID;
 public class BoatSummonItem extends Item {
     public static final String OWNER_TAG = "pvpciv_owner";
 
-    public BoatSummonItem(Properties p) { super(p); }
+    public final int tier;
+    public final Boat.Type look;
+    public final String title, lore;
+
+    public BoatSummonItem(Properties p) { this(p, 1, Boat.Type.OAK, "Дубовая", "«Это не лодка. Это ДУША на льду.» — Ледоруб"); }
+
+    public BoatSummonItem(Properties p, int tier, Boat.Type look, String title, String lore) {
+        super(p);
+        this.tier = tier; this.look = look; this.title = title; this.lore = lore;
+    }
+
+    /** Множитель скорости на льду (тир 1 — ваниль). */
+    public static double speedBonus(int tier) { return tier <= 1 ? 0 : 0.10 * (tier - 1); }
 
     @Override
     public InteractionResult useOn(UseOnContext ctx) {
@@ -47,7 +59,8 @@ public class BoatSummonItem extends Item {
         }
         BlockPos pos = ctx.getClickedPos().relative(ctx.getClickedFace());
         Boat boat = new Boat(level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
-        boat.setVariant(Boat.Type.OAK);
+        boat.setVariant(look);
+        boat.getPersistentData().putInt("tier", tier);
         boat.setYRot(p.getYRot());
         if (!level.noCollision(boat, boat.getBoundingBox())) {
             p.displayClientMessage(Component.literal("Тут не поместится").withStyle(ChatFormatting.RED), true);
@@ -65,10 +78,10 @@ public class BoatSummonItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack st, TooltipContext ctx, List<Component> tip, TooltipFlag flag) {
-        tip.add(Component.literal("Тир 1 • Дубовая • Обычная").withStyle(ChatFormatting.GRAY));
+        tip.add(Component.literal("Тир " + tier + " • " + title + (tier > 1 ? " • +" + Math.round(speedBonus(tier) * 100) + "% скорости на льду" : " • Обычная")).withStyle(tier > 1 ? ChatFormatting.AQUA : ChatFormatting.GRAY));
         tip.add(Component.literal("ПКМ по льду — поставить лодку").withStyle(ChatFormatting.DARK_AQUA));
         tip.add(Component.literal("ПКМ рядом с лодкой — убрать обратно").withStyle(ChatFormatting.DARK_AQUA));
         tip.add(Component.literal("Далеко? ПКМ — лодка вернётся к тебе").withStyle(ChatFormatting.DARK_AQUA));
-        tip.add(Component.literal("«Это не лодка. Это ДУША на льду.» — Ледоруб").withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
+        tip.add(Component.literal(lore).withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
     }
 }

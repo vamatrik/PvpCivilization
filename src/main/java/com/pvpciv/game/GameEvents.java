@@ -62,6 +62,8 @@ public final class GameEvents {
         bus.addListener(BossManager::onDeath);
         bus.addListener(GameEvents::onPickup);
         bus.addListener(GameEvents::onEntityJoin);
+        bus.addListener(GameEvents::onRightClickBlock);
+        bus.addListener(GameEvents::onNameFormat);
         CombatEvents.register(bus);
     }
 
@@ -69,31 +71,11 @@ public final class GameEvents {
 
     private static void onStarted(ServerStartedEvent e) {
         MinecraftServer server = e.getServer();
-        ServerLevel lvl = server.overworld();
+        ServerLevel lvl = com.pvpciv.world.CivWorld.level(server);
         CivData data = CivData.get(server);
-        var log = com.mojang.logging.LogUtils.getLogger();
-        if (!data.built) {
-            long t = System.currentTimeMillis();
-            DormBuilder.build(lvl, data);
-            log.info("[PvpCiv] Dormitory built in {} ms, {} apartments", System.currentTimeMillis() - t, data.apartments.size());
-        }
-        if (data.version < 3) {
-            if (data.version < 2) {
-                Floor1.build(lvl);
-                DormBuilder.placeForges(lvl, data);
-            }
-            DormBuilder.placeDismantlers(lvl, data);
-            data.version = 3;
-            data.setDirty();
-            log.info("[PvpCiv] World upgraded to v3");
-        }
-        if (data.version < 2) {
-            long t = System.currentTimeMillis();
-            Floor1.build(lvl);
-            DormBuilder.placeForges(lvl, data);
-            data.version = 2;
-            data.setDirty();
-            log.info("[PvpCiv] Floor 1 built in {} ms", System.currentTimeMillis() - t);
+        if (data.version < com.pvpciv.world.WorldBuild.VERSION) {
+            com.mojang.logging.LogUtils.getLogger().info("[PvpCiv] Building world 1 in dimension pvpciv:world1 (v{} -> v{})", data.version, com.pvpciv.world.WorldBuild.VERSION);
+            com.pvpciv.world.WorldBuild.buildAll(server, false);
         }
         GameRules r = lvl.getGameRules();
         r.getRule(GameRules.RULE_DOMOBSPAWNING).set(false, server);
@@ -108,7 +90,7 @@ public final class GameEvents {
         r.getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).set(false, server);
         r.getRule(GameRules.RULE_LIMITED_CRAFTING).set(true, server);
         lvl.setWeatherParameters(6000000, 0, false, false);
-        lvl.setDefaultSpawnPos(DormBuilder.ATRIUM_CENTER, 0);
+        server.overworld().setWeatherParameters(6000000, 0, false, false);
     }
 
     private static void onLogin(PlayerEvent.PlayerLoggedInEvent e) {
@@ -136,7 +118,11 @@ public final class GameEvents {
         if (ticks % 60 == 0) SpawnZones.tick(server);
         if (ticks % 20 == 0) for (ServerPlayer p : server.getPlayerList().getPlayers()) Story.tickPlayer(p);
         if (ticks % 10 == 0) for (ServerPlayer p : server.getPlayerList().getPlayers()) com.pvpciv.inv.Bag.sweep(p);
-        if (ticks % 100 == 0) { LunaEntity.ensure(server); TraderEntity.ensure(server); }
+        if (ticks % 100 == 0) {
+            LunaEntity.ensure(server); TraderEntity.ensure(server);
+            com.pvpciv.entity.CarmillaEntity.ensure(server); com.pvpciv.entity.EleonoraEntity.ensure(server);
+        }
+        com.pvpciv.world.IceTrack.tick(server);
     }
 
     /** Подобранное сразу уходит в сумку. */
@@ -161,7 +147,31 @@ public final class GameEvents {
     private static void onEntityJoin(net.neoforged.neoforge.event.entity.EntityJoinLevelEvent e) {
         if (e.getLevel().isClientSide || e.loadedFromDisk()) return;
         if (e.getEntity() instanceof net.minecraft.world.entity.Mob m && !(m instanceof com.pvpciv.entity.StoryNpc)
-                && com.pvpciv.combat.Mobs.level(m) <= 0) e.setCanceled(true);
+                && com.pvpciv.combat.Mobs.level(m) <= 0) {
+            if (com.pvpciv.registry.ModMobs.isCiv(m)) com.pvpciv.combat.Mobs.setupDefault(m);
+            else e.setCanceled(true);
+        }
+    }
+
+    /** Комната Луны: дневник и шкатулка. */
+    private static void onRightClickBlock(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock e) {
+        if (!(e.getEntity() instanceof ServerPlayer p) || e.getHand() != net.minecraft.world.InteractionHand.MAIN_HAND) return;
+        if (!com.pvpciv.world.CivWorld.is(p.level())) return;
+        net.minecraft.core.BlockPos pos = e.getPos();
+        if (pos.equals(DormBuilder.LUNA_DIARY)) {
+            e.setCanceled(true);
+            if (!DialogueManager.inDialogue(p)) DialogueManager.open(p, null, Dialogues.lunaDiary(p));
+        } else if (pos.equals(DormBuilder.LUNA_BOX)) {
+            e.setCanceled(true);
+            Dialogues.lunaBox(p);
+        }
+    }
+
+    /** Активный титул — над ником и в чате. */
+    private static void onNameFormat(PlayerEvent.NameFormat e) {
+        if (!(e.getEntity() instanceof ServerPlayer p)) return;
+        Component pre = com.pvpciv.progress.Titles.prefix(Progress.d(p));
+        if (pre != null) e.setDisplayname(pre.copy().append(e.getDisplayname()));
     }
 
     private static boolean ownedBoat(net.minecraft.world.entity.Entity e) {
@@ -183,7 +193,10 @@ public final class GameEvents {
     private static void onBoatTick(EntityTickEvent.Post e) {
         if (e.getEntity().level().isClientSide || !ownedBoat(e.getEntity())) return;
         CompoundTag t = e.getEntity().getPersistentData();
-        if (e.getEntity().isVehicle()) { t.putInt("idle", 0); return; }
+        if (e.getEntity().isVehicle()) {
+            t.putInt("idle", 0);
+            return;
+        }
         int idle = t.getInt("idle") + 1;
         t.putInt("idle", idle);
         if (idle > 20 * 60 * 5 || e.getEntity().getY() < 0) e.getEntity().discard();
@@ -210,6 +223,7 @@ public final class GameEvents {
         e.getDispatcher().register(Commands.literal("civ")
                 .then(Commands.literal("home").executes(c -> {
                     ServerPlayer p = c.getSource().getPlayerOrException();
+                    if (Vampire.jailed(p)) { p.displayClientMessage(Component.literal("Ты в клетке у Кармиллы. Жди.").withStyle(ChatFormatting.RED), true); return 0; }
                     CivData.Apartment a = CivData.get(p.server).byId(Story.data(p).apartment);
                     if (a != null) Story.toApartment(p, a);
                     return 1;
@@ -248,6 +262,33 @@ public final class GameEvents {
                             Progress.addMoney(c.getSource().getPlayerOrException(), IntegerArgumentType.getInteger(c, "n"), true);
                             return 1;
                         })))
+                .then(Commands.literal("go").requires(s -> s.hasPermission(2))
+                        .then(Commands.argument("place", com.mojang.brigadier.arguments.StringArgumentType.word()).executes(c -> {
+                            ServerPlayer p = c.getSource().getPlayerOrException();
+                            String w = com.mojang.brigadier.arguments.StringArgumentType.getString(c, "place");
+                            net.minecraft.core.BlockPos to = switch (w) {
+                                case "south" -> Floor1.CAMP; case "north" -> com.pvpciv.floor.FloorNorth.OUTPOST; case "basement" -> com.pvpciv.world.Basement.CARMILLA_SPOT.south(3);
+                                case "track" -> DormBuilder.NORTH_DOCK; case "luna" -> DormBuilder.LUNA_SPOT.south(2); case "crypt" -> com.pvpciv.floor.FloorNorth.CRYPT.south(16);
+                                case "lair" -> Floor1.LAIR.north(14); case "ruins" -> Floor1.RUINS; case "eleonora" -> DormBuilder.ELEONORA_SPOT.north(1);
+                                default -> DormBuilder.ATRIUM_CENTER;
+                            };
+                            p.teleportTo(com.pvpciv.world.CivWorld.level(p.server), to.getX() + 0.5, to.getY(), to.getZ() + 0.5, p.getYRot(), 0);
+                            return 1;
+                        })))
+                .then(Commands.literal("cd").requires(s -> s.hasPermission(2)).executes(c -> {
+                    ServerPlayer p = c.getSource().getPlayerOrException();
+                    StoryData d = Story.data(p);
+                    d.questCooldown = 0; d.jailUntil = 0;
+                    p.setData(ModRegistry.STORY.get(), d);
+                    com.pvpciv.world.Basement.setDoor(com.pvpciv.world.CivWorld.level(p.server), true);
+                    Story.sync(p);
+                    c.getSource().sendSuccess(() -> Component.literal("Кулдаун контрактов и заточение сброшены."), false);
+                    return 1;
+                }))
+                .then(Commands.literal("jail").requires(s -> s.hasPermission(2)).executes(c -> {
+                    Vampire.abduct(c.getSource().getPlayerOrException());
+                    return 1;
+                }))
                 .then(Commands.literal("boss").requires(s -> s.hasPermission(2)).executes(c -> {
                     BossManager.forceSpawn(c.getSource().getServer());
                     c.getSource().sendSuccess(() -> Component.literal("Громила проснётся, как только рядом с логовом будет игрок."), false);
@@ -261,23 +302,8 @@ public final class GameEvents {
                             return 1;
                         })))
                 .then(Commands.literal("rebuild").requires(s -> s.hasPermission(2)).executes(c -> {
-                    MinecraftServer server = c.getSource().getServer();
-                    CivData data = CivData.get(server);
-                    Map<Integer, CivData.Apartment> old = new HashMap<>();
-                    for (CivData.Apartment a : data.apartments) old.put(a.id, a);
-                    DormBuilder.build(server.overworld(), data);
-                    for (CivData.Apartment a : data.apartments) {
-                        CivData.Apartment o = old.get(a.id);
-                        if (o != null && o.owner != null) {
-                            a.owner = o.owner; a.ownerName = o.ownerName;
-                            DormBuilder.updateApartmentSign(server.overworld(), a);
-                        }
-                    }
-                    Floor1.build(server.overworld());
-                    DormBuilder.placeForges(server.overworld(), data);
-                    data.version = 2;
-                    data.setDirty();
-                    c.getSource().sendSuccess(() -> Component.literal("Цивилизация и этаж 1 перестроены."), true);
+                    com.pvpciv.world.WorldBuild.buildAll(c.getSource().getServer(), true);
+                    c.getSource().sendSuccess(() -> Component.literal("Мир 1 перестроен: общежитие, подвал, Пепельная пустошь, Инеевый Кряж, трассы."), true);
                     return 1;
                 })));
     }

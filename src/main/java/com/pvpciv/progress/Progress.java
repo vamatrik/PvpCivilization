@@ -70,6 +70,7 @@ public final class Progress {
         hp.removeModifier(HP_ID);
         int lvl = d(p).level;
         if (lvl > 1) hp.addPermanentModifier(new AttributeModifier(HP_ID, 2.0 * (lvl - 1), AttributeModifier.Operation.ADD_VALUE));
+        Titles.apply(p);
         if (p.getHealth() > p.getMaxHealth()) p.setHealth(p.getMaxHealth());
     }
 

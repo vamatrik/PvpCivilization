@@ -19,6 +19,17 @@ public class StoryData implements INBTSerializable<CompoundTag> {
     public int forgeLvl = 1, dismLvl = 1, extraSlots = 0;
     public boolean starterFood = false;
     public CompoundTag shop = new CompoundTag();
+    // титулы
+    public java.util.Set<String> titles = new java.util.LinkedHashSet<>();
+    public String activeTitle = "";
+    // контракты Кармиллы
+    public String questKind = "";       // Mobs.Kind.name() или "ELITE"
+    public int questNeed = 0, questHave = 0, questTier = 0, questsDone = 0, jailed = 0;
+    public long questDeadline = 0, questCooldown = 0, jailUntil = 0;
+    public boolean cdFail = false;
+    // Луна
+    public boolean lunaBox = false;
+    public int lunaCaught = 0;
 
     @Override
     public CompoundTag serializeNBT(HolderLookup.Provider provider) {
@@ -38,6 +49,13 @@ public class StoryData implements INBTSerializable<CompoundTag> {
         t.putInt("extraSlots", extraSlots);
         t.putBoolean("starterFood", starterFood);
         t.put("shop", shop);
+        t.putString("titles", String.join(",", titles));
+        t.putString("activeTitle", activeTitle);
+        t.putString("questKind", questKind);
+        t.putInt("questNeed", questNeed); t.putInt("questHave", questHave); t.putInt("questTier", questTier);
+        t.putInt("questsDone", questsDone); t.putInt("jailed", jailed);
+        t.putLong("questDeadline", questDeadline); t.putLong("questCooldown", questCooldown); t.putLong("jailUntil", jailUntil);
+        t.putBoolean("lunaBox", lunaBox); t.putBoolean("cdFail", cdFail); t.putInt("lunaCaught", lunaCaught);
         return t;
     }
 
@@ -58,5 +76,13 @@ public class StoryData implements INBTSerializable<CompoundTag> {
         extraSlots = t.getInt("extraSlots");
         starterFood = t.getBoolean("starterFood");
         shop = t.getCompound("shop");
+        titles = new java.util.LinkedHashSet<>();
+        for (String x : t.getString("titles").split(",")) if (!x.isBlank()) titles.add(x);
+        activeTitle = t.getString("activeTitle");
+        questKind = t.getString("questKind");
+        questNeed = t.getInt("questNeed"); questHave = t.getInt("questHave"); questTier = t.getInt("questTier");
+        questsDone = t.getInt("questsDone"); jailed = t.getInt("jailed");
+        questDeadline = t.getLong("questDeadline"); questCooldown = t.getLong("questCooldown"); jailUntil = t.getLong("jailUntil");
+        lunaBox = t.getBoolean("lunaBox"); cdFail = t.getBoolean("cdFail"); lunaCaught = t.getInt("lunaCaught");
     }
 }

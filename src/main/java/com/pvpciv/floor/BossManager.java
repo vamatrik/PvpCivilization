@@ -50,7 +50,7 @@ public final class BossManager {
     public static int secondsLeft(MinecraftServer server) {
         if (bossId != null) return -1;
         long next = CivData.get(server).bossNext;
-        return (int) Math.max(0, (next - server.overworld().getGameTime()) / 20);
+        return (int) Math.max(0, (next - com.pvpciv.world.CivWorld.level(server).getGameTime()) / 20);
     }
 
     private static void broadcast(MinecraftServer s, String msg, ChatFormatting c) {
@@ -59,7 +59,7 @@ public final class BossManager {
     }
 
     public static void tick(MinecraftServer server) {
-        ServerLevel lvl = server.overworld();
+        ServerLevel lvl = com.pvpciv.world.CivWorld.level(server);
         CivData data = CivData.get(server);
         long now = lvl.getGameTime();
         if (data.bossNext < 0) { data.bossNext = now + 20L * 180; data.setDirty(); }
@@ -146,7 +146,7 @@ public final class BossManager {
     }
 
     public static Mob spawn(ServerLevel lvl) {
-        Zombie z = EntityType.ZOMBIE.create(lvl);
+        Zombie z = com.pvpciv.registry.ModMobs.BRUTE.get().create(lvl);
         if (z == null) return null;
         Vec3 c = Vec3.atBottomCenterOf(Floor1.LAIR);
         z.moveTo(c.x, c.y, c.z, 0, 0);
@@ -223,7 +223,7 @@ public final class BossManager {
         DAMAGE.clear();
         warned5 = warned1 = false;
         CivData data = CivData.get(server);
-        data.bossNext = server.overworld().getGameTime() + PERIOD;
+        data.bossNext = com.pvpciv.world.CivWorld.level(server).getGameTime() + PERIOD;
         data.setDirty();
     }
 
@@ -231,7 +231,7 @@ public final class BossManager {
     public static void forceSpawn(MinecraftServer server) {
         if (bossId != null) return;
         CivData d = CivData.get(server);
-        d.bossNext = server.overworld().getGameTime();
+        d.bossNext = com.pvpciv.world.CivWorld.level(server).getGameTime();
         d.setDirty();
     }
 

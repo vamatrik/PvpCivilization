@@ -37,6 +37,11 @@ public final class DormBuilder {
     public static final BlockPos ARENA_DOCK = new BlockPos(ROAD_CX, Y0, ROAD_Z1 - 3);
     public static final BlockPos ATRIUM_CENTER = new BlockPos(0, Y0, 6);
     public static final BlockPos LUNA_SPOT = new BlockPos(-4, Y0, -23);
+    /** Луна: дверь её квартиры и точки внутри. */
+    public static final BlockPos LUNA_DOOR = new BlockPos(-4, Y0, -25), LUNA_INSIDE = new BlockPos(-4, Y0, -27), LUNA_BED = new BlockPos(-5, Y0, -29),
+            LUNA_DIARY = new BlockPos(-2, Y0, -26), LUNA_BOX = new BlockPos(-2, Y0, -30);
+    public static final BlockPos ELEONORA_SPOT = new BlockPos(9, Y0 + 2 * FH, 23);
+    public static final BlockPos NORTH_DOCK = new BlockPos(ROAD_CX, Y0, -35);
 
     private static final int N = 0, E = 1, S = 2, W = 3;
     private final ServerLevel level;
@@ -112,6 +117,7 @@ public final class DormBuilder {
         b.roadAndDock();
         b.flushPanes();
         b.signs(data);
+        b.lunaRoom();
         data.built = true;
         data.version = 1;
         data.setDirty();
@@ -119,7 +125,7 @@ public final class DormBuilder {
 
     private void clear() {
         BlockState air = Blocks.AIR.defaultBlockState();
-        for (int x = -34; x <= 34; x++) for (int z = -34; z <= 40; z++) for (int y = 84; y <= 130; y++) {
+        for (int x = -34; x <= 34; x++) for (int z = -40; z <= 40; z++) for (int y = 84; y <= 130; y++) {
             BlockPos p = new BlockPos(x, y, z);
             if (!level.getBlockState(p).isAir()) level.setBlock(p, air, Block.UPDATE_CLIENTS);
         }
@@ -188,7 +194,8 @@ public final class DormBuilder {
             int seq = 1;
             for (int side = 0; side < 4; side++) for (int slot = 0; slot < SLOTS; slot++) {
                 int s = SLOT_START + slot * SLOT_W;
-                if (f == 0 && side == S && slot == 3) { exitHall(y, s); continue; }
+                if (f == 0 && side == S && slot == 3) { exitHall(S, y, s); continue; }
+                if (f == 0 && side == N && slot == 3) { exitHall(N, y, s); continue; }
                 Direction in = inward(side);
                 Direction out = in.getOpposite();
                 String npc = "";
@@ -239,8 +246,7 @@ public final class DormBuilder {
         }
     }
 
-    private void exitHall(int y, int s) {
-        int side = S;
+    private void exitHall(int side, int y, int s) {
         for (int u = s + 1; u <= s + 5; u++) for (int d = BAND_IN; d <= BAND_OUT; d++) {
             int x = wx(side, u, d), z = wz(side, u, d);
             set(x, y - 1, z, Blocks.POLISHED_DEEPSLATE);
@@ -331,6 +337,15 @@ public final class DormBuilder {
             if (edge) pane(x, Y0, z, Blocks.LIGHT_BLUE_STAINED_GLASS_PANE);
         }
         for (int x : new int[]{-3, 9}) { set(x, Y0, DOCK_Z0, Blocks.SEA_LANTERN); set(x, Y0, DOCK_Z1, Blocks.SEA_LANTERN); }
+        // северная пристань (к Ледяной Трассе)
+        for (int x = -3; x <= 9; x++) for (int z = -DOCK_Z1; z <= -DOCK_Z0; z++) {
+            set(x, Y0 - 1, z, (x + z) % 2 == 0 ? Blocks.POLISHED_DEEPSLATE : Blocks.DEEPSLATE_TILES);
+            set(x, Y0 - 2, z, Blocks.COBBLED_DEEPSLATE);
+            boolean edge = x == -3 || x == 9 || (z == -DOCK_Z1 && (x < ROAD_X0 || x > ROAD_X1));
+            if (edge) pane(x, Y0, z, Blocks.LIGHT_BLUE_STAINED_GLASS_PANE);
+        }
+        for (int x = ROAD_X0; x <= ROAD_X1; x++) set(x, Y0 - 1, -DOCK_Z1, Blocks.PACKED_ICE);
+        for (int x : new int[]{-3, 9}) { set(x, Y0, -DOCK_Z0, Blocks.SEA_LANTERN); set(x, Y0, -DOCK_Z1, Blocks.SEA_LANTERN); }
         // Ледяной Тракт
         for (int z = ROAD_Z0; z <= ROAD_Z1; z++) {
             for (int x = ROAD_X0; x <= ROAD_X1; x++) set(x, Y0 - 1, z, Blocks.PACKED_ICE);
@@ -396,6 +411,16 @@ public final class DormBuilder {
         for (int[] o : new int[][]{{2, 2}, {-2, 2}, {2, -2}, {-2, -2}}) set(cx + o[0], Y0, cz + o[1], Blocks.SOUL_LANTERN);
     }
 
+    /** Комната Луны: дневник на кафедре, шкатулка у окна, плюшевые игрушки. */
+    private void lunaRoom() {
+        level.setBlock(LUNA_DIARY, Blocks.LECTERN.defaultBlockState().setValue(LecternBlock.FACING, Direction.WEST), Block.UPDATE_ALL);
+        level.setBlock(LUNA_BOX, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.WEST), Block.UPDATE_ALL);
+        set(LUNA_BOX.getX(), Y0 + 1, LUNA_BOX.getZ(), Blocks.AIR);
+        set(-6, Y0, -27, Blocks.PINK_WOOL);
+        set(-6, Y0 + 1, -27, Blocks.PLAYER_HEAD);
+        set(-2, Y0, -28, Blocks.POTTED_ALLIUM);
+    }
+
     private void flushPanes() {
         for (int i = 0; i < paneQueue.size(); i++) level.setBlock(paneQueue.get(i), paneStates.get(i), Block.UPDATE_ALL);
         paneQueue.clear();
@@ -415,6 +440,9 @@ public final class DormBuilder {
             sign(a.sign, facing, color, "", "Кв. " + a.number, l2, "");
         }
         sign(new BlockPos(ROAD_CX, Y0 + 4, BAND_IN - 1), Direction.NORTH, DyeColor.YELLOW, "▼ ВЫХОД ▼", "Ледяной Тракт", "→ Этаж 1:", "Пепельная пустошь");
+        sign(new BlockPos(ROAD_CX, Y0 + 4, -BAND_IN + 1), Direction.SOUTH, DyeColor.LIGHT_BLUE, "▲ ВЫХОД ▲", "Ледяная Трасса", "→ Инеевый Кряж", "тир 1+, ур. 3–5");
+        set(-4, Y0 + 1, -DOCK_Z0 - 2, Blocks.SEA_LANTERN);
+        sign(new BlockPos(-3, Y0 + 1, -DOCK_Z0 - 2), Direction.EAST, DyeColor.LIGHT_BLUE, "ТРАССА", "Узко и быстро!", "Упал — Бездна", "−10% ✦");
         set(-4, Y0 + 1, DOCK_Z0 + 2, Blocks.SEA_LANTERN);
         sign(new BlockPos(-3, Y0 + 1, DOCK_Z0 + 2), Direction.EAST, DyeColor.LIGHT_BLUE, "Пристань", "Ледоруба", "Лодка: ПКМ", "по льду");
     }
@@ -422,6 +450,7 @@ public final class DormBuilder {
     /** Кузница в каждой квартире (на месте книжной полки). */
     public static void placeForges(ServerLevel level, CivData data) {
         for (CivData.Apartment a : data.apartments) {
+            if (!a.npc.isEmpty()) continue;
             int ix = Integer.signum(a.sign.getX() - a.door.getX()), iz = Integer.signum(a.sign.getZ() - a.door.getZ());
             int ux = Math.abs(iz), uz = Math.abs(ix);
             BlockPos f = a.door.offset(ux * 2 - ix, 0, uz * 2 - iz);
@@ -432,6 +461,7 @@ public final class DormBuilder {
     /** Разборочный стол в каждой квартире (на месте бочки у окна). */
     public static void placeDismantlers(ServerLevel level, CivData data) {
         for (CivData.Apartment a : data.apartments) {
+            if (!a.npc.isEmpty()) continue;
             int ix = Integer.signum(a.sign.getX() - a.door.getX()), iz = Integer.signum(a.sign.getZ() - a.door.getZ());
             int ux = Math.abs(iz), uz = Math.abs(ix);
             BlockPos f = a.door.offset(ux * 2 - ix * 5, 0, uz * 2 - iz * 5);

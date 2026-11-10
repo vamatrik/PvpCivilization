@@ -16,6 +16,7 @@ public class PvpCiv {
     public PvpCiv(IEventBus modBus) {
         ModRegistry.register(modBus);
         modBus.addListener(ModRegistry::onAttributes);
+        modBus.addListener(com.pvpciv.registry.ModMobs::onAttributes);
         modBus.addListener(Network::register);
         GameEvents.register(NeoForge.EVENT_BUS);
         if (FMLEnvironment.dist.isClient()) {

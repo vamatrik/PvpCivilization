@@ -74,7 +74,7 @@ public final class ArenaManager {
 
     public static void tick(MinecraftServer server) {
         if (!running) return;
-        ServerLevel lvl = server.overworld();
+        ServerLevel lvl = com.pvpciv.world.CivWorld.level(server);
         if (inside(lvl).isEmpty()) { fail(lvl); return; }
         if (delay > 0) {
             if (--delay == 0) spawnWave(lvl);

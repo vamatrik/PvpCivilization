@@ -50,8 +50,8 @@ public class LootTables extends SimpleJsonResourceReloadListener {
             JsonObject e = el.getAsJsonObject();
             double chance = e.has("chance") ? e.get("chance").getAsDouble() : 1.0;
             if (rnd.nextDouble() >= Math.min(1.0, chance * chanceMult)) continue;
-            if (e.has("weapons")) {
-                JsonArray ws = e.getAsJsonArray("weapons");
+            if (e.has("weapons") || e.has("gear")) {
+                JsonArray ws = e.getAsJsonArray(e.has("weapons") ? "weapons" : "gear");
                 Item it = item(ws.get(rnd.nextInt(ws.size())).getAsString());
                 if (it == Items.AIR) continue;
                 Rarity min = e.has("min_rarity") ? Rarity.valueOf(e.get("min_rarity").getAsString()) : Rarity.COMMON;

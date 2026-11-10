@@ -15,8 +15,17 @@ public final class ClientState {
     public static long shopRotationAt = 0;
     public static long zoneChangedAt = 0;
     public static com.pvpciv.net.Network.DeathInfo death = null;
+    public static String quest = "";
+    public static int questSeconds = -1, jailSeconds = -1;
+    public static java.util.Set<String> titles = new java.util.HashSet<>();
+    public static String activeTitle = "";
+    /** Катсцена: вид, начало (мс), длительность (мс), текст. */
+    public static int cineKind = 0;
+    public static long cineStart = 0, cineLen = 0;
+    public static String cineText = "";
 
     public static void reset() {
+        quest = ""; questSeconds = -1; jailSeconds = -1; cineKind = 0;
         stage = 0; objective = ""; level = 1; xp = 0; money = 0; zone = ""; zoneType = 0; bossSeconds = -1; dashReadyAt = 0;
     }
 }

@@ -18,12 +18,21 @@ import net.minecraft.world.phys.Vec3;
 /** Создание мобов с уровнем. HP = 20·1.12^(L−1), урон = 3·1.09^(L−1). */
 public final class Mobs {
     public enum Kind {
-        ASH_ZOMBIE(EntityType.ZOMBIE, "Пепельный зомби"),
-        WITHERED(EntityType.HUSK, "Иссохший"),
-        ASH_ARCHER(EntityType.SKELETON, "Пепельный лучник"),
-        ASH_SPIDER(EntityType.SPIDER, "Пепельный паук");
-        public final EntityType<? extends Mob> type; public final String title;
-        Kind(EntityType<? extends Mob> t, String n) { type = t; title = n; }
+        ASH_ZOMBIE(() -> com.pvpciv.registry.ModMobs.ASH_ZOMBIE.get(), "Пепельный зомби", "floor1_mob", 1),
+        WITHERED(() -> com.pvpciv.registry.ModMobs.WITHERED.get(), "Иссохший", "floor1_mob", 2),
+        ASH_ARCHER(() -> com.pvpciv.registry.ModMobs.ASH_ARCHER.get(), "Пепельный лучник", "floor1_mob", 2),
+        ASH_SPIDER(() -> com.pvpciv.registry.ModMobs.ASH_SPIDER.get(), "Пепельный паук", "floor1_mob", 1),
+        FROST_ZOMBIE(() -> com.pvpciv.registry.ModMobs.FROST_ZOMBIE.get(), "Обмороженный", "floor1b_mob", 3),
+        FROST_ARCHER(() -> com.pvpciv.registry.ModMobs.FROST_ARCHER.get(), "Инеевый стрелок", "floor1b_mob", 4),
+        FROST_SPIDER(() -> com.pvpciv.registry.ModMobs.FROST_SPIDER.get(), "Ледяной паук", "floor1b_mob", 4);
+        private final java.util.function.Supplier<? extends EntityType<? extends Mob>> type;
+        public final String title, loot; public final int defLevel;
+        Kind(java.util.function.Supplier<? extends EntityType<? extends Mob>> t, String n, String loot, int lvl) { type = t; title = n; this.loot = loot; defLevel = lvl; }
+        public EntityType<? extends Mob> type() { return type.get(); }
+        public static Kind of(EntityType<?> t) {
+            for (Kind k : values()) if (k.type() == t) return k;
+            return null;
+        }
     }
 
     public static int level(LivingEntity e) { return e.getData(ModRegistry.MOB_LEVEL.get()); }
@@ -39,17 +48,28 @@ public final class Mobs {
     }
 
     public static Mob spawn(ServerLevel lvl, Kind kind, int level, boolean elite, Vec3 pos, String lootTable, String tag) {
-        Mob m = kind.type.create(lvl);
+        Mob m = kind.type().create(lvl);
         if (m == null) return null;
         m.moveTo(pos.x, pos.y, pos.z, lvl.random.nextFloat() * 360, 0);
         setup(m, level, elite, (elite ? "★ " : "") + kind.title, lootTable);
         if (m instanceof Zombie z) z.getAttribute(Attributes.SPAWN_REINFORCEMENTS_CHANCE).setBaseValue(0);
-        if (kind == Kind.ASH_ARCHER) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
-        if (kind == Kind.ASH_ZOMBIE && lvl.random.nextFloat() < 0.3f) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.STONE_SHOVEL));
+        if (kind == Kind.ASH_ARCHER || kind == Kind.FROST_ARCHER) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
+        if ((kind == Kind.ASH_ZOMBIE || kind == Kind.FROST_ZOMBIE) && lvl.random.nextFloat() < 0.3f) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.STONE_SHOVEL));
         for (EquipmentSlot s : EquipmentSlot.values()) m.setDropChance(s, 0f);
         if (!tag.isEmpty()) m.addTag(tag);
         lvl.addFreshEntity(m);
         return m;
+    }
+
+    /** Моб призван командой или яйцом — выдать уровень и имя по умолчанию. */
+    public static void setupDefault(Mob m) {
+        Kind k = Kind.of(m.getType());
+        if (m.getType() == com.pvpciv.registry.ModMobs.BRUTE.get()) { setup(m, 4, false, "Гнилой Громила", "floor1_mob"); return; }
+        if (k == null) return;
+        setup(m, k.defLevel, false, k.title, k.loot);
+        if (m instanceof Zombie z) z.getAttribute(Attributes.SPAWN_REINFORCEMENTS_CHANCE).setBaseValue(0);
+        if (k == Kind.ASH_ARCHER || k == Kind.FROST_ARCHER) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
+        for (EquipmentSlot s : EquipmentSlot.values()) m.setDropChance(s, 0f);
     }
 
     public static void setup(Mob m, int level, boolean elite, String name, String lootTable) {

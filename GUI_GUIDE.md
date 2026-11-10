@@ -58,3 +58,16 @@
 - `ui.ttf` собирается `tools/make_font.py` из Alegreya Sans Medium (OFL, лицензия рядом в `font/ofl.txt`): ровные цифры, своё имя семейства.
 - Размер `11` подобран так, чтобы заглавная была 7 px, как у ванильного шрифта; строки при этом на ~25% у́же, поэтому все существующие раскладки помещаются. Высота строки по-прежнему 9–10 px.
 - Сменить шрифт: другой TTF с кириллицей → `make_font.py` → при необходимости подправить `size` и `shift` в `default.json` и пересмотреть экраны.
+
+## HD-NPC на GeckoLib (с 0.6)
+
+GeckoLib вшит в jar мода (jar-in-jar), отдельно ставить не нужно.
+
+- Модели: `assets/pvpciv/geo/<model>.geo.json`, текстуры `textures/entity/<texture>.png`, общие анимации `animations/civ_npc.animation.json`.
+- Кармилла и Элеонора перенесены из хоррор-мода (генератор `tools/npc/gen_assets.py`), Луна — `tools/npc/luna.py` (там же доп. анимации: `cross`, `drag`, `bite`, `sit`, `spread`, `sit_spread`). `python3 tools/npc/luna.py --anim` пересобирает только анимации.
+- Новый NPC: класс от `entity/GeoNpc` (`model()`, `texture()`, `idleAnim()`), регистрация в `ModRegistry`, рендер `GeoNpcRenderer::new` в `ClientInit`. Анимация с сервера: `setAnim("cross")`, пустая строка — авто (walk/idle).
+- Мобы — свои типы (`registry/ModMobs`, `entity/mob/*`), скины `textures/entity/mob/*.png` (`tools/mob_skins.py` перекрашивает пепельные в инеевые). Призыв: `/summon pvpciv:frost_zombie`.
+
+## Мир (с 0.6)
+
+Весь мир 1 живёт в своём измерении `pvpciv:world1` (`data/pvpciv/dimension/world1.json`, пустота). Сборка — `world/WorldBuild.buildAll` (версия `WorldBuild.VERSION`, поднять — мир перестроится при запуске). Локации: `floor/Floor1` (юг), `floor/FloorNorth` (север), `world/IceTrack` (трасса-сплайн по опорным точкам `CP`), `world/Basement` (подвал Кармиллы). Команды для теста: `/civ go south|north|track|basement|luna|eleonora|crypt|lair|ruins`, `/civ jail`, `/civ cd`, `/civ rebuild`.

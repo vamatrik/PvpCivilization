@@ -30,6 +30,8 @@ public final class Hud {
         Font font = mc.font;
         long now = mc.level.getGameTime();
         int w = g.guiWidth(), h = g.guiHeight();
+        if (cinematic(g, font, w, h)) return;
+        if (ClientState.jailSeconds >= 0) jail(g, font, w);
 
         if (ClientState.zoneType == 2) pvpFrame(g, w, h);
         if (!ClientState.zone.isEmpty()) {
@@ -73,6 +75,20 @@ public final class Hud {
         g.drawString(font, bt, x + 19, ny + 5, awake ? 0xFFFF7060 : s <= 60 ? Skin.WARN : Skin.DIM, false);
         ny += 20;
 
+        if (!ClientState.quest.isEmpty()) {
+            List<FormattedCharSequence> ql = font.split(Component.literal(ClientState.quest), pw - 26);
+            int qh = 8 + ql.size() * 10 + (ClientState.questSeconds >= 0 ? 10 : 0);
+            Skin.plate(g, x, ny, pw, qh);
+            g.fill(x + 2, ny + 2, x + 4, ny + qh - 2, 0xFFD23A54);
+            int ly = ny + 5;
+            for (FormattedCharSequence l : ql) { g.drawString(font, l, x + 9, ly, 0xFFF0C8D0, false); ly += 10; }
+            if (ClientState.questSeconds >= 0) {
+                int qs = ClientState.questSeconds;
+                g.drawString(font, String.format("⏳ %d:%02d", qs / 60, qs % 60), x + 9, ly, qs < 120 ? 0xFFFF6070 : Skin.DIM, false);
+            }
+            ny += qh + 3;
+        }
+
         if (ClientState.stage == 0 || now < ClientState.objectiveFlashUntil + 500) {
             List<FormattedCharSequence> lines = font.split(Component.literal(ClientState.objective), pw - 16);
             Skin.plate(g, x, ny, pw, 10 + lines.size() * 10);
@@ -81,12 +97,66 @@ public final class Hud {
         }
     }
 
+    /** Заточение у Кармиллы: крупный таймер сверху по центру. */
+    private static void jail(GuiGraphics g, Font font, int w) {
+        int s = ClientState.jailSeconds, cx = w / 2, y = 30;
+        Skin.spr(g, "header", cx - 80, y, 160, 22, 0xFFFFC0C8);
+        g.drawCenteredString(font, "ЗАТОЧЕНИЕ В ПОДВАЛЕ", cx, y + 3, 0xFFFF8090);
+        g.drawCenteredString(font, String.format("%d:%02d", s / 60, s % 60), cx, y + 12, 0xFFFFFFFF);
+    }
+
+    /** Катсцена: кинорамки, багровая виньетка, затемнение. true — HUD не рисовать. */
+    private static boolean cinematic(GuiGraphics g, Font font, int w, int h) {
+        if (ClientState.cineKind == 0) return false;
+        long t = System.currentTimeMillis() - ClientState.cineStart;
+        if (t > ClientState.cineLen) { ClientState.cineKind = 0; return false; }
+        float k = t / (float) ClientState.cineLen;
+        if (ClientState.cineKind == 1) {
+            int bar = (int) (h * 0.12f * Math.min(1, t / 400f));
+            float pulse = 0.5f + 0.5f * (float) Math.sin(t / 180.0);
+            int va = (int) (90 + 80 * pulse);
+            for (int i = 0; i < 24; i++) {
+                int a = va * (24 - i) / 24;
+                int c = (a << 24) | 0x600008;
+                g.fill(i * 3, 0, i * 3 + 3, h, c); g.fill(w - i * 3 - 3, 0, w - i * 3, h, c);
+                g.fill(0, i * 2, w, i * 2 + 2, c); g.fill(0, h - i * 2 - 2, w, h - i * 2, c);
+            }
+            g.fill(0, 0, w, bar, 0xFF000000);
+            g.fill(0, h - bar, w, h, 0xFF000000);
+            if (k > 0.62f) g.fill(0, 0, w, h, (int) (Math.min(1, (k - 0.62f) / 0.25f) * 255) << 24);
+            float ta = Math.min(1, t / 500f) * (k > 0.85f ? 0 : 1);
+            if (ta > 0.05f) {
+                g.pose().pushPose();
+                g.pose().translate(w / 2f, h - bar + bar / 2f - 6, 0);
+                g.pose().scale(1.4f, 1.4f, 1);
+                g.drawCenteredString(font, ClientState.cineText, 0, 0, Skin.alpha(0xFFFF6A7A, ta));
+                g.pose().popPose();
+            }
+        } else if (ClientState.cineKind == 2) {
+            float a = k < 0.15f ? k / 0.15f : 1 - (k - 0.15f) / 0.85f;
+            float beat = (float) Math.abs(Math.sin(t / 260.0));
+            g.fill(0, 0, w, h, ((int) (a * (110 + 70 * beat)) << 24) | 0x8A0010);
+            for (int i = 0; i < 30; i++) {
+                int c = ((int) (a * 200 * (30 - i) / 30) << 24);
+                g.fill(i * 4, 0, i * 4 + 4, h, c); g.fill(w - i * 4 - 4, 0, w - i * 4, h, c);
+            }
+        }
+        return ClientState.cineKind == 1;
+    }
+
+    /** 20 → «20», 20.5 → «20.5». */
+    private static String num(float v) {
+        float r = Math.round(v * 10) / 10f;
+        return r == Math.floor(r) ? String.valueOf((int) r) : String.format(java.util.Locale.ROOT, "%.1f", r);
+    }
+
     private static String shortZone() {
         String z = ClientState.zone;
         return z.contains("· ") ? z.substring(z.lastIndexOf("· ") + 2) : z;
     }
 
     private static void zoneBanner(GuiGraphics g, Font font, int w) {
+        if (ClientState.cineKind != 0) return;
         long d = System.currentTimeMillis() - ClientState.zoneChangedAt;
         if (ClientState.zoneChangedAt <= 0 || d > 3200) return;
         float a = d < 300 ? d / 300f : d > 2600 ? 1 - (d - 2600) / 600f : 1;
@@ -165,7 +235,7 @@ public final class Hud {
         Skin.bar(g, hx + 8, by, bw, hp / max, low ? 0xFFFF5050 : 0xFFE84858, low ? 0xFF8A1010 : 0xFF8A1828, "red");
         float abs = mc.player.getAbsorptionAmount();
         if (abs > 0) g.fill(hx + 11, by + 8, hx + 11 + Math.round((bw - 6) * Math.min(1, abs / max)), by + 10, 0xFFFFD040);
-        g.drawCenteredString(font, (int) Math.ceil(hp) + "/" + (int) max, hx + 8 + bw / 2, by + 2, 0xFFFFFFFF);
+        g.drawCenteredString(font, num(Math.min(hp, max)) + "/" + num(max), hx + 8 + bw / 2, by + 2, 0xFFFFFFFF);
         int food = mc.player.getFoodData().getFoodLevel();
         Skin.bar(g, hx + hw - 8 - bw, by, bw, food / 20f, food <= 6 ? 0xFFC87020 : 0xFFF0B040, food <= 6 ? 0xFF6A3008 : 0xFF9A5A10, "amber");
         g.drawCenteredString(font, food + "/20", hx + hw - 8 - bw / 2, by + 2, 0xFFFFFFFF);

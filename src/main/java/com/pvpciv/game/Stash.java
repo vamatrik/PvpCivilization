@@ -33,7 +33,9 @@ public final class Stash {
         }
         data.stash.put(key, now + COOLDOWN);
         data.setDirty();
-        List<ItemStack> loot = LootTables.roll("floor1_stash", lvl.random, 1.0);
+        String table = com.pvpciv.floor.FloorNorth.CRYPT_STASHES.contains(pos) || (pos.getZ() < -560 && Math.abs(pos.getX() - 3) < 10) ? "floor1b_crypt"
+                : pos.getZ() < 0 ? "floor1b_stash" : "floor1_stash";
+        List<ItemStack> loot = LootTables.roll(table, lvl.random, 1.0);
         MutableComponent msg = Component.literal("Тайник: ").withStyle(ChatFormatting.GOLD);
         boolean first = true;
         for (ItemStack st : loot) {
