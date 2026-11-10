@@ -8,6 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
 import java.util.List;
+import com.pvpciv.client.screen.Ornate;
 
 public final class Hud {
     public static void render(GuiGraphics g, DeltaTracker dt) {
@@ -64,33 +65,69 @@ public final class Hud {
             for (FormattedCharSequence l : lines) { g.drawString(font, l, x + 6, ly, 0xD8DCE6, false); ly += 10; }
         }
 
-        // свои полоски здоровья и сытости
-        if (!mc.player.isCreative() && !mc.player.isSpectator()) {
-            int cx = w / 2, barY = h - 32;
-            float hp = mc.player.getHealth(), max = mc.player.getMaxHealth();
-            com.pvpciv.client.screen.CivUi.bar(g, cx - 91, barY, 88, 8, hp / max, hp / max < 0.3f ? 0xC02828 : 0xB8303C);
-            if (mc.player.getAbsorptionAmount() > 0) g.fill(cx - 90, barY + 1, cx - 90 + (int) (86 * Math.min(1, mc.player.getAbsorptionAmount() / max)), barY + 3, 0xFFFFD040);
-            String hs = "❤ " + (int) Math.ceil(hp) + " / " + (int) max;
-            g.drawCenteredString(font, hs, cx - 47, barY - 9, 0xFFFF8A8A);
-            int food = mc.player.getFoodData().getFoodLevel();
-            com.pvpciv.client.screen.CivUi.bar(g, cx + 3, barY, 88, 8, food / 20f, food <= 6 ? 0x8A5A1A : 0xC88A2A);
-            g.drawCenteredString(font, "Сытость " + food + " / 20", cx + 47, barY - 9, food <= 6 ? 0xFFFF8040 : 0xFFE8C07A);
-            int armor = mc.player.getArmorValue();
-            if (armor > 0) g.drawString(font, "Броня " + armor, cx - 91, barY - 19, 0xFFA8C0E0, true);
+        if (!mc.player.isSpectator()) {
+            int cx = w / 2;
+            // хотбар
+            int sw = 20, gap = 22, hw = gap * 9 + 4;
+            int hx = cx - hw / 2, hy = h - 27;
+            Ornate.plate(g, hx, hy, hw, 25);
+            int sel = mc.player.getInventory().selected;
+            for (int i = 0; i < 9; i++) {
+                int sx = hx + 3 + i * gap, sy = hy + 3;
+                Ornate.slot(g, sx, sy, sw, i == sel);
+                net.minecraft.world.item.ItemStack st = mc.player.getInventory().items.get(i);
+                if (!st.isEmpty()) {
+                    if (st.getItem() instanceof com.pvpciv.item.CivWeaponItem cw) {
+                        com.pvpciv.loot.Rarity r = com.pvpciv.loot.Gear.rarity(st).ordinal() < cw.minRarity.ordinal() ? cw.minRarity : com.pvpciv.loot.Gear.rarity(st);
+                        g.fillGradient(sx + 1, sy + 12, sx + sw - 1, sy + sw - 1, 0x00000000, (0x70 << 24) | r.color);
+                    }
+                    g.renderItem(st, sx + 2, sy + 2);
+                    g.renderItemDecorations(font, st, sx + 2, sy + 2);
+                    int stars = com.pvpciv.loot.Gear.stars(st);
+                    if (stars > 0 && st.getItem() instanceof com.pvpciv.item.CivWeaponItem) {
+                        g.pose().pushPose(); g.pose().translate(0, 0, 200);
+                        g.drawString(font, "+" + stars, sx + 1, sy + 1, 0xFF000000 | com.pvpciv.loot.Gear.starColor(stars), true);
+                        g.pose().popPose();
+                    }
+                }
+                g.pose().pushPose(); g.pose().translate(0, 0, 200);
+                g.drawString(font, String.valueOf(i + 1), sx + 2, sy + sw - 9, i == sel ? 0xFFFFE08A : 0x60FFFFFF, false);
+                g.pose().popPose();
+            }
+            net.minecraft.world.item.ItemStack off = mc.player.getOffhandItem();
+            if (!off.isEmpty()) {
+                Ornate.plate(g, hx - 30, hy, 25, 25);
+                Ornate.slot(g, hx - 28, hy + 3, sw, false);
+                g.renderItem(off, hx - 26, hy + 5);
+                g.renderItemDecorations(font, off, hx - 26, hy + 5);
+            }
+            if (!mc.player.isCreative()) {
+                // полоски
+                int barW = 92, barY = hy - 14;
+                float hp = mc.player.getHealth(), max = mc.player.getMaxHealth();
+                Ornate.bar(g, hx + 5, barY, barW, 9, hp / max, hp / max < 0.3f ? 0xD01818 : 0xB82432, 0xFF3048);
+                if (mc.player.getAbsorptionAmount() > 0) g.fill(hx + 5, barY + 6, hx + 5 + (int) (barW * Math.min(1, mc.player.getAbsorptionAmount() / max)), barY + 8, 0xFFFFD040);
+                g.drawCenteredString(font, (int) Math.ceil(hp) + " / " + (int) max, hx + 5 + barW / 2, barY + 1, 0xFFFFFFFF);
+                int food = mc.player.getFoodData().getFoodLevel();
+                Ornate.bar(g, hx + hw - 5 - barW, barY, barW, 9, food / 20f, food <= 6 ? 0x9A4A10 : 0xC8841C, 0xFFB030);
+                g.drawCenteredString(font, food + " / 20", hx + hw - 5 - barW / 2, barY + 1, 0xFFFFFFFF);
+                g.drawString(font, "❤", hx - 6, barY - 10, 0xFFFF5060, true);
+                g.drawString(font, "Сытость", hx + hw - font.width("Сытость") + 4, barY - 10, 0xFFE8B060, true);
+                int armor = mc.player.getArmorValue();
+                if (armor > 0) g.drawCenteredString(font, "Броня " + armor, cx, barY - 10, 0xFFA8C0E0);
+            }
+            // слот навыка R
+            int kx = hx + hw + 6, ky = hy;
+            Ornate.plate(g, kx, ky, 25, 25);
+            Ornate.slot(g, kx + 2, ky + 3, sw, false);
+            g.drawCenteredString(font, "»", kx + 12, ky + 8, 0xFF7FDBFF);
+            g.drawString(font, "R", kx + 4, ky + 15, 0xFFFFE08A, true);
+            long left = ClientState.dashReadyAt - now;
+            if (left > 0) {
+                float cf = left / (float) com.pvpciv.game.DashSkill.COOLDOWN_TICKS;
+                g.fill(kx + 3, ky + 4 + (int) (18 * (1 - cf)), kx + 21, ky + 22, 0xB0000000);
+                g.drawCenteredString(font, String.valueOf((left + 19) / 20), kx + 12, ky + 9, 0xFFFFFFFF);
+            }
         }
-
-        // слот навыка R
-        int sx = w / 2 + 100, sy = h - 24;
-        g.fill(sx - 1, sy - 1, sx + 23, sy + 23, 0xFF7FDBFF);
-        g.fill(sx, sy, sx + 22, sy + 22, 0xE0101828);
-        g.drawString(font, "»", sx + 8, sy + 4, 0x7FDBFF, true);
-        g.drawString(font, "R", sx + 2, sy + 13, 0xFFFFFF, true);
-        long left = ClientState.dashReadyAt - now;
-        if (left > 0) {
-            float cf = left / (float) com.pvpciv.game.DashSkill.COOLDOWN_TICKS;
-            g.fill(sx, sy + (int) (22 * (1 - cf)), sx + 22, sy + 22, 0xB0000000);
-            g.drawCenteredString(font, String.valueOf((left + 19) / 20), sx + 11, sy + 7, 0xFFFFFF);
-        }
-        g.drawString(font, "Рывок", sx + 26, sy + 7, 0xAFC6D8, true);
     }
 }
