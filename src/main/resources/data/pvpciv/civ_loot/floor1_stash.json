@@ -1,0 +1,51 @@
+{
+ "entries": [
+  {
+   "item": "pvpciv:sparks",
+   "chance": 1.0,
+   "min": 3,
+   "max": 10
+  },
+  {
+   "item": "pvpciv:ash_dust",
+   "chance": 0.7,
+   "min": 1,
+   "max": 3
+  },
+  {
+   "item": "pvpciv:rusty_gear",
+   "chance": 0.6,
+   "min": 1,
+   "max": 3
+  },
+  {
+   "item": "pvpciv:charred_coin",
+   "chance": 0.25
+  },
+  {
+   "item": "pvpciv:ash_relic",
+   "chance": 0.03
+  },
+  {
+   "item": "pvpciv:star_w1",
+   "chance": 0.05
+  },
+  {
+   "weapons": [
+    "pvpciv:rusty_cleaver",
+    "pvpciv:ash_saber",
+    "pvpciv:bone_dagger",
+    "pvpciv:charred_axe"
+   ],
+   "chance": 0.03
+  },
+  {
+   "item": "pvpciv:dorm_stew",
+   "chance": 0.2
+  },
+  {
+   "item": "pvpciv:bag_buckle",
+   "chance": 0.01
+  }
+ ]
+}

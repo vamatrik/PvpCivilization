@@ -1,0 +1,5 @@
+{ "parent": "minecraft:block/cube",
+  "textures": { "particle": "minecraft:block/fletching_table_front",
+    "up": "minecraft:block/smithing_table_top", "down": "minecraft:block/oak_planks",
+    "north": "minecraft:block/fletching_table_front", "south": "minecraft:block/fletching_table_front",
+    "east": "minecraft:block/fletching_table_side", "west": "minecraft:block/fletching_table_side" } }

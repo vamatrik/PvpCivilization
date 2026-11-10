@@ -1,0 +1,48 @@
+{
+ "entries": [
+  {
+   "item": "pvpciv:sparks",
+   "chance": 1.0,
+   "min": 12,
+   "max": 25
+  },
+  {
+   "item": "minecraft:rotten_flesh",
+   "chance": 0.6,
+   "min": 1,
+   "max": 2
+  },
+  {
+   "item": "pvpciv:ash_dust",
+   "chance": 1.0,
+   "min": 2,
+   "max": 4
+  },
+  {
+   "item": "pvpciv:charred_coin",
+   "chance": 0.35
+  },
+  {
+   "item": "pvpciv:ash_relic",
+   "chance": 0.05
+  },
+  {
+   "item": "pvpciv:star_w1",
+   "chance": 0.15
+  },
+  {
+   "item": "pvpciv:blessed_star_w1",
+   "chance": 0.015
+  },
+  {
+   "weapons": [
+    "pvpciv:rusty_cleaver",
+    "pvpciv:ash_saber",
+    "pvpciv:bone_dagger",
+    "pvpciv:charred_axe"
+   ],
+   "chance": 0.15,
+   "min_rarity": "UNCOMMON"
+  }
+ ]
+}

@@ -1,0 +1,8 @@
+{ "entries": [
+  { "item": "pvpciv:sparks", "chance": 1.0, "min": 80, "max": 160 },
+  { "item": "pvpciv:ash_relic", "chance": 0.8, "min": 1, "max": 2 },
+  { "item": "pvpciv:star_w1", "chance": 1.0, "min": 2, "max": 4 },
+  { "item": "pvpciv:blessed_star_w1", "chance": 0.25 },
+  { "weapons": ["pvpciv:rusty_cleaver","pvpciv:ash_saber","pvpciv:bone_dagger","pvpciv:charred_axe"], "chance": 1.0, "min_rarity": "RARE" },
+  { "weapons": ["pvpciv:rusty_cleaver","pvpciv:ash_saber","pvpciv:bone_dagger","pvpciv:charred_axe"], "chance": 0.15, "min_rarity": "LEGENDARY" }
+] }
