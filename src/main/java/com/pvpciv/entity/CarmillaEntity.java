@@ -35,6 +35,21 @@ public class CarmillaEntity extends GeoNpc {
     private int wings = 0;
 
     public void showWings(int ticks) { wings = Math.max(wings, ticks); }
+    /** «Личная» Кармилла катсцены похищения: видна только жертве, сама исчезает. */
+    public UUID onlyFor;
+
+    public static CarmillaEntity phantom(ServerLevel lvl, ServerPlayer victim, Vec3 at) {
+        CarmillaEntity c = ModRegistry.CARMILLA.get().create(lvl);
+        if (c == null) return null;
+        c.onlyFor = victim.getUUID();
+        c.busy = 100000;
+        c.moveTo(at.x, at.y, at.z, 0, 0);
+        lvl.addFreshEntity(c);
+        return c;
+    }
+
+    @Override
+    public boolean broadcastToPlayer(ServerPlayer p) { return onlyFor == null || onlyFor.equals(p.getUUID()); }
 
     public CarmillaEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level, "Кармилла", COLOR);
@@ -46,7 +61,7 @@ public class CarmillaEntity extends GeoNpc {
 
     public static CarmillaEntity find(MinecraftServer server) {
         ServerLevel lvl = CivWorld.level(server);
-        for (var e : lvl.getAllEntities()) if (e instanceof CarmillaEntity c && c.isAlive()) return c;
+        for (var e : lvl.getAllEntities()) if (e instanceof CarmillaEntity c && c.isAlive() && c.onlyFor == null) return c;
         return null;
     }
 
@@ -54,7 +69,7 @@ public class CarmillaEntity extends GeoNpc {
         ServerLevel lvl = CivWorld.level(server);
         BlockPos spot = Basement.CARMILLA_SPOT;
         if (!lvl.areEntitiesLoaded(ChunkPos.asLong(spot))) return;
-        List<CarmillaEntity> all = lvl.getEntitiesOfClass(CarmillaEntity.class, new AABB(spot).inflate(64));
+        List<CarmillaEntity> all = lvl.getEntitiesOfClass(CarmillaEntity.class, new AABB(spot).inflate(64), c -> c.onlyFor == null);
         for (int i = 1; i < all.size(); i++) all.get(i).discard();
         if (!all.isEmpty() || find(server) != null) return;
         CarmillaEntity c = ModRegistry.CARMILLA.get().create(lvl);
@@ -67,6 +82,7 @@ public class CarmillaEntity extends GeoNpc {
     public void tick() {
         super.tick();
         if (level().isClientSide) return;
+        if (onlyFor != null) { if (tickCount > 600) discard(); return; }
         if (busy > 0) { busy--; return; }
         if (wings > 0) { wings--; setAnim(wings > 0 ? "sit_spread" : ""); }
         else if (tickCount % 400 == 200 && random.nextFloat() < 0.6f) showWings(70);
@@ -89,7 +105,7 @@ public class CarmillaEntity extends GeoNpc {
 
     @Override
     protected void onTalk(ServerPlayer p) {
-        if (busy > 0) return;
+        if (busy > 0 || onlyFor != null) return;
         UUID talker = DialogueManager.talkerOf(this);
         if (talker != null && !talker.equals(p.getUUID())) {
             Story.say(p, "Кармилла", COLOR, "Подожди, сладкий. Я занята другим должником.");
@@ -103,6 +119,7 @@ public class CarmillaEntity extends GeoNpc {
 
     @Override
     protected void onPunched(ServerPlayer p) {
+        if (onlyFor != null) return;
         String[] lines = {"Ах. Как пылко. Ещё раз — и это будет считаться приглашением.", "Ты бьёшь вампира в её же склепе? Смело. Глупо, но смело.", "Хм-м. Кровь у тебя быстрее, когда ты злишься."};
         Story.say(p, "Кармилла", COLOR, lines[random.nextInt(lines.length)]);
         level().playSound(null, blockPosition(), SoundEvents.WITCH_CELEBRATE, SoundSource.NEUTRAL, 0.8f, 0.7f);

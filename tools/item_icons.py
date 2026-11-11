@@ -179,10 +179,111 @@ def armor_layers():
             if 10 <= y <= 13 and 9 <= x <= 14: l1.putpixel((x, y), (0, 0, 0, 0))   # лицо открыто
     paint(l1, [(16, 16, 40, 32)], (90, 140, 180), (216, 200, 168))          # кираса
     paint(l1, [(40, 16, 56, 32)], (106, 154, 191), (216, 200, 168))         # наплечи
-    paint(l1, [(0, 16, 16, 32)], (74, 106, 138), (234, 250, 255))           # сапоги
+    paint(l1, [(0, 26, 16, 32), (8, 16, 12, 20)], (74, 106, 138), (234, 250, 255))   # сапоги: только низ ноги + подошва
     l1.save(os.path.join(d, 'rime_layer_1.png'))
     l2 = Image.new('RGBA', (64, 32), (0, 0, 0, 0))
-    paint(l2, [(16, 16, 40, 32), (0, 16, 16, 32)], (74, 106, 138), (216, 200, 168))
+    paint(l2, [(16, 26, 40, 32), (0, 20, 16, 26), (4, 16, 8, 20)], (74, 106, 138), (216, 200, 168))   # поножи: пояс + нога до колена
     l2.save(os.path.join(d, 'rime_layer_2.png'))
 armor_layers()
 print('ok')
+
+# ---------------------------------------------------------------- 0.7: Хранительница Склепа — перекраска иконок Громилы в лёд
+def recolor(src, dst, hue=0.56, sat=0.55, light=1.15):
+    import colorsys
+    im = Image.open(os.path.join(TEX, src + '.png')).convert('RGBA')
+    px = im.load()
+    for x in range(im.width):
+        for y in range(im.height):
+            r, g, b, a = px[x, y]
+            if a == 0: continue
+            h, l, s = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
+            r2, g2, b2 = colorsys.hls_to_rgb(hue, min(1, l * light), min(1, s * 0.4 + sat))
+            px[x, y] = (int(r2 * 255), int(g2 * 255), int(b2 * 255), a)
+    im.save(os.path.join(TEX, dst + '.png'))
+    json.dump({"parent": "minecraft:item/generated", "textures": {"layer0": "pvpciv:item/" + dst}}, open(os.path.join(MOD, dst + '.json'), 'w'))
+
+recolor('brute_crystal', 'keeper_crystal')
+recolor('brute_trophy', 'keeper_trophy')
+
+# 0.7: ядро брони и свиток закалки
+CORE = {'o': hx('101828'), 'd': hx('2a4a7a'), 'm': hx('4a8ac8'), 'l': hx('8fd8ff'), 'w': hx('f0fcff'), 'g': hx('e8c45a'), 'G': hx('9a7a2a')}
+art('armor_core', [
+    "................",
+    "......oooo......",
+    "....ooGggGoo....",
+    "...oGgddddgGo...",
+    "..oGgdmmmmdgGo..",
+    "..ogdmllllmdgo..",
+    ".oGdmlwwwwlmdGo.",
+    ".ogdmlwwwwlmdgo.",
+    ".ogdmlwwwwlmdgo.",
+    ".oGdmlwwwwlmdGo.",
+    "..ogdmllllmdgo..",
+    "..oGgdmmmmdgGo..",
+    "...oGgddddgGo...",
+    "....ooGggGoo....",
+    "......oooo......",
+    "................"], CORE)
+SCR = {'o': hx('3a2a1a'), 'p': hx('e8dcc0'), 'P': hx('c8b890'), 'r': hx('b02030'), 'i': hx('6a5a4a'), 'b': hx('4a8ac8')}
+art('temper_scroll', [
+    "................",
+    "..oooooooooo....",
+    ".oPppppppppPo...",
+    ".oPoooooooooPo..",
+    "..opppppppppo...",
+    "..opiiiiiiipo...",
+    "..oppbbbbbppo...",
+    "..opiiiiiiipo...",
+    "..opppppppppo...",
+    "..opiiiiirrpo...",
+    "..oppppprrrro...",
+    "..opppppprrro...",
+    ".oPoooooooooPo..",
+    ".oPppppppppPo...",
+    "..oooooooooo....",
+    "................"], SCR)
+
+# ---------------------------------------------------------------- 0.8: этаж 2
+for src, dst, hue, sat, light in (('brute_trophy', 'don_trophy', 0.12, 0.35, 0.9), ('brute_trophy', 'rat_king_trophy', 0.8, 0.45, 1.0),
+                                  ('rime_shard', 'neon_tube', 0.9, 0.7, 1.2), ('frozen_locket', 'gold_chain', 0.13, 0.7, 1.1),
+                                  ('armor_core', 'gas_filter', 0.28, 0.4, 1.0), ('ash_dust', 'rubber_scrap', 0.0, 0.0, 0.6),
+                                  ('brute_crystal', 'don_ring', 0.0, 0.7, 1.0), ('keeper_crystal', 'rat_crown_shard', 0.13, 0.7, 1.1),
+                                  ('rime_helmet', 'hazmat_helmet', 0.17, 0.55, 1.0), ('rime_chestplate', 'hazmat_chestplate', 0.17, 0.55, 1.0),
+                                  ('rime_leggings', 'hazmat_leggings', 0.17, 0.55, 1.0), ('rime_boots', 'hazmat_boots', 0.17, 0.55, 1.0)):
+    recolor(src, dst, hue, sat, light)
+
+def recolor_layer(src, dst, hue, sat, light):
+    import colorsys
+    d = os.path.join(ROOT, 'textures', 'models', 'armor')
+    im = Image.open(os.path.join(d, src)).convert('RGBA'); px = im.load()
+    for x in range(im.width):
+        for y in range(im.height):
+            r, g, b, a = px[x, y]
+            if a == 0: continue
+            h, l, s = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
+            r2, g2, b2 = colorsys.hls_to_rgb(hue, min(1, l * light), min(1, s * 0.4 + sat))
+            px[x, y] = (int(r2 * 255), int(g2 * 255), int(b2 * 255), a)
+    im.save(os.path.join(d, dst))
+recolor_layer('rime_layer_1.png', 'hazmat_layer_1.png', 0.17, 0.55, 1.0)
+recolor_layer('rime_layer_2.png', 'hazmat_layer_2.png', 0.17, 0.55, 1.0)
+
+PAR = {'o': hx('3a2010'), 'r': hx('e06020'), 'R': hx('a03a10'), 'w': hx('f0e8d8'), 'l': hx('8a8070'), 'b': hx('5a4a30')}
+art('parachute', [
+    "................",
+    "....oooooooo....",
+    "..oorrwwrrwwoo..",
+    ".orrrwwrrwwrrro.",
+    ".oRRRwwRRwwRRRo.",
+    "..l..l....l..l..",
+    "...l..l..l..l...",
+    "....l..ll..l....",
+    ".....l.ll.l.....",
+    "......llll......",
+    "......obbo......",
+    ".....obbbbo.....",
+    ".....obbbbo.....",
+    "......oooo......",
+    "................",
+    "................"], PAR)
+
+recolor('bag_buckle', 'smuggler_pack', 0.78, 0.55, 1.0)

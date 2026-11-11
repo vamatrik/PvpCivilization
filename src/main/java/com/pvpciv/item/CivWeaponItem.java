@@ -31,6 +31,17 @@ public class CivWeaponItem extends SwordItem {
     public final Rarity minRarity;
     /** «Тир N+» — оружие второй локации этажа: на полтира сильнее. */
     public final boolean plus;
+    /** Навык на ПКМ (у особого оружия, в основном с боссов). */
+    public com.pvpciv.game.WeaponSkills.Skill skill;
+    public CivWeaponItem skill(com.pvpciv.game.WeaponSkills.Skill s) { skill = s; return this; }
+
+    @Override
+    public net.minecraft.world.InteractionResultHolder<ItemStack> use(net.minecraft.world.level.Level lvl, net.minecraft.world.entity.player.Player p, net.minecraft.world.InteractionHand hand) {
+        ItemStack st = p.getItemInHand(hand);
+        if (skill == null || hand != net.minecraft.world.InteractionHand.MAIN_HAND) return net.minecraft.world.InteractionResultHolder.pass(st);
+        if (p instanceof net.minecraft.server.level.ServerPlayer sp) com.pvpciv.game.WeaponSkills.cast(sp, st, this);
+        return net.minecraft.world.InteractionResultHolder.sidedSuccess(st, lvl.isClientSide);
+    }
 
     public CivWeaponItem(int tier, WClass cls, Rarity minRarity, String lore) { this(tier, false, cls, minRarity, lore); }
 
@@ -43,7 +54,7 @@ public class CivWeaponItem extends SwordItem {
     public String tierName() { return tier + (plus ? "+" : ""); }
 
     public static double damage(double tier, WClass cls, Rarity r, int stars) {
-        double starMul = stars >= 11 ? 2.2 : 1 + 0.1 * stars;
+        double starMul = stars >= 11 ? 2.6 : 1 + 0.1 * stars;   // +11 — ×1.3 от +10
         return 4 * Math.pow(1.35, tier - 1) * cls.dmg * r.mult * starMul;
     }
 
@@ -89,6 +100,10 @@ public class CivWeaponItem extends SwordItem {
         int sc = Gear.starColor(Math.max(1, s));
         tip.add(Component.literal(stars.toString()).withStyle(x -> x.withColor(s > 0 ? sc : 0x555555)));
         tip.add(Component.literal(String.format("Урон: %.1f", damage(st))).withStyle(ChatFormatting.GRAY));
+        if (skill != null) {
+            tip.add(Component.literal("Навык (ПКМ): " + skill.title + " • КД " + skill.cd + " с").withStyle(ChatFormatting.GOLD));
+            tip.add(Component.literal(skill.desc).withStyle(ChatFormatting.YELLOW));
+        }
         if (!lore.isEmpty()) tip.add(Component.literal(lore).withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
         if (s < Gear.MAX_STARS) tip.add(Component.literal(String.format("Заточка до +%d: %d%%", s + 1, (int) Math.round(Gear.chance(s) * 100))).withStyle(ChatFormatting.DARK_AQUA));
     }

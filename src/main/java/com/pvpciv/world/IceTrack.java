@@ -46,7 +46,7 @@ public final class IceTrack extends Builder {
         for (int i = 0; i < PTS.size(); i++) {
             double[] p = PTS.get(i);
             double fromEnd = Math.min(i, PTS.size() - 1 - i) * 0.5;
-            p[2] = fromEnd < 26 ? 2.6 : 1.75;    // у пристани и у Кряжа шире, в середине — узко
+            p[2] = fromEnd < 26 ? 3.0 : 2.3;    // у пристани и у Кряжа шире
         }
         START = 14;
         FINISH = PTS.size() - 14;
@@ -86,8 +86,24 @@ public final class IceTrack extends Builder {
                 }
         }
         edge.removeAll(core);
+        // бортики на поворотах: где направление трассы заметно меняется
+        Set<Long> rail = new HashSet<>();
+        for (int i = 8; i < PTS.size() - 8; i++) {
+            double[] a = PTS.get(i - 8), m = PTS.get(i), c = PTS.get(i + 8);
+            double a1 = Math.atan2(m[1] - a[1], m[0] - a[0]), a2 = Math.atan2(c[1] - m[1], c[0] - m[0]);
+            double turn = Math.abs(Math.atan2(Math.sin(a2 - a1), Math.cos(a2 - a1)));
+            if (turn < (i < 150 ? 0.06 : 0.16)) continue;   // первый поворот от пристани — бортики даже на пологом
+            double hw = m[2];
+            for (int x = (int) Math.floor(m[0] - hw - 2); x <= (int) Math.ceil(m[0] + hw + 2); x++)
+                for (int z = (int) Math.floor(m[1] - hw - 2); z <= (int) Math.ceil(m[1] + hw + 2); z++) {
+                    double d = Math.hypot(x + 0.5 - m[0], z + 0.5 - m[1]);
+                    if (d > hw && d <= hw + 1.0) rail.add(BlockPos.asLong(x, 0, z));
+                }
+        }
+        rail.removeAll(core); rail.removeAll(edge);
         for (long k : edge) { BlockPos p = BlockPos.of(k); b.set(p.getX(), Y - 1, p.getZ(), Blocks.BLUE_ICE); }
         for (long k : core) { BlockPos p = BlockPos.of(k); b.set(p.getX(), Y - 1, p.getZ(), Blocks.PACKED_ICE); }
+        for (long k : rail) { BlockPos p = BlockPos.of(k); b.set(p.getX(), Y - 1, p.getZ(), Blocks.PACKED_ICE); b.set(p.getX(), Y, p.getZ(), Blocks.BLUE_ICE); }
         // подсветка снизу и сосульки
         for (int i = 0; i < PTS.size(); i += 12) {
             double[] p = PTS.get(i);
@@ -96,8 +112,9 @@ public final class IceTrack extends Builder {
             b.set(x, Y - 3, z, i % 24 == 0 ? Blocks.SEA_LANTERN : Blocks.ICE);
             if (i % 24 == 0) b.set(x, Y - 4, z, Blocks.END_ROD.defaultBlockState().setValue(EndRodBlock.FACING, Direction.DOWN));
         }
-        b.gate(START, "СТАРТ", "Ледяная Трасса", "Лодка: ПКМ по льду", "Заезд на время!");
-        b.gate(FINISH, "ФИНИШ", "Инеевый Кряж", "Этаж 1 • ур. 3–5", "Мобы сильнее!");
+        b.fixShapes();
+        b.gate(START, "СТАРТ", "Ледяная Трасса", "Садись в лодку", "Время пошло!");
+        b.gate(FINISH, "ФИНИШ", "Инеевый Кряж", "Мобы ур. 5–7", "Тир 1+");
         // клетчатые линии
         for (int idx : new int[]{START, FINISH}) {
             double[] p = PTS.get(idx);
@@ -114,7 +131,16 @@ public final class IceTrack extends Builder {
         double[] p = PTS.get(idx);
         int cx = (int) Math.floor(p[0]), cz = (int) Math.floor(p[1]);
         int w = (int) Math.ceil(p[2]) + 2;
-        for (int y = Y - 1; y <= Y + 4; y++) { set(cx - w, y, cz, Blocks.QUARTZ_PILLAR); set(cx + w, y, cz, Blocks.QUARTZ_PILLAR); }
+        // площадки под столбами — к табличкам можно подойти
+        for (int side : new int[]{-1, 1}) {
+            for (int dx = -1; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) {
+                int x = cx + side * (w + 1 - dx);
+                set(x, Y - 1, cz + dz, Blocks.PACKED_ICE);
+                set(x, Y - 2, cz + dz, Blocks.ICE);
+            }
+            set(cx + side * w, Y - 3, cz, Blocks.SEA_LANTERN);
+        }
+        for (int y = Y; y <= Y + 4; y++) { set(cx - w, y, cz, Blocks.QUARTZ_PILLAR); set(cx + w, y, cz, Blocks.QUARTZ_PILLAR); }
         for (int x = cx - w; x <= cx + w; x++) set(x, Y + 5, cz, (x - cx) % 2 == 0 ? Blocks.SEA_LANTERN : Blocks.LIGHT_BLUE_STAINED_GLASS);
         sign(new BlockPos(cx - w, Y + 2, cz + 1), Direction.SOUTH, DyeColor.LIGHT_BLUE, l1, l2, l3, l4);
         sign(new BlockPos(cx + w, Y + 2, cz - 1), Direction.NORTH, DyeColor.LIGHT_BLUE, l1, l2, l3, l4);
@@ -139,7 +165,7 @@ public final class IceTrack extends Builder {
                 r.start = -1; r.idx = idx; continue;
             }
             if (r.idx >= 0 && idx - r.idx > 40) { r.start = -1; }  // телепорт/срезка — не считается
-            if (r.start < 0 && r.idx >= 0 && r.idx < START && idx >= START) {
+            if (r.start < 0 && r.idx >= 0 && idx > r.idx && idx >= START && idx <= START + 24 && r.idx <= START + 20) {
                 r.start = now;
                 p.displayClientMessage(Component.literal("⏱ СТАРТ!").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), true);
                 lvl.playSound(null, p.blockPosition(), SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.PLAYERS, 1f, 1.6f);
@@ -153,7 +179,7 @@ public final class IceTrack extends Builder {
                             .append(Component.literal(best > 0 ? "   личный рекорд " + fmt(best) : "").withStyle(ChatFormatting.GRAY)), true);
                 }
             }
-            if (idx < r.idx - 20) r.start = -1;   // развернулся назад
+            if (r.start >= 0 && idx < r.idx - 20) r.start = -1;   // развернулся назад
             r.idx = idx;
         }
     }

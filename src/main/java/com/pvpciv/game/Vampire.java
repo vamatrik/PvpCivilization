@@ -41,38 +41,55 @@ public final class Vampire {
     public static final int C = CarmillaEntity.COLOR;
     public static final long TIME_LIMIT = 20L * 60 * 20, COOLDOWN_DONE = 20L * 60 * 45, COOLDOWN_FAIL = 20L * 60 * 30, JAIL = 20L * 60 * 3;
 
-    /** tier, kind (Mobs.Kind или ELITE), сколько, как назвать во множественном числе. */
-    public record Contract(int tier, String kind, int need, String what) {}
-    private static final List<Contract> POOL = List.of(
-            new Contract(0, "ASH_ZOMBIE", 12, "пепельных зомби"),
-            new Contract(0, "ASH_SPIDER", 10, "пепельных пауков"),
-            new Contract(1, "WITHERED", 10, "иссохших"),
-            new Contract(1, "ASH_ARCHER", 10, "пепельных лучников"),
-            new Contract(2, "FROST_ZOMBIE", 10, "обмороженных"),
-            new Contract(2, "FROST_SPIDER", 8, "ледяных пауков"),
-            new Contract(2, "FROST_ARCHER", 8, "инеевых стрелков"),
-            new Contract(3, "ELITE", 3, "элитных мобов (★)"));
-    private static final String[] TIER = {"Лёгкий", "Средний", "Сложный", "Кровавый"};
-    private static final int[] TIER_COLOR = {0xB8B8B8, 0x6FD3FF, 0xC77DFF, 0xFF5566};
+    /** Как назвать N мобов вида kind в контракте. */
+    private static String what(String kind) {
+        return switch (kind) {
+            case "ASH_ZOMBIE" -> "пепельных зомби"; case "WITHERED" -> "иссохших"; case "ASH_ARCHER" -> "пепельных лучников";
+            case "ASH_SPIDER" -> "пепельных пауков"; case "FROST_ZOMBIE" -> "обмороженных"; case "FROST_ARCHER" -> "инеевых стрелков";
+            case "FROST_SPIDER" -> "ледяных пауков"; case "ELITE" -> "элитных мобов (★)"; default -> kind;
+        };
+    }
+
+    /** Позиция контракта: вид, сколько нужно, сколько убито. Хранится строкой «KIND:need:have;…» в questKind. */
+    public record Pos(String kind, int need, int have) {}
+
+    public static List<Pos> parse(StoryData d) {
+        List<Pos> out = new ArrayList<>();
+        for (String part : d.questKind.split(";")) {
+            String[] f = part.split(":");
+            if (f.length == 3) out.add(new Pos(f[0], Integer.parseInt(f[1]), Integer.parseInt(f[2])));
+        }
+        return out;
+    }
+
+    private static void store(StoryData d, List<Pos> list) {
+        StringBuilder sb = new StringBuilder();
+        int need = 0, have = 0;
+        for (Pos x : list) { if (sb.length() > 0) sb.append(';'); sb.append(x.kind()).append(':').append(x.need()).append(':').append(x.have()); need += x.need(); have += Math.min(x.have(), x.need()); }
+        d.questKind = sb.toString(); d.questNeed = need; d.questHave = have;
+    }
+
+    private static final String[] TIER = {"Лёгкий", "Средний", "Сложный", "Кровавый", "ЭЛИТНЫЙ"};
+    private static final int[] TIER_COLOR = {0xB8B8B8, 0x6FD3FF, 0xC77DFF, 0xFF5566, 0xFFD166};
+    public static final long ELITE_CD = 20L * 60 * 60 * 8;
 
     private static long now(MinecraftServer s) { return CivWorld.level(s).getGameTime(); }
 
     // ------------------------------------------------------------------ состояние
-    public static boolean jailed(ServerPlayer p) { return Progress.d(p).jailUntil > now(p.server); }
+    /** Заточение считается по реальному времени: вышел из игры и зашёл — срок всё равно идёт. */
+    private static long real() { return System.currentTimeMillis() / 50; }
+
+    public static boolean jailed(ServerPlayer p) { return Progress.d(p).jailUntil > real(); }
     public static boolean hasQuest(StoryData d) { return !d.questKind.isEmpty(); }
     public static boolean questDone(StoryData d) { return hasQuest(d) && d.questHave >= d.questNeed; }
 
-    public static Contract contract(StoryData d) {
-        for (Contract c : POOL) if (c.kind().equals(d.questKind) && c.tier() == d.questTier) return c;
-        return null;
-    }
-
-    /** Строка для HUD-трекера: «Контракт: 5/12 пепельных зомби». */
+    /** Строки для HUD-трекера. */
     public static String hudLine(StoryData d) {
-        Contract c = contract(d);
-        if (c == null) return "";
+        if (!hasQuest(d)) return "";
         if (questDone(d)) return "Контракт выполнен — вернись к Кармилле";
-        return "Контракт: " + d.questHave + "/" + d.questNeed + " " + c.what();
+        StringBuilder sb = new StringBuilder("Контракт:");
+        for (Pos x : parse(d)) sb.append(" ").append(Math.min(x.have(), x.need())).append("/").append(x.need()).append(" ").append(what(x.kind())).append(";");
+        return sb.substring(0, sb.length() - 1);
     }
 
     public static int hudSeconds(ServerPlayer p, StoryData d) {
@@ -81,42 +98,72 @@ public final class Vampire {
     }
 
     public static int jailSeconds(ServerPlayer p) {
-        long left = Progress.d(p).jailUntil - now(p.server);
+        long left = Progress.d(p).jailUntil - real();
         return left > 0 ? (int) (left / 20) : -1;
     }
 
-    private static Contract offerFor(ServerPlayer p) {
-        int lvl = Progress.d(p).level;
-        int lo = lvl <= 2 ? 0 : lvl <= 4 ? 1 : 2, hi = lvl <= 2 ? 1 : lvl <= 4 ? 2 : 3;
-        List<Contract> ok = new ArrayList<>();
-        for (Contract c : POOL) if (c.tier() >= lo && c.tier() <= hi) ok.add(c);
-        long seed = p.getUUID().getLeastSignificantBits() ^ (now(p.server) / (20L * 60 * 10));   // предложение меняется раз в 10 минут
-        return ok.get((int) Math.floorMod(seed, ok.size()));
+    /** Виды мобов, которых игрок уже убивал (контракт — только на знакомых). */
+    private static List<String> known(StoryData d) {
+        List<String> out = new ArrayList<>();
+        for (Mobs.Kind k : Mobs.Kind.values()) if (d.kills.getInt(k.name()) > 0) out.add(k.name());
+        return out;
     }
 
-    private static String rewardText(int tier) {
-        return switch (tier) {
-            case 0 -> "100 ✦ и звезда заточки";
-            case 1 -> "180 ✦, 2 звезды и шанс 15% на благословенную";
-            case 2 -> "320 ✦, 2 звезды и шанс 60% на благословенную";
-            default -> "450 ✦ и благословенная звезда (30% — вторая)";
-        };
+    /** Предложение: 1–4 вида, всего 20–60 мобов; меняется раз в 10 минут. */
+    private static List<Pos> offerFor(ServerPlayer p) {
+        StoryData d = Progress.d(p);
+        List<String> kinds = known(d);
+        var r = net.minecraft.util.RandomSource.create(p.getUUID().getLeastSignificantBits() ^ (now(p.server) / (20L * 60 * 10)));
+        java.util.Collections.shuffle(kinds, new java.util.Random(r.nextLong()));
+        int n = 1 + r.nextInt(Math.min(4, kinds.size()));
+        int total = 20 + r.nextInt(9) * 5 + Math.min(20, d.questsDone * 2);   // 20–60, растёт с опытом
+        total = Math.min(60, Math.max(total, n * 5));
+        List<Pos> out = new ArrayList<>();
+        int left = total;
+        for (int i = 0; i < n; i++) {
+            int part = i == n - 1 ? left : Math.max(5, total / n + (r.nextInt(5) - 2));
+            left -= part;
+            out.add(new Pos(kinds.get(i), part, 0));
+        }
+        return out;
+    }
+
+    private static int tierOf(List<Pos> c) { return c.size() >= 4 ? 3 : c.size() - 1; }
+
+    private static String rewardText(List<Pos> c, boolean elite) {
+        if (elite) return "500 ✦, 2 благословенные звезды и 40% на звезду крови";
+        int n = c.size(), total = c.stream().mapToInt(Pos::need).sum();
+        return (60 + total * 6 + n * 40) + " ✦, звёзды ×" + (1 + n / 2) + ", шанс " + (n * 12) + "% на благословенную";
+    }
+
+    private static String describe(List<Pos> c) {
+        StringBuilder sb = new StringBuilder();
+        for (Pos x : c) { if (sb.length() > 0) sb.append(", "); sb.append(x.need()).append(" ").append(what(x.kind())); }
+        return sb.toString();
     }
 
     // ------------------------------------------------------------------ события
     public static void onKill(ServerPlayer p, Mob mob, boolean elite) {
         StoryData d = Progress.d(p);
-        if (!hasQuest(d) || questDone(d)) return;
         Mobs.Kind k = Mobs.Kind.of(mob.getType());
-        boolean counts = d.questKind.equals("ELITE") ? elite : k != null && k.name().equals(d.questKind);
-        if (!counts) return;
-        d.questHave++;
+        if (k != null) d.kills.putInt(k.name(), d.kills.getInt(k.name()) + 1);
+        p.setData(ModRegistry.STORY.get(), d);
+        if (!hasQuest(d) || questDone(d)) return;
+        List<Pos> list = parse(d);
+        boolean hit = false;
+        for (int i = 0; i < list.size(); i++) {
+            Pos x = list.get(i);
+            boolean counts = x.kind().equals("ELITE") ? elite : k != null && k.name().equals(x.kind());
+            if (counts && x.have() < x.need()) { list.set(i, new Pos(x.kind(), x.need(), x.have() + 1)); hit = true; break; }
+        }
+        if (!hit) return;
+        store(d, list);
         p.setData(ModRegistry.STORY.get(), d);
         if (questDone(d)) {
             d.questDeadline = 0;
-            Story.title(p, "КОНТРАКТ ВЫПОЛНЕН", "Вернись в подвал к Кармилле за наградой", C);
+            Story.title(p, "КОНТРАКТ ВЫПОЛНЕН", "Вернись в подвал к Кармилле", C);
             p.level().playSound(null, p.blockPosition(), SoundEvents.BELL_RESONATE, SoundSource.PLAYERS, 1f, 1.2f);
-        } else p.displayClientMessage(Component.literal("Контракт: " + d.questHave + "/" + d.questNeed).withStyle(s -> s.withColor(C)), true);
+        } else p.displayClientMessage(Component.literal("Контракт: " + d.questHave + "/" + d.questNeed).withStyle(s2 -> s2.withColor(C)), true);
         Story.sync(p);
     }
 
@@ -126,7 +173,7 @@ public final class Vampire {
         StoryData d = Progress.d(p);
         long now = now(p.server);
         if (d.jailUntil > 0) {
-            if (now >= d.jailUntil) release(p);
+            if (real() >= d.jailUntil) release(p);
             else if (!Basement.inCell(p.position()) && !ABDUCTING.contains(p.getUUID())) toCell(p);
             return;
         }
@@ -145,8 +192,7 @@ public final class Vampire {
             return dl.node("a", NAME, C, "Тсс. Ты отбываешь долг. Посиди, подумай о сроках. Мне нравится, как ты думаешь — громко.", opt("[Молчать]", null));
         }
         if (questDone(d)) {
-            Contract k = contract(d);
-            return dl.node("a", NAME, C, "Учуяла тебя ещё с лестницы. " + d.questNeed + " " + (k != null ? k.what() : "") + " — пахнет честной работой. Держи плату.",
+            return dl.node("a", NAME, C, "Учуяла тебя ещё с лестницы. " + d.questNeed + " голов — пахнет честной работой. Держи плату.",
                     pp -> reward(pp), opt("[Забрать награду]", null));
         }
         if (hasQuest(d)) {
@@ -157,36 +203,53 @@ public final class Vampire {
                             opt("Подожди, я…", "quit2"))
                     .node("quit2", NAME, C, "…", pp -> { clearQuest(pp); abduct(pp); }, opt("[…]", null));
         }
-        if (d.questCooldown > now) {
+        if (known(d).isEmpty()) {
+            return dl.node("a", NAME, C, "Новенький? Пахнешь общежитием, а не кровью. Сначала докажи, что умеешь убивать: сходи на этаж, поохоться — тогда и поговорим о контрактах.",
+                    opt("[Уйти]", null));
+        }
+        boolean eliteOpen = d.questsDone >= 5 && d.eliteCd <= now;
+        if (d.questCooldown > now && !eliteOpen) {
             long min = (d.questCooldown - now) / 1200 + 1;
             return dl.node("a", NAME, C, d.cdFail
                     ? "Свой долг ты уже отсидел. Новый контракт — через " + min + " мин. Ешь гранаты, у тебя бледный вид."
                     : "Ты сегодня уже был мне полезен. Приходи через " + min + " мин. И береги шею.", opt("[Уйти]", null));
         }
-        Contract k = offerFor(p);
+        List<Pos> k = offerFor(p);
+        List<Pos> ek = List.of(new Pos("ELITE", 5, 0));
         boolean first = d.questsDone == 0 && d.jailed == 0;
         String intro = first
                 ? "Новенький? В подвал общежития студенты обычно не спускаются. А те, кто спускается… становятся моими должниками. Шучу. Наполовину."
                 : "Снова ты. Соскучился по подвалу? Или по мне?";
-        dl.node("a", NAME, C, intro, opt("Кто ты такая?", first ? "who" : "offer"), opt("Есть работа?", "offer"), opt("[Уйти]", null));
+        List<DialogueManager.Opt> opts = new ArrayList<>();
+        opts.add(opt("Кто ты такая?", first ? "who" : "offer"));
+        if (d.questCooldown <= now) opts.add(opt("Есть работа?", "offer"));
+        if (eliteOpen) opts.add(opt("★ Элитный контракт", "elite"));
+        opts.add(opt("[Уйти]", null));
+        dl.node("a", NAME, C, intro, opts.toArray(new DialogueManager.Opt[0]));
         dl.node("who", NAME, C, "Кармилла. Этот подвал был моим склепом задолго до того, как сверху построили ваше общежитие. Комендант Агафья делает вид, что меня нет. Я делаю вид, что не голодна.",
                 opt("И что тебе нужно?", "deal"));
         dl.node("deal", NAME, C, "Мне скучно, а мобы на этажах мешают моим… поставкам. Я даю контракт — ты чистишь этаж и получаешь плату. Не успел — плату беру я. Кровью. Немного. Обычно.",
-                opt("Звучит честно…?", "offer"));
-        dl.node("offer", NAME, C, "Контракт «" + TIER[k.tier()] + "»: убить " + k.need() + " " + k.what() + " за 20 минут. Плата: " + rewardText(k.tier())
-                        + ". Не успеешь — я приду за тобой сама. Где бы ты ни был.",
+                opt("Звучит честно…?", d.questCooldown <= now ? "offer" : "elite"));
+        dl.node("offer", NAME, C, "Контракт «" + TIER[tierOf(k)] + "»: " + describe(k) + " за 20 минут. Плата: " + rewardText(k, false)
+                        + ". Не успеешь — я приду за тобой сама.",
                 opt("Подписываю кровью", "take"), opt("Не сегодня", "no"));
-        dl.node("take", NAME, C, "Ммм, хороший почерк. Беги. Часы уже тикают — я их слышу.", pp -> take(pp, k), opt("[Уйти]", null));
+        dl.node("take", NAME, C, "Ммм, хороший почерк. Беги. Часы уже тикают — я их слышу.", pp -> take(pp, k, false), opt("[Уйти]", null));
+        dl.node("elite", NAME, C, "Для своих у меня особая работа: 5 элитных мобов (★) за 25 минут. Плата: " + rewardText(ek, true)
+                        + ". Провалишь — посидишь у меня 10 минут. Раз в 8 часов.",
+                opt("Подписываю кровью", "etake"), opt("Не сегодня", "no"));
+        dl.node("etake", NAME, C, "Вот это я понимаю — аппетит. Иди.", pp -> take(pp, ek, true), opt("[Уйти]", null));
         dl.node("no", NAME, C, "Как скажешь. Предложение меняется каждые десять минут — как и моё настроение. Кстати, если увидишь блондинку с арбалетом на третьем этаже — передай, что я соскучилась.", opt("[Уйти]", null));
         return dl;
     }
 
-    private static void take(ServerPlayer p, Contract k) {
+    private static void take(ServerPlayer p, List<Pos> k, boolean elite) {
         StoryData d = Progress.d(p);
-        d.questKind = k.kind(); d.questTier = k.tier(); d.questNeed = k.need(); d.questHave = 0;
-        d.questDeadline = now(p.server) + TIME_LIMIT;
+        store(d, k);
+        d.questTier = elite ? 4 : tierOf(k);
+        d.questDeadline = now(p.server) + (elite ? TIME_LIMIT * 5 / 4 : TIME_LIMIT);
+        if (elite) d.eliteCd = now(p.server) + ELITE_CD;
         p.setData(ModRegistry.STORY.get(), d);
-        Story.title(p, "КОНТРАКТ", k.need() + " " + k.what() + " • 20:00", TIER_COLOR[k.tier()]);
+        Story.title(p, elite ? "ЭЛИТНЫЙ КОНТРАКТ" : "КОНТРАКТ", d.questNeed + " целей • " + (elite ? "25:00" : "20:00"), TIER_COLOR[d.questTier]);
         p.level().playSound(null, p.blockPosition(), SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1f, 0.8f);
         Story.sync(p);
     }
@@ -199,19 +262,25 @@ public final class Vampire {
 
     private static void reward(ServerPlayer p) {
         StoryData d = Progress.d(p);
-        int tier = d.questTier;
+        int tier = d.questTier, n = Math.max(1, parse(d).size()), total = d.questNeed;
+        boolean elite = tier == 4;
         clearQuest(p);
         d = Progress.d(p);
         d.questsDone++;
-        d.questCooldown = now(p.server) + COOLDOWN_DONE;
+        if (!elite) d.questCooldown = now(p.server) + COOLDOWN_DONE;
         d.cdFail = false;
         p.setData(ModRegistry.STORY.get(), d);
         var r = p.getRandom();
-        int money = switch (tier) { case 0 -> 100; case 1 -> 180; case 2 -> 320; default -> 450; };
-        int stars = tier == 0 ? 1 : tier == 3 ? 0 : 2;
-        int blessed = switch (tier) { case 1 -> r.nextFloat() < 0.15f ? 1 : 0; case 2 -> r.nextFloat() < 0.6f ? 1 : 0; case 3 -> 1 + (r.nextFloat() < 0.3f ? 1 : 0); default -> 0; };
+        int money = elite ? 500 : 60 + total * 6 + n * 40;
+        int stars = elite ? 0 : 1 + n / 2;
+        int blessed = elite ? 2 : (r.nextFloat() < 0.12f * n ? 1 : 0);
         Progress.addMoney(p, money, true);
         if (stars > 0) com.pvpciv.inv.Bag.give(p, new ItemStack(ModRegistry.STAR_W1.get(), stars));
+        if (r.nextFloat() < (elite ? 0.4f : 0.04f)) {   // звезда крови: элитный контракт ~40%, обычный 4%
+            ItemStack bs = new ItemStack(ModRegistry.BLOOD_STAR_W1.get());
+            com.pvpciv.inv.Bag.give(p, bs);
+            Story.announceRareDrop(p.level(), bs);
+        }
         if (blessed > 0) {
             ItemStack b = new ItemStack(ModRegistry.BLESSED_STAR_W1.get(), blessed);
             com.pvpciv.inv.Bag.give(p, b);
@@ -229,39 +298,67 @@ public final class Vampire {
 
     /** Катсцена: Кармилла появляется за спиной, хватает, темнота — подвал, укус, клетка. */
     public static void abduct(ServerPlayer p) {
+        boolean eliteFail = Progress.d(p).questTier == 4 && hasQuest(Progress.d(p));
+        abduct(p, eliteFail ? JAIL * 10 / 3 : JAIL, true);
+    }
+
+    /** jailTicks — сколько сидеть; dropQuest — сгорает ли контракт (для звезды крови — нет). */
+    public static void abduct(ServerPlayer p, long jailTicks, boolean dropQuest) { abduct(p, jailTicks, dropQuest, false); }
+
+    public static void abduct(ServerPlayer p, long jailTicks, boolean dropQuest, boolean blood) {
         MinecraftServer server = p.server;
         if (ABDUCTING.contains(p.getUUID())) return;
-        clearQuest(p);
+        if (dropQuest) clearQuest(p);
         ABDUCTING.add(p.getUUID());
         DialogueManager.forget(p);
         PacketDistributor.sendToPlayer(p, new Network.DialogueClose());
         if (p.isPassenger()) p.stopRiding();
         if (!CivWorld.is(p.level())) toCell(p);
         ServerLevel lvl = CivWorld.level(server);
-        CarmillaEntity c = CarmillaEntity.find(server);
-        p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 70, 10, false, false));
-        p.addEffect(new MobEffectInstance(MobEffects.JUMP, 70, 128, false, false));   // прыжок отключён
-        PacketDistributor.sendToPlayer(p, new Network.Cinematic(1, 70, "Кармилла пришла за долгом…"));
+        // 0.7: у каждой жертвы своя Кармилла (видна только ей), катсцена ~11 с; саму жертву на это время не видно
+        Vec3 look0 = p.getLookAngle().multiply(1, 0, 1);
+        final Vec3 look = look0.lengthSqr() < 1e-4 ? new Vec3(0, 0, 1) : look0.normalize();
+        Vec3 at = p.position().add(look.scale(3.2));
+        CarmillaEntity c = CarmillaEntity.phantom(lvl, p, at);
+        p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 110, 10, false, false));
+        p.addEffect(new MobEffectInstance(MobEffects.JUMP, 110, 128, false, false));   // прыжок отключён
+        p.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, 230, 0, false, false));
+        PacketDistributor.sendToPlayer(p, new Network.Cinematic(1, 110, blood ? "Звезда крови требует платы…" : "Кармилла пришла за долгом…"));
         lvl.playSound(null, p.blockPosition(), SoundEvents.WARDEN_HEARTBEAT, SoundSource.HOSTILE, 2f, 0.7f);
         if (c != null) {
-            c.busy = 140;
-            Vec3 look = p.getLookAngle().multiply(1, 0, 1).normalize();
-            Vec3 at = p.position().add(look.scale(3.0));   // прямо перед глазами — чтобы её было видно
             CarmillaEntity.puff(lvl, at);
-            c.teleportTo(at.x, p.getY(), at.z);
             c.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, p.getEyePosition());
             c.setAnim("spread");
             lvl.playSound(null, p.blockPosition(), SoundEvents.PHANTOM_BITE, SoundSource.HOSTILE, 1.5f, 0.6f);
         }
-        Story.say(p, NAME, C, "Попался.");
-        GameEvents.later(server, 22, () -> {
-            if (c != null) { c.setAnim("drag"); lvl.sendParticles(new DustParticleOptions(new Vector3f(0.7f, 0, 0.1f), 2f), p.getX(), p.getY() + 1, p.getZ(), 50, 0.5, 0.8, 0.5, 0); }
-            p.level().playSound(null, p.blockPosition(), SoundEvents.ENDER_DRAGON_FLAP, SoundSource.HOSTILE, 1.2f, 1.3f);
+        Story.say(p, NAME, C, blood ? "Звезда на крови треснула? Значит, кровь — моя." : "Попался.");
+        final Vec3 side = new Vec3(-look.z, 0, look.x);
+        GameEvents.later(server, 35, () -> {
+            if (c == null || !p.isAlive()) return;
+            Vec3 s2 = p.position().add(side.scale(2.2)).add(look.scale(1.2));
+            CarmillaEntity.puff(lvl, c.position());
+            c.teleportTo(s2.x, p.getY(), s2.z);
+            c.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, p.getEyePosition());
+            c.setAnim("cross");
+            lvl.playSound(null, p.blockPosition(), SoundEvents.BAT_AMBIENT, SoundSource.HOSTILE, 1f, 0.6f);
+            Story.say(p, NAME, C, blood ? "Ты же читал мелкий шрифт? Звезда — моя кровь. Провал — твоя." : "Двадцать минут. Ты потратил их на что угодно, кроме меня. Обидно, знаешь ли.");
         });
-        GameEvents.later(server, 52, () -> {
-            if (!p.isAlive() || p.hasDisconnected()) { ABDUCTING.remove(p.getUUID()); return; }
+        GameEvents.later(server, 70, () -> {
+            if (c == null || !p.isAlive()) return;
+            Vec3 s3 = p.position().add(look.scale(1.1));
+            c.teleportTo(s3.x, p.getY(), s3.z);
+            c.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, p.getEyePosition());
+            c.setAnim("drag");
+            p.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 60, 0, false, false));
+            lvl.sendParticles(new DustParticleOptions(new Vector3f(0.7f, 0, 0.1f), 2f), p.getX(), p.getY() + 1, p.getZ(), 60, 0.5, 0.8, 0.5, 0);
+            lvl.playSound(null, p.blockPosition(), SoundEvents.ENDER_DRAGON_FLAP, SoundSource.HOSTILE, 1.2f, 1.3f);
+            Story.say(p, NAME, C, "Не дёргайся. Пойдём вниз — там тихо и никто не мешает.");
+        });
+        GameEvents.later(server, 105, () -> {
+            if (!p.isAlive() || p.hasDisconnected()) { ABDUCTING.remove(p.getUUID()); if (c != null) c.discard(); return; }
             StoryData d = Progress.d(p);
-            d.jailUntil = now(server) + JAIL;
+            d.jailUntil = real() + jailTicks;
+            if (hasQuest(d) && d.questDeadline > 0) d.questDeadline += jailTicks;   // время в клетке не съедает контракт
             d.jailed++;
             d.questCooldown = 0;
             p.setData(ModRegistry.STORY.get(), d);
@@ -273,15 +370,27 @@ public final class Vampire {
                 c.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, p.getEyePosition());
                 c.setAnim("bite");
             }
-            PacketDistributor.sendToPlayer(p, new Network.Cinematic(2, 50, "Укус"));
+            PacketDistributor.sendToPlayer(p, new Network.Cinematic(2, 70, "Укус"));
             lvl.playSound(null, p.blockPosition(), SoundEvents.GENERIC_DRINK, SoundSource.HOSTILE, 1.5f, 0.6f);
             lvl.playSound(null, p.blockPosition(), SoundEvents.PLAYER_HURT_SWEET_BERRY_BUSH, SoundSource.PLAYERS, 1f, 0.8f);
-            p.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 120, 0, false, false));
+            p.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 160, 0, false, false));
+            p.getFoodData().setFoodLevel(0);          // выпила досуха — жизнь мёдом не покажется
+            p.getFoodData().setSaturation(0);
         });
-        GameEvents.later(server, 110, () -> {
+        GameEvents.later(server, 175, () -> {
+            if (c == null || !p.isAlive()) return;
+            c.setAnim("spread");
+            lvl.playSound(null, p.blockPosition(), SoundEvents.PHANTOM_FLAP, SoundSource.HOSTILE, 1f, 0.7f);
+            Story.say(p, NAME, C, "М-м-м… Вкусно. Даже жаль, что ты так редко опаздываешь.");
+        });
+        GameEvents.later(server, 220, () -> {
             ABDUCTING.remove(p.getUUID());
-            if (c != null) { CarmillaEntity.puff(lvl, c.position()); c.busy = 0; c.setAnim(""); }
-            Story.say(p, NAME, C, "Вкусно. Посиди тут три минутки, остынь. Дверь откроется сама — я же не зверь.");
+            if (c != null) { CarmillaEntity.puff(lvl, c.position()); c.discard(); }
+            p.removeEffect(MobEffects.INVISIBILITY);
+            long mins = Math.max(1, jailTicks / 1200);
+            Story.say(p, NAME, C, blood
+                    ? "Оружие твоё цело — я держу слово. А ты посидишь у меня " + mins + " минут. Сделка есть сделка."
+                    : "Посиди тут " + mins + " " + (mins < 5 ? "минутки" : "минут") + ", остынь. Дверь откроется сама — я же не зверь.");
             Titles.grant(p, "vampire_victim");
             Story.sync(p);
         });

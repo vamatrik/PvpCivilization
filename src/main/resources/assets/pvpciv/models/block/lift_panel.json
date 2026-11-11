@@ -1,0 +1,115 @@
+{
+ "textures": {
+  "m": "pvpciv:block/bench_steel",
+  "s": "pvpciv:block/lift_screen",
+  "particle": "pvpciv:block/bench_steel"
+ },
+ "elements": [
+  {
+   "from": [
+    5,
+    0,
+    5
+   ],
+   "to": [
+    11,
+    10,
+    11
+   ],
+   "faces": {
+    "north": {
+     "texture": "#m"
+    },
+    "south": {
+     "texture": "#m"
+    },
+    "east": {
+     "texture": "#m"
+    },
+    "west": {
+     "texture": "#m"
+    },
+    "up": {
+     "texture": "#m"
+    },
+    "down": {
+     "texture": "#m"
+    }
+   }
+  },
+  {
+   "from": [
+    2,
+    10,
+    6
+   ],
+   "to": [
+    14,
+    20,
+    10
+   ],
+   "faces": {
+    "north": {
+     "texture": "#m"
+    },
+    "south": {
+     "texture": "#m"
+    },
+    "east": {
+     "texture": "#m"
+    },
+    "west": {
+     "texture": "#m"
+    },
+    "up": {
+     "texture": "#m"
+    },
+    "down": {
+     "texture": "#m"
+    }
+   }
+  },
+  {
+   "from": [
+    3,
+    11,
+    5.6
+   ],
+   "to": [
+    13,
+    19,
+    6
+   ],
+   "faces": {
+    "north": {
+     "texture": "#s"
+    }
+   },
+   "neoforge_data": {
+    "block_light": 15,
+    "sky_light": 15
+   }
+  },
+  {
+   "from": [
+    3,
+    11,
+    10
+   ],
+   "to": [
+    13,
+    19,
+    10.4
+   ],
+   "faces": {
+    "south": {
+     "texture": "#s"
+    }
+   },
+   "neoforge_data": {
+    "block_light": 15,
+    "sky_light": 15
+   }
+  }
+ ]
+}

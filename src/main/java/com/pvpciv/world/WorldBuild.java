@@ -12,11 +12,23 @@ import java.util.Map;
 
 /** Полная сборка мира 1 в его измерении: общежитие, подвал, обе локации этажа 1, трассы. */
 public final class WorldBuild {
-    public static final int VERSION = 11;
+    public static final int VERSION = 23;
 
     /** Мелкие правки уже построенного мира (без полной перестройки). */
     public static void patch(MinecraftServer server, int from) {
         ServerLevel lvl = CivWorld.level(server);
+        if (from < 18) { buildAll(server, true); return; }
+        if (from < 19) {   // 0.7: алтарь инфузии в подвале, стол брони и домашний сундук в квартирах, табличка склепа
+            CivData d1 = CivData.get(server);
+            Basement.placeAltar(lvl);
+            DormBuilder.placeHomeStations(lvl, d1);
+            FloorNorth.cryptSign(lvl);
+        }
+        if (from < 20) { Floor1.lairSign(lvl); FloorNorth.cryptSign(lvl); }
+        if (from < 21 && from >= 19) Basement.placeAltar(lvl);
+        if (from < 22 && from >= 19) DormBuilder.placeHomeStations(lvl, CivData.get(server));   // 0.8: витрина трофеев
+        if (from < 23) { RoofBuilder.build(lvl); com.pvpciv.floor.Floor2.build(CivWorld.f2(server)); }   // 0.8: Небесный лифт и этаж 2   // 0.7.1: пьедесталы с блок-сущностями (предметы кладутся руками)   // 0.7.1: Громила раз в 20 мин, Хранительница раз в 40   // 0.6.8: соединённые решётки/заборы, повороты станций
+        if (from < 17) { CivData d0 = CivData.get(server); DormBuilder.placeForges(lvl, d0); DormBuilder.placeDismantlers(lvl, d0); }   // 0.6.7: повороты станций, сакура   // 0.6.4: лёд не тает, бортик первого поворота   // 0.7: гравий, фонари, арки трассы, бортики
         if (from < 11) Basement.rebuildThrone(lvl);
         CivData d = CivData.get(server);
         d.version = VERSION;
@@ -50,6 +62,9 @@ public final class WorldBuild {
         log.info("[PvpCiv] Floor 1 / Rime Ridge + Ice Track: {} ms", System.currentTimeMillis() - t);
         DormBuilder.placeForges(lvl, data);
         DormBuilder.placeDismantlers(lvl, data);
+        DormBuilder.placeHomeStations(lvl, data);
+        RoofBuilder.build(lvl);
+        com.pvpciv.floor.Floor2.build(CivWorld.f2(server));
         // при стройке отрываются цветы/свечи/ковры — убрать выпавшие предметы, чтобы не лагало
         java.util.List<net.minecraft.world.entity.Entity> drops = new java.util.ArrayList<>();
         for (var e : lvl.getAllEntities()) if (e instanceof net.minecraft.world.entity.item.ItemEntity) drops.add(e);

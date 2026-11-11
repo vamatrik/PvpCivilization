@@ -89,6 +89,7 @@ public class ForgeScreen extends CivScreen<ForgeMenu> {
                 boolean blessed = star.is(ModRegistry.BLESSED_STAR_W1.get());
                 if (star.isEmpty()) g.drawString(font, "Положи звезду заточки", x + 16, y + 138, Skin.DIM, false);
                 else if (blessed) g.drawString(font, "При неудаче: заточка −1", x + 16, y + 138, 0xFFC8D0E0, false);
+                else if (star.is(ModRegistry.BLOOD_STAR_W1.get())) g.drawString(font, "Неудача: подвал на 10 мин", x + 16, y + 138, 0xFFFF6A7A, false);
                 else {
                     g.fill(x + 13, y + 136, x + 159, y + 148, 0x70C01818);
                     g.drawString(font, "При неудаче: ПОЛОМКА", x + 16, y + 138, 0xFFFF8080, false);

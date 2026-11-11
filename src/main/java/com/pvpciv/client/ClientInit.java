@@ -20,6 +20,7 @@ public final class ClientInit {
 
     public static void init(IEventBus modBus) {
         modBus.addListener((RegisterKeyMappingsEvent e) -> e.register(DASH));
+        modBus.addListener((net.neoforged.neoforge.client.event.ModelEvent.RegisterAdditional e) -> e.register(StashRenderer.LID));
         modBus.addListener((net.neoforged.fml.event.lifecycle.FMLClientSetupEvent e) -> e.enqueueWork(() -> {
             for (var h : ModRegistry.ITEMS.getEntries())
                 if (h.get() instanceof com.pvpciv.item.CivWeaponItem)
@@ -29,9 +30,21 @@ public final class ClientInit {
         modBus.addListener((EntityRenderersEvent.RegisterRenderers e) -> {
             e.registerEntityRenderer(ModRegistry.GUARD.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/guard.png")));
             e.registerEntityRenderer(ModRegistry.LUNA.get(), GeoNpcRenderer::new);
+            e.registerEntityRenderer(ModRegistry.LUNA_GUIDE.get(), GeoNpcRenderer::new);
+            e.registerEntityRenderer(ModRegistry.TIMOFEY.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/timofey.png")));
+            e.registerEntityRenderer(ModRegistry.PARACHUTIST.get(), ctx -> new NpcRenderer<>(ctx, true, PvpCiv.id("textures/entity/parachutist.png")));
+            e.registerEntityRenderer(ModRegistry.PLUMBER.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/plumber.png")));
+            e.registerEntityRenderer(ModRegistry.SMUGGLER.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/smuggler.png")));
             e.registerEntityRenderer(ModRegistry.CARMILLA.get(), GeoNpcRenderer::new);
             e.registerEntityRenderer(ModRegistry.ELEONORA.get(), GeoNpcRenderer::new);
             MobRenderers.register(e);
+            e.registerEntityRenderer(com.pvpciv.registry.ModMobs.BRUTE_BOSS.get(), ctx -> new BossRenderer<>(ctx, "brute", 1f, 1.3f));
+            e.registerEntityRenderer(com.pvpciv.registry.ModMobs.KEEPER_BOSS.get(), ctx -> new BossRenderer<>(ctx, "keeper", 1.3f, 0.6f));
+            e.registerEntityRenderer(com.pvpciv.registry.ModMobs.DON_BOSS.get(), ctx -> new BossRenderer<>(ctx, "don", 1.25f, 0.6f));
+            e.registerEntityRenderer(com.pvpciv.registry.ModMobs.RAT_KING_BOSS.get(), ctx -> new BossRenderer<>(ctx, "rat_king", 1.35f, 0.8f));
+            e.registerBlockEntityRenderer(ModRegistry.STASH_BE.get(), ctx -> new StashRenderer());
+            e.registerBlockEntityRenderer(ModRegistry.PEDESTAL_BE.get(), ctx -> new PedestalRenderer());
+            e.registerBlockEntityRenderer(ModRegistry.SHOWCASE_BE.get(), ctx -> new ShowcaseRenderer());
             e.registerEntityRenderer(ModRegistry.TRADER.get(), ctx -> new NpcRenderer<>(ctx, true, PvpCiv.id("textures/entity/trader.png")));
         });
         modBus.addListener((RegisterGuiLayersEvent e) -> e.registerAbove(VanillaGuiLayers.HOTBAR, PvpCiv.id("hud"), Hud::render));
@@ -39,6 +52,9 @@ public final class ClientInit {
             e.register(ModRegistry.INV_MENU.get(), com.pvpciv.client.screen.CivInventoryScreen::new);
             e.register(ModRegistry.FORGE_MENU.get(), com.pvpciv.client.screen.ForgeScreen::new);
             e.register(ModRegistry.DISMANTLE_MENU.get(), com.pvpciv.client.screen.DismantleScreen::new);
+            e.register(ModRegistry.INFUSION_MENU.get(), com.pvpciv.client.screen.InfusionScreen::new);
+            e.register(ModRegistry.ARMOR_MENU.get(), com.pvpciv.client.screen.ArmorBenchScreen::new);
+            e.register(ModRegistry.HOME_CHEST_MENU.get(), com.pvpciv.client.screen.HomeChestScreen::new);
             e.register(ModRegistry.TRADER_MENU.get(), com.pvpciv.client.screen.TraderScreen::new);
         });
         NeoForge.EVENT_BUS.addListener((ScreenEvent.Opening e) -> {

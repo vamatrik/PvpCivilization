@@ -15,16 +15,22 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
 
-/** Создание мобов с уровнем. HP = 20·1.12^(L−1), урон = 3·1.09^(L−1). */
+/** Создание мобов с уровнем. HP = 20·1.065^(L−1), урон = 3·1.05^(L−1) (5 уровней на этаж ≈ ×1.37 за этаж). */
 public final class Mobs {
     public enum Kind {
         ASH_ZOMBIE(() -> com.pvpciv.registry.ModMobs.ASH_ZOMBIE.get(), "Пепельный зомби", "floor1_mob", 1),
         WITHERED(() -> com.pvpciv.registry.ModMobs.WITHERED.get(), "Иссохший", "floor1_mob", 2),
         ASH_ARCHER(() -> com.pvpciv.registry.ModMobs.ASH_ARCHER.get(), "Пепельный лучник", "floor1_mob", 2),
         ASH_SPIDER(() -> com.pvpciv.registry.ModMobs.ASH_SPIDER.get(), "Пепельный паук", "floor1_mob", 1),
-        FROST_ZOMBIE(() -> com.pvpciv.registry.ModMobs.FROST_ZOMBIE.get(), "Обмороженный", "floor1b_mob", 3),
-        FROST_ARCHER(() -> com.pvpciv.registry.ModMobs.FROST_ARCHER.get(), "Инеевый стрелок", "floor1b_mob", 4),
-        FROST_SPIDER(() -> com.pvpciv.registry.ModMobs.FROST_SPIDER.get(), "Ледяной паук", "floor1b_mob", 4);
+        FROST_ZOMBIE(() -> com.pvpciv.registry.ModMobs.FROST_ZOMBIE.get(), "Обмороженный", "floor1b_mob", 5),
+        FROST_ARCHER(() -> com.pvpciv.registry.ModMobs.FROST_ARCHER.get(), "Инеевый стрелок", "floor1b_mob", 6),
+        FROST_SPIDER(() -> com.pvpciv.registry.ModMobs.FROST_SPIDER.get(), "Ледяной паук", "floor1b_mob", 6),
+        POLICE(() -> com.pvpciv.registry.ModMobs.POLICE.get(), "Продажный коп", "floor2_mob", 7),
+        THUG(() -> com.pvpciv.registry.ModMobs.THUG.get(), "Гопник", "floor2_mob", 6),
+        STREET_DOG(() -> com.pvpciv.registry.ModMobs.STREET_DOG.get(), "Бешеная дворняга", "floor2_mob", 6),
+        RAT(() -> com.pvpciv.registry.ModMobs.RAT.get(), "Канализационная крыса", "floor2b_mob", 9),
+        GHOUL(() -> com.pvpciv.registry.ModMobs.GHOUL.get(), "Сточный упырь", "floor2b_mob", 9),
+        GUNNER(() -> com.pvpciv.registry.ModMobs.GUNNER.get(), "Автоматчик", "floor2b_mob", 10);
         private final java.util.function.Supplier<? extends EntityType<? extends Mob>> type;
         public final String title, loot; public final int defLevel;
         Kind(java.util.function.Supplier<? extends EntityType<? extends Mob>> t, String n, String loot, int lvl) { type = t; title = n; this.loot = loot; defLevel = lvl; }
@@ -38,8 +44,8 @@ public final class Mobs {
     public static int level(LivingEntity e) { return e.getData(ModRegistry.MOB_LEVEL.get()); }
     public static String lootKind(LivingEntity e) { return e.getData(ModRegistry.MOB_KIND.get()); }
 
-    public static double hp(int lvl) { return 20 * Math.pow(1.12, lvl - 1); }
-    public static double dmg(int lvl) { return 3 * Math.pow(1.09, lvl - 1); }
+    public static double hp(int lvl) { return 20 * Math.pow(1.065, lvl - 1); }
+    public static double dmg(int lvl) { return 3 * Math.pow(1.05, lvl - 1); }
 
     public static int levelColor(int lvl) {
         if (lvl <= 3) return 0xCFCFCF;
@@ -53,8 +59,11 @@ public final class Mobs {
         m.moveTo(pos.x, pos.y, pos.z, lvl.random.nextFloat() * 360, 0);
         setup(m, level, elite, (elite ? "★ " : "") + kind.title, lootTable);
         if (m instanceof Zombie z) z.getAttribute(Attributes.SPAWN_REINFORCEMENTS_CHANCE).setBaseValue(0);
-        if (kind == Kind.ASH_ARCHER || kind == Kind.FROST_ARCHER) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
+        if (kind == Kind.ASH_ARCHER || kind == Kind.FROST_ARCHER || kind == Kind.GUNNER) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
         if ((kind == Kind.ASH_ZOMBIE || kind == Kind.FROST_ZOMBIE) && lvl.random.nextFloat() < 0.3f) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.STONE_SHOVEL));
+        if (kind == Kind.POLICE) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ModRegistry.POLICE_BATON.get()));
+        if (kind == Kind.THUG && lvl.random.nextFloat() < 0.6f) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ModRegistry.NAIL_BAT.get()));
+        if (kind == Kind.GHOUL && lvl.random.nextFloat() < 0.4f) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ModRegistry.PIPE_WRENCH.get()));
         for (EquipmentSlot s : EquipmentSlot.values()) m.setDropChance(s, 0f);
         if (!tag.isEmpty()) m.addTag(tag);
         lvl.addFreshEntity(m);
@@ -68,7 +77,7 @@ public final class Mobs {
         if (k == null) return;
         setup(m, k.defLevel, false, k.title, k.loot);
         if (m instanceof Zombie z) z.getAttribute(Attributes.SPAWN_REINFORCEMENTS_CHANCE).setBaseValue(0);
-        if (k == Kind.ASH_ARCHER || k == Kind.FROST_ARCHER) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
+        if (k == Kind.ASH_ARCHER || k == Kind.FROST_ARCHER || k == Kind.GUNNER) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
         for (EquipmentSlot s : EquipmentSlot.values()) m.setDropChance(s, 0f);
     }
 

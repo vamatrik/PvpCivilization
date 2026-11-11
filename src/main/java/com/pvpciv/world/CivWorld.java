@@ -16,5 +16,13 @@ public final class CivWorld {
         return l != null ? l : server.overworld();
     }
 
-    public static boolean is(Level level) { return level.dimension() == WORLD1; }
+    public static boolean is(Level level) { return level.dimension() == WORLD1 || level.dimension() == F2; }
+
+    /** Этаж 2 мира 1 — отдельное измерение (небо над этажом 1). */
+    public static final ResourceKey<Level> F2 = ResourceKey.create(Registries.DIMENSION, PvpCiv.id("world1_f2"));
+    public static ServerLevel f2(MinecraftServer server) {
+        ServerLevel l = server.getLevel(F2);
+        return l != null ? l : level(server);
+    }
+    public static boolean isF2(Level level) { return level.dimension() == F2; }
 }

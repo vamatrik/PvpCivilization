@@ -11,4 +11,9 @@ public class CivZombie extends Zombie {
     @Override protected boolean convertsInWater() { return false; }
     @Override public boolean canBreakDoors() { return false; }
     @Override public boolean canPickUpLoot() { return false; }
+    /** Мобы цивилизации не дерутся между собой — цель только игрок. */
+    @Override public void setTarget(net.minecraft.world.entity.LivingEntity t) {
+        if (t != null && !(t instanceof net.minecraft.world.entity.player.Player)) return;
+        super.setTarget(t);
+    }
 }

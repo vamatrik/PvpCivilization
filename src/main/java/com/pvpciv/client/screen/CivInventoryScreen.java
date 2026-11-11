@@ -78,9 +78,11 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
         skill(g, x + 144, y + 55, "R", "Рывок", 1);
         skill(g, x + 144, y + 76, "F", "Второй навык", 8);
         skill(g, x + 144, y + 97, "V", "Третий навык", 18);
-        Skin.button(g, font, x + 142, y + 122, 60, "Титулы", mx, my, true, false);
-        Skin.button(g, font, x + 204, y + 122, 60, "Трофеи", mx, my, true, false);
-        Skin.button(g, font, x + 142, y + 142, 122, "Верстак брони", mx, my, true, false);
+        Skin.button(g, font, x + 142, y + 122, 41, "Титулы", mx, my, true, false);
+        Skin.button(g, font, x + 184, y + 122, 41, "Трофеи", mx, my, true, false);
+        Skin.button(g, font, x + 226, y + 122, 41, "Лодки", mx, my, true, false);
+        Skin.button(g, font, x + 142, y + 142, 41, "Боссы", mx, my, true, false);
+        Skin.button(g, font, x + 184, y + 142, 41, "Броня+", mx, my, true, false);
     }
 
     private void skill(GuiGraphics g, int x, int y, String key, String name, int lvl) {
@@ -142,9 +144,11 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
             if (in(mx, my, 184, 144, 80, 16)) { click(CivInventoryMenu.BTN_SORT); return true; }
         }
         if (menu.tab() == CivInventoryMenu.TAB_STATS) {
-            if (in(mx, my, 142, 122, 60, 16)) { minecraft.setScreen(new StubScreens.Titles()); return true; }
-            if (in(mx, my, 204, 122, 60, 16)) { minecraft.setScreen(new StubScreens.Trophies()); return true; }
-            if (in(mx, my, 142, 142, 122, 16)) { minecraft.setScreen(new StubScreens.ArmorBench()); return true; }
+            if (in(mx, my, 142, 122, 41, 16)) { minecraft.setScreen(new StubScreens.Titles()); return true; }
+            if (in(mx, my, 184, 122, 41, 16)) { minecraft.setScreen(new StubScreens.Trophies()); return true; }
+            if (in(mx, my, 226, 122, 41, 16)) { minecraft.setScreen(new StubScreens.Boats()); return true; }
+            if (in(mx, my, 142, 142, 41, 16)) { minecraft.setScreen(new StubScreens.Bosses()); return true; }
+            if (in(mx, my, 184, 142, 41, 16)) { minecraft.setScreen(new StubScreens.ArmorBench()); return true; }
         }
         return super.mouseClicked(mx, my, b);
     }

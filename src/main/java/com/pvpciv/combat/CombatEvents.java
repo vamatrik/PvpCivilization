@@ -41,22 +41,33 @@ public final class CombatEvents {
     }
 
     public static double resist(int deltaLevel) {
-        return Math.min(1.0, Math.max(0.0, 0.2 * (deltaLevel - 1)));
+        return Math.min(1.0, Math.max(0.0, 0.25 * (deltaLevel - 1)));   // +2 ур. — 25%, +3 — 50%, +4 — 75%, +5 и выше — иммунитет
     }
 
     private static void onIncoming(LivingIncomingDamageEvent e) {
         LivingEntity target = e.getEntity();
         if (target.level().isClientSide) return;
         Entity src = e.getSource().getEntity();
+        // в клетке Кармиллы от голода не умирают
+        if (target instanceof ServerPlayer jp && e.getSource().is(net.minecraft.world.damagesource.DamageTypes.STARVE) && com.pvpciv.game.Vampire.jailed(jp)) { e.setCanceled(true); return; }
+        // мобы цивилизации друг друга не ранят (стрела лучника в зомби и т. п.)
+        if (src instanceof net.minecraft.world.entity.Mob && !(target instanceof net.minecraft.world.entity.player.Player)
+                && Mobs.level((net.minecraft.world.entity.Mob) src) > 0 && target instanceof net.minecraft.world.entity.Mob tm && Mobs.level(tm) > 0) {
+            e.setCanceled(true);
+            return;
+        }
+        // оглушённый не атакует
+        if (src instanceof LivingEntity le && le.hasEffect(com.pvpciv.registry.ModRegistry.STUN) && e.getSource().getDirectEntity() == src) { e.setCanceled(true); return; }
+        if (src instanceof ServerPlayer hp && e.getSource().getDirectEntity() == hp) com.pvpciv.game.WeaponSkills.onHit(hp, target);
         // PvP
         if (target instanceof ServerPlayer victim && src instanceof ServerPlayer attacker && attacker != victim) {
-            Zones.Zone za = Zones.at(attacker.position()), zv = Zones.at(victim.position());
+            Zones.Zone za = Zones.at(attacker), zv = Zones.at(victim);
             if (za.type() != Zones.Type.PVP || zv.type() != Zones.Type.PVP) {
                 e.setCanceled(true);
                 attacker.displayClientMessage(Component.literal("Здесь PvP выключено").withStyle(ChatFormatting.GRAY), true);
                 return;
             }
-            e.setAmount(e.getAmount() * (float) (1 + 0.01 * (Progress.d(attacker).level - 1)));
+            e.setAmount(e.getAmount() * (float) (1 + 0.006 * (Progress.d(attacker).level - 1)));
             return;
         }
         // игрок бьёт моба с уровнем
@@ -69,14 +80,42 @@ public final class CombatEvents {
                 p.displayClientMessage(Component.literal("Враг слишком силён для тебя (+" + dl + " ур.)").withStyle(ChatFormatting.DARK_RED), true);
                 return;
             }
-            e.setAmount((float) (e.getAmount() * (1 - r) * (1 + 0.01 * (Progress.d(p).level - 1))));
+            e.setAmount((float) (e.getAmount() * (1 - r) * (1 + 0.006 * (Progress.d(p).level - 1))));
             return;
         }
         // моб с уровнем бьёт игрока
         if (target instanceof ServerPlayer p && src instanceof Mob mob && Mobs.level(mob) > 0) {
             int dl = Mobs.level(mob) - Progress.d(p).level;
-            if (dl > 0) e.setAmount((float) (e.getAmount() * (1 + 0.07 * dl)));
+            if (dl > 0) e.setAmount((float) (e.getAmount() * (1 + 0.15 * dl)));   // +15% урона за каждый уровень разницы
+            Mobs.Kind k = Mobs.Kind.of(mob.getType());
+            if (k == Mobs.Kind.FROST_ZOMBIE || k == Mobs.Kind.FROST_ARCHER || k == Mobs.Kind.FROST_SPIDER) frost(p, lvlOf(p));
         }
+    }
+
+    private static ServerLevel lvlOf(ServerPlayer p) { return p.serverLevel(); }
+
+    /** Мобы Кряжа: каждый удар — стак холода (сброс через 6 с без ударов), на 5 стаках — заморозка 1.5 с. */
+    public static void frost(ServerPlayer p, ServerLevel lvl) {
+        var t = p.getPersistentData();
+        long now = lvl.getGameTime();
+        int stacks = now - t.getLong("frostAt") > 120 ? 0 : t.getInt("frost");
+        stacks++;
+        t.putLong("frostAt", now);
+        lvl.sendParticles(net.minecraft.core.particles.ParticleTypes.SNOWFLAKE, p.getX(), p.getY() + 1, p.getZ(), 6 + stacks * 3, 0.4, 0.6, 0.4, 0.02);
+        if (stacks >= 5) {
+            stacks = 0;
+            p.setTicksFrozen(Math.max(p.getTicksFrozen(), 200));   // синяя рамка мороза
+            p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 30, 6, false, false));
+            p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.JUMP, 30, 128, false, false));
+            p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.DIG_SLOWDOWN, 30, 4, false, false));
+            lvl.playSound(null, p.blockPosition(), net.minecraft.sounds.SoundEvents.GLASS_BREAK, net.minecraft.sounds.SoundSource.PLAYERS, 1f, 0.6f);
+            lvl.sendParticles(net.minecraft.core.particles.ParticleTypes.ITEM_SNOWBALL, p.getX(), p.getY() + 1, p.getZ(), 30, 0.4, 0.8, 0.4, 0.1);
+            p.displayClientMessage(Component.literal("❄ ЗАМОРОЖЕН").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), true);
+        } else {
+            if (stacks >= 3) p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 120, 0, false, false));
+            p.displayClientMessage(Component.literal("❄ Холод " + stacks + "/5").withStyle(ChatFormatting.AQUA), true);
+        }
+        t.putInt("frost", stacks);
     }
 
     private static void onDamaged(LivingDamageEvent.Post e) {
@@ -91,6 +130,7 @@ public final class CombatEvents {
                 : Component.literal(txt).withStyle(x -> x.withColor(0xFFFFFF));
         DamageNumbers.show(lvl, target, c);
         if (target instanceof Mob mob && Mobs.level(mob) > 0) {
+            Progress.d(p).hits++;
             BossManager.recordDamage(mob, p, dmg);
             Component name = mob.getCustomName() != null ? mob.getCustomName() : mob.getName();
             p.displayClientMessage(name.copy().append(Component.literal(String.format("  ❤ %d/%d", (int) Math.ceil(Math.max(0, mob.getHealth())), (int) mob.getMaxHealth())).withStyle(ChatFormatting.RED)), true);
@@ -121,6 +161,7 @@ public final class CombatEvents {
             double mult = kind.endsWith("_elite") ? 3.0 : 1.0;
             Progress.addXp(p, Progress.xpFor(Progress.d(p).level, Mobs.level(mob), mult));
             com.pvpciv.game.Vampire.onKill(p, mob, kind.endsWith("_elite"));
+            com.pvpciv.floor.SpawnZones.onDeath(mob);
         }
     }
 

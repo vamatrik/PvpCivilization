@@ -43,6 +43,14 @@
    ],
    "chance": 0.15,
    "min_rarity": "UNCOMMON"
+  },
+  {
+   "item": "pvpciv:blood_star_w1",
+   "chance": 0.003
+  },
+  {
+   "item": "pvpciv:temper_scroll",
+   "chance": 0.02
   }
  ]
 }

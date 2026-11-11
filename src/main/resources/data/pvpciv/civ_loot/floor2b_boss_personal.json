@@ -1,0 +1,68 @@
+{
+ "entries": [
+  {
+   "item": "pvpciv:rat_crown_shard",
+   "chance": 1.0,
+   "min": 1,
+   "max": 2
+  },
+  {
+   "item": "pvpciv:sparks",
+   "chance": 1.0,
+   "min": 200,
+   "max": 340
+  },
+  {
+   "item": "pvpciv:star_w1",
+   "chance": 1.0,
+   "min": 3,
+   "max": 5
+  },
+  {
+   "item": "pvpciv:blessed_star_w1",
+   "chance": 0.3
+  },
+  {
+   "item": "pvpciv:gas_filter",
+   "chance": 1.0,
+   "min": 1,
+   "max": 2
+  },
+  {
+   "weapons": [
+    "pvpciv:rat_pipe"
+   ],
+   "chance": 0.08,
+   "min_rarity": "EPIC",
+   "mythic": true
+  },
+  {
+   "weapons": [
+    "pvpciv:pipe_wrench",
+    "pvpciv:sewer_shiv",
+    "pvpciv:rebar_sword",
+    "pvpciv:toxic_hatchet"
+   ],
+   "chance": 0.5,
+   "min_rarity": "RARE"
+  },
+  {
+   "gear": [
+    "pvpciv:hazmat_helmet",
+    "pvpciv:hazmat_chestplate",
+    "pvpciv:hazmat_leggings",
+    "pvpciv:hazmat_boots"
+   ],
+   "chance": 0.25,
+   "min_rarity": "RARE"
+  },
+  {
+   "item": "pvpciv:temper_scroll",
+   "chance": 0.5
+  },
+  {
+   "item": "pvpciv:blood_star_w1",
+   "chance": 0.08
+  }
+ ]
+}

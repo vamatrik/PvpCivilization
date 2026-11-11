@@ -18,7 +18,39 @@ public abstract class Builder {
 
     protected Builder(ServerLevel level, long seed) { this.level = level; this.rnd = RandomSource.create(seed); }
 
-    protected void set(int x, int y, int z, BlockState s) { level.setBlock(new BlockPos(x, y, z), s, Block.UPDATE_CLIENTS); }
+    protected void set(int x, int y, int z, BlockState s) {
+        // осыпающиеся блоки (гравий, песок) без опоры заменяем, иначе они падают и рвут землю
+        if (s.is(Blocks.ICE)) s = Blocks.PACKED_ICE.defaultBlockState();   // обычный лёд тает у света → вода
+        if (s.getBlock() instanceof FallingBlock && level.getBlockState(new BlockPos(x, y - 1, z)).isAir()) s = Blocks.COARSE_DIRT.defaultBlockState();
+        // стоячий фонарь без опоры — подставить столбик
+        if (s.getBlock() instanceof LanternBlock && !s.getValue(LanternBlock.HANGING) && level.getBlockState(new BlockPos(x, y - 1, z)).isAir())
+            level.setBlock(new BlockPos(x, y - 1, z), Blocks.DARK_OAK_FENCE.defaultBlockState(), Block.UPDATE_CLIENTS);
+        level.setBlock(new BlockPos(x, y, z), s, Block.UPDATE_CLIENTS);
+        if (s.getBlock() instanceof CrossCollisionBlock || s.getBlock() instanceof WallBlock) connect.add(new BlockPos(x, y, z));
+    }
+
+    /** Решётки, заборы, стены и панели — соединить с соседями (при стройке они ставятся «голыми»). */
+    private final java.util.List<BlockPos> connect = new java.util.ArrayList<>();
+
+    /** То же для целой области (для построек вне Builder). */
+    public static void fixArea(ServerLevel level, int x0, int x1, int y0, int y1, int z0, int z1) {
+        for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) for (int y = y0; y <= y1; y++) {
+            BlockPos p = new BlockPos(x, y, z);
+            BlockState st = level.getBlockState(p);
+            if (!(st.getBlock() instanceof CrossCollisionBlock || st.getBlock() instanceof WallBlock)) continue;
+            BlockState upd = Block.updateFromNeighbourShapes(st, level, p);
+            if (upd != st) level.setBlock(p, upd, Block.UPDATE_CLIENTS);
+        }
+    }
+
+    public void fixShapes() {
+        for (BlockPos p : connect) {
+            BlockState st = level.getBlockState(p);
+            BlockState upd = Block.updateFromNeighbourShapes(st, level, p);
+            if (upd != st) level.setBlock(p, upd, Block.UPDATE_CLIENTS);
+        }
+        connect.clear();
+    }
     protected void set(int x, int y, int z, Block b) { set(x, y, z, b.defaultBlockState()); }
     protected void setLit(int x, int y, int z, BlockState s) { level.setBlock(new BlockPos(x, y, z), s, Block.UPDATE_ALL); }
     protected Block pick(Block... b) { return b[rnd.nextInt(b.length)]; }

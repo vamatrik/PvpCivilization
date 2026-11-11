@@ -78,7 +78,7 @@ public class ApartmentDoorBlock extends DoorBlock {
         if (lowState.is(this)) {
             net.minecraft.core.Direction f = lowState.getValue(FACING);
             double dot = (player.getX() - (low.getX() + 0.5)) * f.getStepX() + (player.getZ() - (low.getZ() + 0.5)) * f.getStepZ();
-            if (dot < -0.4) {
+            if (dot > 0.4) {   // FACING двери смотрит внутрь квартиры
                 if (!level.isClientSide && !lowState.getValue(OPEN)) {
                     level.playSound(null, pos, SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.BLOCKS, 0.6f, 1.6f);
                     this.setOpen(player, level, lowState, low, true);
@@ -96,6 +96,10 @@ public class ApartmentDoorBlock extends DoorBlock {
 
     @Override
     protected void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
+        if (state.is(this) && state.getValue(HALF) == DoubleBlockHalf.LOWER && state.getValue(OPEN) && com.pvpciv.entity.GuardEntity.holds(pos)) {
+            level.scheduleTick(pos, this, 40);   // охранник ещё в дверях
+            return;
+        }
         if (state.is(this) && state.getValue(HALF) == DoubleBlockHalf.LOWER && state.getValue(OPEN)) {
             this.setOpen(null, level, state, pos, false);
         }

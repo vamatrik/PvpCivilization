@@ -66,14 +66,18 @@ public final class Hud {
         g.drawString(font, Skin.fit(font, shortZone(), pw - 26), x + 17, y + 30, ClientState.zoneType == 2 ? 0xFFFF8080 : Skin.TEXT, false);
 
         int ny = y + 46;
-        boolean awake = ClientState.bossSeconds < 0;
-        Skin.plate(g, x, ny, pw, 17);
-        if (awake) g.fill(x + 2, ny + 2, x + pw - 2, ny + 15, (0x50 + (int) (0x30 * Math.sin(System.currentTimeMillis() / 250.0))) << 24 | 0xC01010);
-        Skin.icon(g, "skull", x + 4, ny + 2);
-        int s = ClientState.bossSeconds;
-        String bt = awake ? "Громила проснулся!" : s == 0 ? "Громила ждёт" : String.format("Громила: %d:%02d", s / 60, s % 60);
-        g.drawString(font, bt, x + 19, ny + 5, awake ? 0xFFFF7060 : s <= 60 ? Skin.WARN : Skin.DIM, false);
-        ny += 20;
+        for (String[] bd : new String[][]{{"brute", "Громила"}, {"keeper", "Хранительница"}, {"don", "Дон"}, {"rat_king", "Крысиный король"}}) {
+            if (!ClientState.pinned(bd[0])) continue;
+            int s = ClientState.bossSeconds(bd[0]);
+            boolean awake = s < 0;
+            Skin.plate(g, x, ny, pw, 17);
+            if (awake) g.fill(x + 2, ny + 2, x + pw - 2, ny + 15, (0x50 + (int) (0x30 * Math.sin(System.currentTimeMillis() / 250.0))) << 24 | (bd[0].equals("keeper") ? 0x1060C0 : 0xC01010));
+            Skin.icon(g, "skull", x + 4, ny + 2);
+            String bt = awake ? bd[1] + (bd[0].equals("keeper") ? " проснулась!" : " проснулся!")
+                    : s == 0 ? bd[1] + " ждёт" : String.format("%s: %d:%02d", bd[1], s / 60, s % 60);
+            g.drawString(font, Skin.fit(font, bt, pw - 24), x + 19, ny + 5, awake ? (bd[0].equals("keeper") ? 0xFF80D0FF : 0xFFFF7060) : s <= 60 ? Skin.WARN : Skin.DIM, false);
+            ny += 20;
+        }
 
         if (!ClientState.quest.isEmpty()) {
             List<FormattedCharSequence> ql = font.split(Component.literal(ClientState.quest), pw - 26);
@@ -132,6 +136,38 @@ public final class Hud {
                 g.drawCenteredString(font, ClientState.cineText, 0, 0, Skin.alpha(0xFFFF6A7A, ta));
                 g.pose().popPose();
             }
+        } else if (ClientState.cineKind == 3) {   // Небесный лифт: подъём, затемнение, титр этажа
+            int bar = (int) (h * 0.1f);
+            if (k < 0.5f) {
+                float sk = k / 0.5f;
+                g.fillGradient(0, 0, w, h, ((int) (sk * 160) << 24) | 0x0A1840, ((int) (sk * 120) << 24) | 0x40A0E0);
+                for (int i = 0; i < 40; i++) {
+                    int x = (i * 97) % w, len = 20 + (i * 31) % 50;
+                    int y = (int) ((t * (0.6 + (i % 5) * 0.15) + i * 53) % (h + len)) - len;
+                    g.fill(x, y, x + 1, y + len, 0x60FFFFFF);
+                }
+            }
+            float black = k < 0.38f ? 0 : k < 0.5f ? (k - 0.38f) / 0.12f : k < 0.62f ? 1 : Math.max(0, 1 - (k - 0.62f) / 0.18f);
+            if (black > 0) g.fill(0, 0, w, h, ((int) (black * 255)) << 24);
+            g.fill(0, 0, w, bar, 0xFF000000);
+            g.fill(0, h - bar, w, h, 0xFF000000);
+            String[] lines = ClientState.cineText.split("\\n");
+            float ta = k < 0.55f ? 0 : k < 0.65f ? (k - 0.55f) / 0.1f : k > 0.92f ? (1 - k) / 0.08f : 1;
+            if (ta > 0.05f) {
+                g.pose().pushPose();
+                g.pose().translate(w / 2f, h / 2f - 20, 0);
+                g.pose().scale(3f, 3f, 1);
+                g.drawCenteredString(font, lines[0], 0, 0, Skin.alpha(0xFFFFE08A, ta));
+                g.pose().popPose();
+                if (lines.length > 1) {
+                    g.pose().pushPose();
+                    g.pose().translate(w / 2f, h / 2f + 14, 0);
+                    g.pose().scale(1.5f, 1.5f, 1);
+                    g.drawCenteredString(font, lines[1], 0, 0, Skin.alpha(0xFF8FE3FF, ta));
+                    g.pose().popPose();
+                }
+            }
+            return true;
         } else if (ClientState.cineKind == 2) {
             float a = k < 0.15f ? k / 0.15f : 1 - (k - 0.15f) / 0.85f;
             float beat = (float) Math.abs(Math.sin(t / 260.0));
@@ -205,7 +241,27 @@ public final class Hud {
         }
         // навыки
         int kx = hx + hw + 4;
-        Skin.plate(g, kx, hy, 70, 28);
+        ItemStack main = mc.player.getMainHandItem();
+        boolean wskill = main.getItem() instanceof com.pvpciv.item.CivWeaponItem cw && cw.skill != null;
+        Skin.plate(g, kx, hy, wskill ? 92 : 70, 28);
+        if (wskill) {
+            int ix = kx + 7 + 3 * 20 + 2, iy = hy + 6;
+            Skin.slot(g, ix, iy);
+            g.renderItem(main, ix, iy);
+            float cf = mc.player.getCooldowns().getCooldownPercent(main.getItem(), 0);
+            if (cf > 0) {
+                g.pose().pushPose(); g.pose().translate(0, 0, 200);
+                g.fill(ix, iy + Math.round(16 * (1 - cf)), ix + 16, iy + 16, 0xC0000000);
+                int secs = Math.round(cf * ((com.pvpciv.item.CivWeaponItem) main.getItem()).skill.cd);
+                g.drawCenteredString(font, String.valueOf(Math.max(1, secs)), ix + 8, iy + 4, 0xFFFFFFFF);
+                g.pose().popPose();
+            } else Skin.glow(g, ix + 8, iy + 8, 11, 0x30FFD060);
+            g.pose().pushPose();
+            g.pose().translate(ix + 6, iy + 10, 210);
+            g.pose().scale(0.75f, 0.75f, 1);
+            g.drawString(font, "ПКМ", 0, 0, Skin.GOLD_L, true);
+            g.pose().popPose();
+        }
         for (int i = 0; i < 3; i++) {
             int ix = kx + 7 + i * 20, iy = hy + 6;
             boolean open = ClientState.level >= SKILL_LEVELS[i];

@@ -81,6 +81,12 @@ public final class ArenaManager {
             return;
         }
         mobs.removeIf(id -> { Entity e = lvl.getEntity(id); return e == null || !e.isAlive(); });
+        // пауки лезут на стены арены — вернуть на песок
+        for (UUID id : mobs) if (lvl.getEntity(id) instanceof Mob m && (m.getY() > Floor1.Y + 2.5 || m.position().distanceTo(center()) > 18.5)) {
+            Vec3 c = center();
+            m.teleportTo(c.x + (m.getRandom().nextDouble() - 0.5) * 10, Floor1.Y, c.z + (m.getRandom().nextDouble() - 0.5) * 10);
+            lvl.sendParticles(ParticleTypes.POOF, m.getX(), m.getY() + 0.5, m.getZ(), 8, 0.3, 0.3, 0.3, 0.02);
+        }
         if (mobs.isEmpty()) {
             wave++;
             if (wave >= 3) { win(lvl); return; }
@@ -100,16 +106,16 @@ public final class ArenaManager {
     private static void spawnWave(ServerLevel lvl) {
         int players = Math.max(1, inside(lvl).size());
         if (wave == 0) for (int i = 0; i < 3 + players; i++)
-            add(Mobs.spawn(lvl, i % 2 == 0 ? Mobs.Kind.ASH_ZOMBIE : Mobs.Kind.WITHERED, 2, false, ring(lvl), "floor1_dungeon", "civ_dungeon"));
+            add(Mobs.spawn(lvl, i % 2 == 0 ? Mobs.Kind.ASH_ZOMBIE : Mobs.Kind.WITHERED, 2 + lvl.random.nextInt(2), false, ring(lvl), "floor1_dungeon", "civ_dungeon"));
         if (wave == 1) for (int i = 0; i < 4 + players; i++) {
             Mobs.Kind k = switch (i % 3) { case 0 -> Mobs.Kind.ASH_ARCHER; case 1 -> Mobs.Kind.ASH_SPIDER; default -> Mobs.Kind.WITHERED; };
-            add(Mobs.spawn(lvl, k, 2 + lvl.random.nextInt(2), false, ring(lvl), "floor1_dungeon", "civ_dungeon"));
+            add(Mobs.spawn(lvl, k, 3 + lvl.random.nextInt(2), false, ring(lvl), "floor1_dungeon", "civ_dungeon"));
         }
         if (wave == 2) {
-            for (int i = 0; i < 1 + players; i++) add(Mobs.spawn(lvl, Mobs.Kind.ASH_ZOMBIE, 3, true, ring(lvl), "floor1_mob", "civ_dungeon"));
-            Mob boss = Mobs.spawn(lvl, Mobs.Kind.WITHERED, 4, true, center().add(0, 0, 8), "floor1_mob", "civ_dungeon");
+            for (int i = 0; i < 1 + players; i++) add(Mobs.spawn(lvl, Mobs.Kind.ASH_ZOMBIE, 4, true, ring(lvl), "floor1_mob", "civ_dungeon"));
+            Mob boss = Mobs.spawn(lvl, Mobs.Kind.WITHERED, 5, true, center().add(0, 0, 8), "floor1_mob", "civ_dungeon");
             if (boss != null) {
-                Mobs.setup(boss, 4, true, "Пепельный надзиратель", "floor1_mob");
+                Mobs.setup(boss, 5, true, "Пепельный надзиратель", "floor1_mob");
                 boss.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.SCALE).setBaseValue(1.5);
                 add(boss);
             }

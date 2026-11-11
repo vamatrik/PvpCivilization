@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * Этаж 1, локация 2 «Инеевый Кряж» (тир 1+) — к северу от общежития, в конце Ледяной Трассы.
- * Мобы 3–5 уровня, броня, оружие 1+, лодка тира 2. Застава, Замёрзшее озеро, Ледяные Шпили, Снежные руины,
+ * Мобы 5–7 уровня, броня, оружие 1+, лодка тира 2. Застава, Замёрзшее озеро, Ледяные Шпили, Снежные руины,
  * Хвойное кладбище и Ледяной Склеп (PvP-зона с элитной стражей).
  */
 public final class FloorNorth extends Builder {
@@ -35,13 +35,13 @@ public final class FloorNorth extends Builder {
             new Floor1.Area("Хвойное кладбище", PINES, 26));
 
     public static final List<SpawnZones.Zone> ZONES = List.of(
-            new SpawnZones.Zone("f1b_gate", new BlockPos(3, Y, -432), 15, 3, 3, 3, Mobs.Kind.FROST_ZOMBIE, Mobs.Kind.FROST_SPIDER),
-            new SpawnZones.Zone("f1b_lake", LAKE, 18, 3, 3, 4, Mobs.Kind.FROST_ZOMBIE, Mobs.Kind.FROST_ARCHER),
-            new SpawnZones.Zone("f1b_spires", SPIRES, 20, 3, 3, 4, Mobs.Kind.FROST_SPIDER, Mobs.Kind.FROST_ZOMBIE),
-            new SpawnZones.Zone("f1b_mid", new BlockPos(3, Y, -500), 18, 4, 4, 4, Mobs.Kind.FROST_ARCHER, Mobs.Kind.FROST_ZOMBIE, Mobs.Kind.FROST_SPIDER),
-            new SpawnZones.Zone("f1b_pines", PINES, 20, 3, 4, 5, Mobs.Kind.FROST_ARCHER, Mobs.Kind.FROST_SPIDER),
-            new SpawnZones.Zone("f1b_ruins", SNOW_RUINS, 20, 3, 4, 5, Mobs.Kind.FROST_ZOMBIE, Mobs.Kind.FROST_ARCHER),
-            new SpawnZones.Zone("f1b_crypt", CRYPT, 9, 3, 5, 5, 0.35f, Mobs.Kind.FROST_ZOMBIE, Mobs.Kind.FROST_ARCHER));
+            new SpawnZones.Zone("f1b_gate", new BlockPos(3, Y, -432), 15, 3, 5, 5, Mobs.Kind.FROST_ZOMBIE, Mobs.Kind.FROST_SPIDER),
+            new SpawnZones.Zone("f1b_lake", LAKE, 18, 3, 5, 6, Mobs.Kind.FROST_ZOMBIE, Mobs.Kind.FROST_ARCHER),
+            new SpawnZones.Zone("f1b_spires", SPIRES, 20, 3, 5, 6, Mobs.Kind.FROST_SPIDER, Mobs.Kind.FROST_ZOMBIE),
+            new SpawnZones.Zone("f1b_mid", new BlockPos(3, Y, -500), 18, 4, 6, 6, Mobs.Kind.FROST_ARCHER, Mobs.Kind.FROST_ZOMBIE, Mobs.Kind.FROST_SPIDER),
+            new SpawnZones.Zone("f1b_pines", PINES, 20, 3, 6, 7, Mobs.Kind.FROST_ARCHER, Mobs.Kind.FROST_SPIDER),
+            new SpawnZones.Zone("f1b_ruins", SNOW_RUINS, 20, 3, 6, 7, Mobs.Kind.FROST_ZOMBIE, Mobs.Kind.FROST_ARCHER),
+            new SpawnZones.Zone("f1b_crypt", CRYPT, 9, 2, 6, 7, 0f, Mobs.Kind.FROST_ZOMBIE, Mobs.Kind.FROST_ARCHER));
 
     private FloorNorth(ServerLevel l) { super(l, 9191L); }
 
@@ -85,6 +85,7 @@ public final class FloorNorth extends Builder {
         b.pines();
         b.crypt();
         b.decor();
+        b.fixShapes();
     }
 
     private void terrain() {
@@ -135,7 +136,7 @@ public final class FloorNorth extends Builder {
         set(cx + 4, Y, cz - 2, Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.EAST));
         set(cx - 6, Y, cz + 3, Blocks.STONE_BRICKS);
         set(cx - 6, Y + 1, cz + 3, Blocks.STONE_BRICKS);
-        sign(new BlockPos(cx - 5, Y + 1, cz + 3), Direction.EAST, DyeColor.LIGHT_BLUE, "ЭТАЖ 1 • тир 1+", "Инеевый Кряж", "ур. мобов 3–5", "Броня! Лодка т.2");
+        sign(new BlockPos(cx - 5, Y + 1, cz + 3), Direction.EAST, DyeColor.LIGHT_BLUE, "ЭТАЖ 1 • тир 1+", "Инеевый Кряж", "ур. мобов 5–7", "Броня! Лодка т.2");
         set(cx + 6, Y, cz + 3, Blocks.STONE_BRICKS);
         set(cx + 6, Y + 1, cz + 3, Blocks.STONE_BRICKS);
         sign(new BlockPos(cx + 5, Y + 1, cz + 3), Direction.WEST, DyeColor.WHITE, "← Озеро, кладбище", "Шпили, руины →", "↑ Ледяной Склеп", "(PvP, элита)");
@@ -215,6 +216,17 @@ public final class FloorNorth extends Builder {
     }
 
     /** Ледяной Склеп: круглый храм изо льда и камня, внутри два тайника склепа. PvP-зона. */
+    /** 0.7: обновить табличку у входа в склеп. */
+    public static void cryptSign(net.minecraft.server.level.ServerLevel level) {
+        BlockPos p = new BlockPos(CRYPT.getX() - 4, Y + 1, CRYPT.getZ() + CRYPT_R + 3);
+        if (level.getBlockEntity(p) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sb) {
+            var t = sb.getFrontText().setMessage(1, net.minecraft.network.chat.Component.literal("Хранительница")).setMessage(2, net.minecraft.network.chat.Component.literal("раз в 40 минут"));
+            sb.setText(t, true);
+            sb.setChanged();
+            level.sendBlockUpdated(p, sb.getBlockState(), sb.getBlockState(), 3);
+        }
+    }
+
     private void crypt() {
         int cx = CRYPT.getX(), cz = CRYPT.getZ(), R = CRYPT_R;
         for (int x = -R - 1; x <= R + 1; x++) for (int z = -R - 1; z <= R + 1; z++) {
@@ -238,7 +250,7 @@ public final class FloorNorth extends Builder {
         stash(cx + 4, Y, cz - 8, CRYPT_STASHES);
         set(cx - 4, Y, cz + R + 2, Blocks.STONE_BRICKS);
         set(cx - 4, Y + 1, cz + R + 2, Blocks.STONE_BRICKS);
-        sign(new BlockPos(cx - 4, Y + 1, cz + R + 3), Direction.SOUTH, DyeColor.LIGHT_BLUE, "ЛЕДЯНОЙ СКЛЕП", "Элитная стража", "Тайники склепа", "! PvP-зона !");
+        sign(new BlockPos(cx - 4, Y + 1, cz + R + 3), Direction.SOUTH, DyeColor.LIGHT_BLUE, "ЛЕДЯНОЙ СКЛЕП", "Хранительница", "раз в 40 минут", "! PvP-зона !");
     }
 
     private void decor() {

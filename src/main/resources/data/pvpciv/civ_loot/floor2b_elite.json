@@ -1,0 +1,56 @@
+{
+ "entries": [
+  {
+   "item": "pvpciv:sparks",
+   "chance": 1.0,
+   "min": 40,
+   "max": 70
+  },
+  {
+   "item": "pvpciv:rubber_scrap",
+   "chance": 1.0,
+   "min": 2,
+   "max": 5
+  },
+  {
+   "item": "pvpciv:gas_filter",
+   "chance": 0.35
+  },
+  {
+   "item": "pvpciv:star_w1",
+   "chance": 0.3
+  },
+  {
+   "item": "pvpciv:blessed_star_w1",
+   "chance": 0.05
+  },
+  {
+   "weapons": [
+    "pvpciv:pipe_wrench",
+    "pvpciv:sewer_shiv",
+    "pvpciv:rebar_sword",
+    "pvpciv:toxic_hatchet"
+   ],
+   "chance": 0.35,
+   "min_rarity": "UNCOMMON"
+  },
+  {
+   "gear": [
+    "pvpciv:hazmat_helmet",
+    "pvpciv:hazmat_chestplate",
+    "pvpciv:hazmat_leggings",
+    "pvpciv:hazmat_boots"
+   ],
+   "chance": 0.1,
+   "min_rarity": "UNCOMMON"
+  },
+  {
+   "item": "pvpciv:temper_scroll",
+   "chance": 0.08
+  },
+  {
+   "item": "pvpciv:blood_star_w1",
+   "chance": 0.03
+  }
+ ]
+}

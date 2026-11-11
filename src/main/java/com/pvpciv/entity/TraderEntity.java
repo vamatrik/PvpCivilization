@@ -51,6 +51,7 @@ public class TraderEntity extends StoryNpc {
         }
         String[] hi = {"О, клиент! Смотри, щупай, покупай!", "Блестяшки принёс? ПКМ по ним — и они мои!", "Новый завоз — каждые восемь часов. Не проспи!"};
         com.pvpciv.game.Story.say(p, "Сорока", COLOR, hi[p.getRandom().nextInt(hi.length)]);
+        com.pvpciv.game.Shop.VENDOR.remove(p.getUUID());
         p.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inv, pl) -> new com.pvpciv.menu.TraderMenu(id, inv), net.minecraft.network.chat.Component.literal("Сорока")));
         com.pvpciv.game.Shop.sendOffers(p);
     }

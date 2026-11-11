@@ -37,8 +37,8 @@ public class CivArmorItem extends ArmorItem {
     }
 
     /** Броня (очки) и бонус к здоровью за предмет. Полный комплект тира 1+ обычной редкости ≈ 8 брони и +5 HP. */
-    public double armor(ItemStack st) { return 8 * Math.pow(1.25, tier - 1.5) * part() * Gear.rarity(st).mult; }
-    public double health(ItemStack st) { return 5 * Math.pow(1.3, tier - 1.5) * part() * Gear.rarity(st).mult; }
+    public double armor(ItemStack st) { return 8 * Math.pow(1.25, tier - 1.5) * part() * Gear.rarity(st).mult * com.pvpciv.game.ArmorUp.mult(Gear.stars(st)); }
+    public double health(ItemStack st) { return 5 * Math.pow(1.3, tier - 1.5) * part() * Gear.rarity(st).mult * com.pvpciv.game.ArmorUp.mult(Gear.stars(st)); }
 
     @Override
     public ItemAttributeModifiers getDefaultAttributeModifiers(ItemStack st) {
@@ -54,6 +54,8 @@ public class CivArmorItem extends ArmorItem {
     public Component getName(ItemStack st) {
         int rc = Gear.rarity(st).color;
         MutableComponent base = Component.translatable(getDescriptionId(st)).withStyle(x -> x.withColor(rc));
+        int lv = Gear.stars(st);
+        if (lv > 0) base = Component.literal("+" + lv + " ").withStyle(x -> x.withColor(Gear.starColor(lv))).append(base);
         return base;
     }
 
@@ -64,7 +66,17 @@ public class CivArmorItem extends ArmorItem {
         String t = tier == Math.floor(tier) ? String.valueOf((int) tier) : (int) Math.floor(tier) + "+";
         tip.add(Component.literal(r.title + " • " + set + " • Тир " + t).withStyle(x -> x.withColor(rc)));
         tip.add(Component.literal(String.format("Броня: +%.1f   Здоровье: +%.1f", armor(st), health(st))).withStyle(ChatFormatting.GRAY));
-        tip.add(Component.literal("Верстак брони (скоро): опыт из материалов").withStyle(ChatFormatting.DARK_AQUA));
+        int lv = Gear.stars(st);
+        if (lv >= com.pvpciv.game.ArmorUp.MAX) tip.add(Component.literal("Улучшение: +11 (максимум)").withStyle(ChatFormatting.DARK_RED));
+        else {
+            int need = com.pvpciv.game.ArmorUp.need(Math.min(lv, 10)), xp = com.pvpciv.game.ArmorUp.xp(st);
+            int fill = (int) Math.round(10.0 * xp / need);
+            tip.add(Component.literal("Улучшение +" + lv + "  ").withStyle(ChatFormatting.DARK_AQUA)
+                    .append(Component.literal("■".repeat(fill)).withStyle(ChatFormatting.AQUA))
+                    .append(Component.literal("■".repeat(10 - fill)).withStyle(ChatFormatting.DARK_GRAY))
+                    .append(Component.literal("  " + xp + "/" + need).withStyle(ChatFormatting.GRAY)));
+            tip.add(Component.literal("Стол брони в квартире: хлам → опыт, ядро → +1").withStyle(ChatFormatting.DARK_GRAY));
+        }
         if (!lore.isEmpty()) tip.add(Component.literal(lore).withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
     }
 

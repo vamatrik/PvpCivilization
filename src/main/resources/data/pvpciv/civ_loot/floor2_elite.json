@@ -1,0 +1,41 @@
+{
+ "entries": [
+  {
+   "item": "pvpciv:sparks",
+   "chance": 1.0,
+   "min": 30,
+   "max": 55
+  },
+  {
+   "item": "pvpciv:gold_chain",
+   "chance": 0.4
+  },
+  {
+   "item": "pvpciv:star_w1",
+   "chance": 0.25
+  },
+  {
+   "item": "pvpciv:blessed_star_w1",
+   "chance": 0.04
+  },
+  {
+   "weapons": [
+    "pvpciv:nail_bat",
+    "pvpciv:brass_knuckles",
+    "pvpciv:machete",
+    "pvpciv:fire_axe",
+    "pvpciv:street_blade"
+   ],
+   "chance": 0.35,
+   "min_rarity": "UNCOMMON"
+  },
+  {
+   "item": "pvpciv:temper_scroll",
+   "chance": 0.06
+  },
+  {
+   "item": "pvpciv:blood_star_w1",
+   "chance": 0.02
+  }
+ ]
+}

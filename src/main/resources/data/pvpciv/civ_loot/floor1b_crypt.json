@@ -43,12 +43,20 @@
     "pvpciv:rime_leggings",
     "pvpciv:rime_boots"
    ],
-   "chance": 0.25,
+   "chance": 0.1625,
    "min_rarity": "RARE"
   },
   {
    "item": "pvpciv:rime_boat_t2",
    "chance": 0.03
+  },
+  {
+   "item": "pvpciv:blood_star_w1",
+   "chance": 0.02
+  },
+  {
+   "item": "pvpciv:temper_scroll",
+   "chance": 0.12
   }
  ]
 }

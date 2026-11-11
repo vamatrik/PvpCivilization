@@ -35,6 +35,7 @@ public class ForgeMenu extends CivMenu {
     private boolean pendingSuccess;
     private int pendingFrom;
     private boolean pendingBlessed;
+    private boolean pendingBlood;
 
     public ForgeMenu(int id, Inventory inv) { this(id, inv, BlockPos.ZERO); }
 
@@ -49,7 +50,7 @@ public class ForgeMenu extends CivMenu {
             @Override public int getMaxStackSize() { return 1; }
         });
         addSlot(new Slot(box, 1, 25, 51) {
-            @Override public boolean mayPlace(ItemStack st) { return (st.is(ModRegistry.STAR_W1.get()) || st.is(ModRegistry.BLESSED_STAR_W1.get())) && progress.get() == 0; }
+            @Override public boolean mayPlace(ItemStack st) { return (st.is(ModRegistry.STAR_W1.get()) || st.is(ModRegistry.BLESSED_STAR_W1.get()) || st.is(ModRegistry.BLOOD_STAR_W1.get())) && progress.get() == 0; }
             @Override public boolean mayPickup(Player p) { return progress.get() == 0; }
         });
         addBag(169, 37, () -> true);
@@ -83,6 +84,7 @@ public class ForgeMenu extends CivMenu {
             return true;
         }
         pendingBlessed = star.is(ModRegistry.BLESSED_STAR_W1.get());
+        pendingBlood = star.is(ModRegistry.BLOOD_STAR_W1.get());
         star.shrink(1);
         pendingFrom = s;
         pendingSuccess = sp.getRandom().nextDouble() < chance();
@@ -124,6 +126,13 @@ public class ForgeMenu extends CivMenu {
             lvl.sendParticles(new DustParticleOptions(rgb(Gear.starColor(target)), 2.0f), fx, fy, fz, 80, 0.5, 0.6, 0.5, 0);
             lvl.sendParticles(ParticleTypes.END_ROD, fx, fy, fz, 30, 0.2, 0.4, 0.2, 0.08);
             if (target >= 8) broadcast(lvl, "УСПЕХ! " + sp.getGameProfile().getName() + " получил +" + target + "!", ChatFormatting.GOLD);
+        } else if (pendingBlood) {
+            // звезда крови: оружие цело, но платит владелец — Кармилла уводит на 10 минут
+            result.set(2);
+            lvl.playSound(null, pos, SoundEvents.WARDEN_HEARTBEAT, SoundSource.BLOCKS, 1.5f, 0.6f);
+            lvl.sendParticles(new DustParticleOptions(new Vector3f(0.7f, 0f, 0.08f), 2.0f), fx, fy, fz, 60, 0.5, 0.6, 0.5, 0);
+            sp.closeContainer();
+            GameEvents.later(sp.server, 20, () -> com.pvpciv.game.Vampire.abduct(sp, 20L * 60 * 10, false, true));
         } else if (pendingBlessed) {
             Gear.setStars(w, Math.max(0, pendingFrom - 1));
             box.setChanged();

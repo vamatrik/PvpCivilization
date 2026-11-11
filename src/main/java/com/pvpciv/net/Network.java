@@ -37,14 +37,15 @@ public final class Network {
 
     /** Сервер → клиент: состояние HUD. */
     public record SyncState(int stage, String objective, int level, long xp, long xpNext, long money, String zone, int zoneType, int bossSeconds,
-                            String quest, int questSeconds, int jailSeconds, String titles, String activeTitle) implements CustomPacketPayload {
+                            String quest, int questSeconds, int jailSeconds, String titles, String activeTitle, int keeperSeconds, int trophies, String boats, String bosses) implements CustomPacketPayload {
         public static final Type<SyncState> TYPE = new Type<>(PvpCiv.id("sync_state"));
         public static final StreamCodec<ByteBuf, SyncState> CODEC = new StreamCodec<>() {
             @Override public SyncState decode(ByteBuf b) {
                 return new SyncState(ByteBufCodecs.VAR_INT.decode(b), ByteBufCodecs.STRING_UTF8.decode(b), ByteBufCodecs.VAR_INT.decode(b),
                         ByteBufCodecs.VAR_LONG.decode(b), ByteBufCodecs.VAR_LONG.decode(b), ByteBufCodecs.VAR_LONG.decode(b),
                         ByteBufCodecs.STRING_UTF8.decode(b), ByteBufCodecs.VAR_INT.decode(b), ByteBufCodecs.INT.decode(b),
-                        ByteBufCodecs.STRING_UTF8.decode(b), ByteBufCodecs.INT.decode(b), ByteBufCodecs.INT.decode(b), ByteBufCodecs.STRING_UTF8.decode(b), ByteBufCodecs.STRING_UTF8.decode(b));
+                        ByteBufCodecs.STRING_UTF8.decode(b), ByteBufCodecs.INT.decode(b), ByteBufCodecs.INT.decode(b), ByteBufCodecs.STRING_UTF8.decode(b), ByteBufCodecs.STRING_UTF8.decode(b),
+                        ByteBufCodecs.INT.decode(b), ByteBufCodecs.VAR_INT.decode(b), ByteBufCodecs.STRING_UTF8.decode(b), ByteBufCodecs.STRING_UTF8.decode(b));
             }
             @Override public void encode(ByteBuf b, SyncState s) {
                 ByteBufCodecs.VAR_INT.encode(b, s.stage); ByteBufCodecs.STRING_UTF8.encode(b, s.objective); ByteBufCodecs.VAR_INT.encode(b, s.level);
@@ -52,6 +53,7 @@ public final class Network {
                 ByteBufCodecs.STRING_UTF8.encode(b, s.zone); ByteBufCodecs.VAR_INT.encode(b, s.zoneType); ByteBufCodecs.INT.encode(b, s.bossSeconds);
                 ByteBufCodecs.STRING_UTF8.encode(b, s.quest); ByteBufCodecs.INT.encode(b, s.questSeconds); ByteBufCodecs.INT.encode(b, s.jailSeconds);
                 ByteBufCodecs.STRING_UTF8.encode(b, s.titles); ByteBufCodecs.STRING_UTF8.encode(b, s.activeTitle);
+                ByteBufCodecs.INT.encode(b, s.keeperSeconds); ByteBufCodecs.VAR_INT.encode(b, s.trophies); ByteBufCodecs.STRING_UTF8.encode(b, s.boats); ByteBufCodecs.STRING_UTF8.encode(b, s.bosses);
             }
         };
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
@@ -65,7 +67,35 @@ public final class Network {
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    /** Сервер → клиент: какие тайники ты уже обчистил (позиция → когда снова будут готовы, мс). */
+    public record StashState(java.util.List<Long> pos, java.util.List<Long> readyMs) implements CustomPacketPayload {
+        public static final Type<StashState> TYPE = new Type<>(PvpCiv.id("stash_state"));
+        public static final StreamCodec<ByteBuf, StashState> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_LONG.apply(ByteBufCodecs.list()), StashState::pos, ByteBufCodecs.VAR_LONG.apply(ByteBufCodecs.list()), StashState::readyMs, StashState::new);
+        @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     /** Клиент → сервер: выбрать активный титул ("" — снять). */
+    /** Сервер → клиент: открыть табло лифта (маска открытых этажей, текущий этаж). */
+    public record OpenLift(int mask, int current) implements CustomPacketPayload {
+        public static final Type<OpenLift> TYPE = new Type<>(PvpCiv.id("open_lift"));
+        public static final StreamCodec<ByteBuf, OpenLift> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, OpenLift::mask, ByteBufCodecs.VAR_INT, OpenLift::current, OpenLift::new);
+        @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+    /** Клиент → сервер: поехать на этаж. */
+    public record LiftGo(int floor) implements CustomPacketPayload {
+        public static final Type<LiftGo> TYPE = new Type<>(PvpCiv.id("lift_go"));
+        public static final StreamCodec<ByteBuf, LiftGo> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, LiftGo::floor, LiftGo::new);
+        @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    /** Клиент → сервер: выбрать лодку в гараже. */
+    public record SelectBoat(String id) implements CustomPacketPayload {
+        public static final Type<SelectBoat> TYPE = new Type<>(PvpCiv.id("select_boat"));
+        public static final StreamCodec<ByteBuf, SelectBoat> CODEC = StreamCodec.composite(ByteBufCodecs.STRING_UTF8, SelectBoat::id, SelectBoat::new);
+        @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     public record SelectTitle(String id) implements CustomPacketPayload {
         public static final Type<SelectTitle> TYPE = new Type<>(PvpCiv.id("select_title"));
         public static final StreamCodec<ByteBuf, SelectTitle> CODEC = StreamCodec.composite(ByteBufCodecs.STRING_UTF8, SelectTitle::id, SelectTitle::new);
@@ -129,8 +159,16 @@ public final class Network {
         });
         r.playToClient(DeathInfo.TYPE, DeathInfo.CODEC, (p, ctx) -> com.pvpciv.client.ClientPayloads.death(p));
         r.playToClient(Cinematic.TYPE, Cinematic.CODEC, (p, ctx) -> com.pvpciv.client.ClientPayloads.cinematic(p));
+        r.playToClient(StashState.TYPE, StashState.CODEC, (p, ctx) -> com.pvpciv.client.ClientPayloads.stash(p));
         r.playToServer(SelectTitle.TYPE, SelectTitle.CODEC, (p, ctx) -> {
             if (ctx.player() instanceof net.minecraft.server.level.ServerPlayer sp) com.pvpciv.progress.Titles.select(sp, p.id());
+        });
+        r.playToClient(OpenLift.TYPE, OpenLift.CODEC, (p, ctx) -> com.pvpciv.client.ClientPayloads.openLift(p));
+        r.playToServer(LiftGo.TYPE, LiftGo.CODEC, (p, ctx) -> {
+            if (ctx.player() instanceof ServerPlayer sp) com.pvpciv.game.SkyLift.ride(sp, p.floor());
+        });
+        r.playToServer(SelectBoat.TYPE, SelectBoat.CODEC, (p, ctx) -> {
+            if (ctx.player() instanceof ServerPlayer sp) com.pvpciv.game.Garage.select(sp, p.id());
         });
         r.playToClient(TraderOffers.TYPE, TraderOffers.CODEC, (p, ctx) -> com.pvpciv.client.ClientPayloads.offers(p));
         r.playToServer(OpenInventory.TYPE, OpenInventory.CODEC, (p, ctx) -> {

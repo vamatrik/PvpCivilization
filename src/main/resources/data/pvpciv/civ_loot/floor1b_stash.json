@@ -36,7 +36,7 @@
     "pvpciv:rime_leggings",
     "pvpciv:rime_boots"
    ],
-   "chance": 0.05
+   "chance": 0.0325
   },
   {
    "item": "pvpciv:dorm_stew",
@@ -49,6 +49,10 @@
   {
    "item": "pvpciv:rime_boat_t2",
    "chance": 0.004
+  },
+  {
+   "item": "pvpciv:temper_scroll",
+   "chance": 0.05
   }
  ]
 }

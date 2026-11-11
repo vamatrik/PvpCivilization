@@ -1,0 +1,19 @@
+{
+ "variants": {
+  "facing=north": {
+   "model": "pvpciv:block/armor_bench"
+  },
+  "facing=east": {
+   "model": "pvpciv:block/armor_bench",
+   "y": 90
+  },
+  "facing=south": {
+   "model": "pvpciv:block/armor_bench",
+   "y": 180
+  },
+  "facing=west": {
+   "model": "pvpciv:block/armor_bench",
+   "y": 270
+  }
+ }
+}

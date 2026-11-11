@@ -35,6 +35,33 @@ public final class Shop {
     public static long rotation() { return System.currentTimeMillis() / ROTATION_MS; }
     public static long msLeft() { return ROTATION_MS - System.currentTimeMillis() % ROTATION_MS; }
 
+    /** С кем сейчас торгует игрок: "" — Сорока, "smuggler" — контрабандист в канализации. */
+    public static final java.util.Map<java.util.UUID, String> VENDOR = new java.util.HashMap<>();
+
+    public static List<Offer> offers(ServerPlayer p) {
+        return "smuggler".equals(VENDOR.get(p.getUUID())) ? smuggler() : offers();
+    }
+
+    /** Контрабандист: еда, золотые яблоки (лимит), товар с этажа 3 (катана), второй рюкзак — один раз за игру. */
+    public static List<Offer> smuggler() {
+        List<Offer> out = new ArrayList<>();
+        out.add(new Offer("s_beef", new ItemStack(Items.COOKED_BEEF, 4), 40, 999));
+        out.add(new Offer("s_carrot", new ItemStack(Items.GOLDEN_CARROT, 2), 90, 8));
+        out.add(new Offer("s_apple", new ItemStack(Items.GOLDEN_APPLE), 450, 2));
+        out.add(new Offer("s_filter", new ItemStack(ModRegistry.GAS_MASK_FILTER.get()), 380, 2));
+        out.add(new Offer("s_scroll", new ItemStack(ModRegistry.TEMPER_SCROLL.get()), 1600, 1));
+        out.add(new Offer("s_blood", new ItemStack(ModRegistry.BLOOD_STAR_W1.get()), 5200, 1));
+        out.add(new Offer("katana", Gear.withRarity(new ItemStack(ModRegistry.SAMURAI_KATANA.get()), Rarity.RARE), 7500, 1));
+        out.add(new Offer("pack", new ItemStack(ModRegistry.SMUGGLER_PACK.get()), 6000, 1));
+        return out;
+    }
+
+    /** Катана: кроме Искр — хороший меч этажа 2 (тир 2, редкий и выше, не именной). */
+    private static boolean tradeBlade(ItemStack st) {
+        return st.getItem() instanceof com.pvpciv.item.CivWeaponItem w && w.tier == 2 && w.skill == null
+                && Gear.rarity(st).ordinal() >= Rarity.RARE.ordinal();
+    }
+
     public static List<Offer> offers() {
         long rot = rotation();
         RandomSource r = RandomSource.create(rot * 7919L + 17);
@@ -61,19 +88,31 @@ public final class Shop {
 
     public static int left(ServerPlayer p, Offer o) {
         StoryData d = Progress.d(p);
+        if (o.id().equals("buckle") && d.boughtBuckle) return 0;   // пряжка у Сороки — один раз за игру
+        if (o.id().equals("pack") && d.boughtPack) return 0;
         return o.limit() - bought(d).getInt(o.id());
     }
 
     public static void buy(ServerPlayer p, int idx) {
-        List<Offer> list = offers();
+        List<Offer> list = offers(p);
         if (idx < 0 || idx >= list.size()) return;
         Offer o = list.get(idx);
         StoryData d = Progress.d(p);
         CompoundTag b = bought(d);
-        if (b.getInt(o.id()) >= o.limit()) { p.displayClientMessage(Component.literal("Распродано! Новый завоз скоро.").withStyle(ChatFormatting.GRAY), true); return; }
+        if (b.getInt(o.id()) >= o.limit() || (o.id().equals("buckle") && d.boughtBuckle) || (o.id().equals("pack") && d.boughtPack)) { p.displayClientMessage(Component.literal("Распродано! Новый завоз скоро.").withStyle(ChatFormatting.GRAY), true); return; }
         if (d.money < o.price()) { p.displayClientMessage(Component.literal("Не хватает Искр: нужно " + o.price() + " ✦").withStyle(ChatFormatting.RED), true); return; }
+        if (o.id().equals("katana")) {
+            if (Bag.count(p, Shop::tradeBlade) < 1) {
+                p.displayClientMessage(Component.literal("«Катану — только за меч в придачу: тир 2, редкий или лучше.»").withStyle(ChatFormatting.RED), true);
+                return;
+            }
+            Bag.take(p, Shop::tradeBlade, 1);
+            p.sendSystemMessage(Component.literal("Контрабандист забрал твой меч этажа 2 в придачу.").withStyle(ChatFormatting.GRAY));
+        }
         d.money -= o.price();
         b.putInt(o.id(), b.getInt(o.id()) + 1);
+        if (o.id().equals("buckle")) d.boughtBuckle = true;
+        if (o.id().equals("pack")) d.boughtPack = true;
         p.setData(ModRegistry.STORY.get(), d);
         Bag.give(p, o.stack().copy());
         p.level().playSound(null, p.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.8f, 1.4f);
@@ -83,7 +122,7 @@ public final class Shop {
 
     public static void sendOffers(ServerPlayer p) {
         List<Network.OfferView> views = new ArrayList<>();
-        for (Offer o : offers()) views.add(new Network.OfferView(o.stack(), o.price(), Math.max(0, left(p, o))));
+        for (Offer o : offers(p)) views.add(new Network.OfferView(o.stack(), o.price(), Math.max(0, left(p, o))));
         PacketDistributor.sendToPlayer(p, new Network.TraderOffers(views, msLeft()));
     }
 

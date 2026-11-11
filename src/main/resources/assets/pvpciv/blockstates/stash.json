@@ -1,1 +1,19 @@
-{ "variants": { "": { "model": "pvpciv:block/stash" } } }
+{
+ "variants": {
+  "facing=north": {
+   "model": "pvpciv:block/stash"
+  },
+  "facing=east": {
+   "model": "pvpciv:block/stash",
+   "y": 90
+  },
+  "facing=south": {
+   "model": "pvpciv:block/stash",
+   "y": 180
+  },
+  "facing=west": {
+   "model": "pvpciv:block/stash",
+   "y": 270
+  }
+ }
+}

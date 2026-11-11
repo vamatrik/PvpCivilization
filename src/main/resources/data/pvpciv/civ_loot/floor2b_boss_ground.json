@@ -1,0 +1,42 @@
+{
+ "entries": [
+  {
+   "item": "pvpciv:sparks",
+   "chance": 1.0,
+   "min": 200,
+   "max": 320
+  },
+  {
+   "item": "pvpciv:rubber_scrap",
+   "chance": 1.0,
+   "min": 4,
+   "max": 10
+  },
+  {
+   "item": "pvpciv:star_w1",
+   "chance": 1.0,
+   "min": 3,
+   "max": 6
+  },
+  {
+   "weapons": [
+    "pvpciv:pipe_wrench",
+    "pvpciv:sewer_shiv",
+    "pvpciv:rebar_sword",
+    "pvpciv:toxic_hatchet"
+   ],
+   "chance": 1.0,
+   "min_rarity": "RARE"
+  },
+  {
+   "weapons": [
+    "pvpciv:pipe_wrench",
+    "pvpciv:sewer_shiv",
+    "pvpciv:rebar_sword",
+    "pvpciv:toxic_hatchet"
+   ],
+   "chance": 0.15,
+   "min_rarity": "LEGENDARY"
+  }
+ ]
+}

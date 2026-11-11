@@ -26,6 +26,7 @@ import java.util.List;
  */
 public final class DormBuilder {
     public static final int Y0 = 100, FLOORS = 4, FH = 6;
+    public static final net.minecraft.world.phys.Vec3 LIFT_ARRIVE = RoofBuilder.ARRIVE;
     public static final int ATR = 21, GAL_IN = 22, GAL_OUT = 24, BAND_IN = 25, BAND_OUT = 31;
     public static final int SLOTS = 6, SLOT_W = 7, SLOT_START = -21;
     public static final int ROAD_X0 = 0, ROAD_X1 = 6, ROAD_CX = 3;
@@ -118,6 +119,7 @@ public final class DormBuilder {
         b.flushPanes();
         b.signs(data);
         b.lunaRoom();
+        Builder.fixArea(level, -34, 34, 84, 130, -40, 40);
         data.built = true;
         data.version = 1;
         data.setDirty();
@@ -220,7 +222,7 @@ public final class DormBuilder {
                 set(wx(side, s + 5, 30), y, wz(side, s + 5, 30), Blocks.BARREL);
                 set(wx(side, s + 5, 30), y + 1, wz(side, s + 5, 30), Blocks.POTTED_CHERRY_SAPLING);
                 set(wx(side, s + 5, 26), y, wz(side, s + 5, 26), Blocks.BOOKSHELF);
-                set(wx(side, s + 5, 27), y, wz(side, s + 5, 27), Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, in));
+                if (!npc.isEmpty()) set(wx(side, s + 5, 27), y, wz(side, s + 5, 27), Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, in));
                 for (int u = s + 2; u <= s + 4; u++) for (int d = 27; d <= 29; d++)
                     set(wx(side, u, d), y, wz(side, u, d), npc.equals("luna") ? Blocks.PINK_CARPET : Blocks.LIGHT_GRAY_CARPET);
                 set(wx(side, s + 3, 28), y + 4, wz(side, s + 3, 28), Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
@@ -440,7 +442,7 @@ public final class DormBuilder {
             sign(a.sign, facing, color, "", "Кв. " + a.number, l2, "");
         }
         sign(new BlockPos(ROAD_CX, Y0 + 4, BAND_IN - 1), Direction.NORTH, DyeColor.YELLOW, "▼ ВЫХОД ▼", "Ледяной Тракт", "→ Этаж 1:", "Пепельная пустошь");
-        sign(new BlockPos(ROAD_CX, Y0 + 4, -BAND_IN + 1), Direction.SOUTH, DyeColor.LIGHT_BLUE, "▲ ВЫХОД ▲", "Ледяная Трасса", "→ Инеевый Кряж", "тир 1+, ур. 3–5");
+        sign(new BlockPos(ROAD_CX, Y0 + 4, -BAND_IN + 1), Direction.SOUTH, DyeColor.LIGHT_BLUE, "▲ ВЫХОД ▲", "Ледяная Трасса", "→ Инеевый Кряж", "тир 1+, ур. 5–7");
         set(-4, Y0 + 1, -DOCK_Z0 - 2, Blocks.SEA_LANTERN);
         sign(new BlockPos(-3, Y0 + 1, -DOCK_Z0 - 2), Direction.EAST, DyeColor.LIGHT_BLUE, "ТРАССА", "Узко и быстро!", "Упал — Бездна", "−10% ✦");
         set(-4, Y0 + 1, DOCK_Z0 + 2, Blocks.SEA_LANTERN);
@@ -454,7 +456,9 @@ public final class DormBuilder {
             int ix = Integer.signum(a.sign.getX() - a.door.getX()), iz = Integer.signum(a.sign.getZ() - a.door.getZ());
             int ux = Math.abs(iz), uz = Math.abs(ix);
             BlockPos f = a.door.offset(ux * 2 - ix, 0, uz * 2 - iz);
-            level.setBlock(f, ModRegistry.FORGE.get().defaultBlockState(), Block.UPDATE_ALL);
+            level.setBlock(f, ModRegistry.FORGE.get().defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, Direction.fromDelta(-ux, 0, -uz)), Block.UPDATE_ALL);
+            BlockPos stair = f.offset(-ix, 0, -iz);   // ступенька рядом с кузницей — убрать
+            if (level.getBlockState(stair).is(Blocks.SPRUCE_STAIRS)) level.setBlock(stair, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
         }
     }
 
@@ -465,7 +469,36 @@ public final class DormBuilder {
             int ix = Integer.signum(a.sign.getX() - a.door.getX()), iz = Integer.signum(a.sign.getZ() - a.door.getZ());
             int ux = Math.abs(iz), uz = Math.abs(ix);
             BlockPos f = a.door.offset(ux * 2 - ix * 5, 0, uz * 2 - iz * 5);
-            level.setBlock(f, ModRegistry.DISMANTLE.get().defaultBlockState(), Block.UPDATE_ALL);
+            level.setBlock(f, ModRegistry.DISMANTLE.get().defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, Direction.fromDelta(ix, 0, iz)), Block.UPDATE_ALL);
+            // горшок с сакурой — со стола на белую тумбу левее
+            level.setBlock(f.above(), Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+            BlockPos pot = f.offset(-ux, 0, -uz);
+            if (level.getBlockState(pot).isAir()) {
+                level.setBlock(pot, Blocks.SMOOTH_QUARTZ.defaultBlockState(), Block.UPDATE_ALL);
+                level.setBlock(pot.above(), Blocks.POTTED_CHERRY_SAPLING.defaultBlockState(), Block.UPDATE_ALL);
+            }
+        }
+    }
+
+    /** 0.7: стол брони и домашний сундук — у стены у двери, напротив кузницы. */
+    public static void placeHomeStations(ServerLevel level, CivData data) {
+        for (CivData.Apartment a : data.apartments) {
+            if (!a.npc.isEmpty()) continue;
+            int ix = Integer.signum(a.sign.getX() - a.door.getX()), iz = Integer.signum(a.sign.getZ() - a.door.getZ());
+            int ux = Math.abs(iz), uz = Math.abs(ix);
+            BlockPos bench = a.door.offset(-ux * 2 - ix, 0, -uz * 2 - iz), chest = a.door.offset(-ux * 2 - ix * 2, 0, -uz * 2 - iz * 2);
+            if (level.getBlockState(bench).is(ModRegistry.FORGE.get())) {   // кузница оказалась с этой стороны — зеркалим
+                bench = a.door.offset(ux * 2 - ix, 0, uz * 2 - iz); chest = a.door.offset(ux * 2 - ix * 2, 0, uz * 2 - iz * 2);
+            }
+            Direction side = Math.abs(bench.getX() - a.door.getX()) == 2 ? Direction.fromDelta(Integer.signum(a.door.getX() - bench.getX()), 0, 0)
+                    : Direction.fromDelta(0, 0, Integer.signum(a.door.getZ() - bench.getZ()));
+            for (BlockPos p : new BlockPos[]{bench, chest}) { level.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL); level.setBlock(p.above(), Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL); }
+            level.setBlock(bench, ModRegistry.ARMOR_BENCH.get().defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, side), Block.UPDATE_ALL);
+            level.setBlock(chest, ModRegistry.HOME_CHEST.get().defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, side), Block.UPDATE_ALL);
+            BlockPos cas = chest.offset(chest.getX() - bench.getX(), 0, chest.getZ() - bench.getZ());   // витрина — следующая за сундуком
+            level.setBlock(cas.above(), Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+            if (!level.getBlockState(cas).is(ModRegistry.TROPHY_CASE.get()))
+                level.setBlock(cas, ModRegistry.TROPHY_CASE.get().defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, side), Block.UPDATE_ALL);
         }
     }
 

@@ -17,7 +17,26 @@ import net.minecraft.world.phys.BlockHitResult;
 
 /** Кузница квартиры: заточка оружия звёздами. */
 public class ForgeBlock extends Block {
-    public ForgeBlock(Properties p) { super(p); }
+    public ForgeBlock(Properties p) {
+        super(p);
+        registerDefaultState(stateDefinition.any().setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, net.minecraft.core.Direction.NORTH));
+    }
+
+    /** Блок смотрит «лицом» на того, кто ставит. */
+    @Override
+    protected void createBlockStateDefinition(net.minecraft.world.level.block.state.StateDefinition.Builder<Block, BlockState> b) {
+        b.add(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING);
+    }
+
+    @Override
+    public BlockState getStateForPlacement(net.minecraft.world.item.context.BlockPlaceContext ctx) {
+        return defaultBlockState().setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, ctx.getHorizontalDirection().getOpposite());
+    }
+
+    @Override
+    protected BlockState rotate(BlockState s, net.minecraft.world.level.block.Rotation r) {
+        return s.setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, r.rotate(s.getValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING)));
+    }
 
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {

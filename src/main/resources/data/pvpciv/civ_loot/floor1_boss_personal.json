@@ -43,6 +43,14 @@
   {
    "item": "pvpciv:bag_buckle",
    "chance": 0.08
+  },
+  {
+   "item": "pvpciv:blood_star_w1",
+   "chance": 0.01
+  },
+  {
+   "item": "pvpciv:temper_scroll",
+   "chance": 0.3
   }
  ]
 }

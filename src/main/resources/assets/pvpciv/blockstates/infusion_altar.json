@@ -1,0 +1,16 @@
+{
+ "variants": {
+  "facing=north": {
+   "model": "pvpciv:block/infusion_altar"
+  },
+  "facing=east": {
+   "model": "pvpciv:block/infusion_altar"
+  },
+  "facing=south": {
+   "model": "pvpciv:block/infusion_altar"
+  },
+  "facing=west": {
+   "model": "pvpciv:block/infusion_altar"
+  }
+ }
+}

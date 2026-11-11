@@ -18,7 +18,7 @@ import java.util.List;
 public class TraderScreen extends CivScreen<TraderMenu> {
     private static final int ROW = 18, ROWS = 8;
 
-    public TraderScreen(TraderMenu m, Inventory inv, Component t) { super(m, inv, "Лавка Сороки", 352, 206); }
+    public TraderScreen(TraderMenu m, Inventory inv, Component t) { super(m, inv, t.getString().equals("Контрабандист") ? "Контрабандист Шнырь" : "Лавка Сороки", 352, 206); }
 
     @Override
     protected void drawContent(GuiGraphics g, int mx, int my, float pt) {
@@ -42,7 +42,7 @@ public class TraderScreen extends CivScreen<TraderMenu> {
                 g.drawString(font, cnt, left - 4 - font.width(cnt), oy + 4, Skin.DIM, false);
             }
         }
-        if (offers.isEmpty()) g.drawCenteredString(font, "Сорока раскладывает товар...", x + 92, y + 90, Skin.DIM);
+        if (offers.isEmpty()) g.drawCenteredString(font, "Товар раскладывают...", x + 92, y + 90, Skin.DIM);
         Skin.button(g, font, x + 10, y + 180, 84, "Продать хлам", mx, my, true, false);
         long ms = Math.max(0, ClientState.shopRotationAt - System.currentTimeMillis());
         Skin.icon(g, "clock", x + 100, y + 183);
@@ -70,7 +70,7 @@ public class TraderScreen extends CivScreen<TraderMenu> {
             List<Component> tip = new ArrayList<>(getTooltipFromContainerItem(st));
             int price = Shop.sellPrice(st);
             tip.add(price > 0 ? Component.literal("ПКМ — продать за " + (long) price * st.getCount() + " ✦").withStyle(ChatFormatting.GOLD)
-                    : Component.literal("Сорока это не купит").withStyle(ChatFormatting.DARK_GRAY));
+                    : Component.literal("Это здесь не купят").withStyle(ChatFormatting.DARK_GRAY));
             g.renderTooltip(font, tip, st.getTooltipImage(), st, mx, my);
             return;
         }

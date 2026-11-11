@@ -43,12 +43,12 @@ public final class Floor1 extends Builder {
             new SpawnZones.Zone("f1_dunes_w", new BlockPos(-42, Y, 405), 16, 3, 1, 1, Mobs.Kind.ASH_ZOMBIE, Mobs.Kind.ASH_SPIDER),
             new SpawnZones.Zone("f1_dunes_e", new BlockPos(46, Y, 400), 16, 3, 1, 2, Mobs.Kind.ASH_ZOMBIE, Mobs.Kind.ASH_SPIDER),
             new SpawnZones.Zone("f1_ruins", RUINS, 22, 4, 1, 2, Mobs.Kind.ASH_ZOMBIE, Mobs.Kind.WITHERED),
-            new SpawnZones.Zone("f1_mid", new BlockPos(24, Y, 515), 16, 3, 2, 2, Mobs.Kind.WITHERED, Mobs.Kind.ASH_ARCHER),
-            new SpawnZones.Zone("f1_ruins_s", new BlockPos(-40, Y, 522), 15, 3, 2, 2, Mobs.Kind.ASH_ARCHER, Mobs.Kind.WITHERED),
-            new SpawnZones.Zone("f1_east", new BlockPos(80, Y, 528), 13, 3, 2, 2, Mobs.Kind.ASH_SPIDER, Mobs.Kind.ASH_ZOMBIE),
-            new SpawnZones.Zone("f1_grove", GROVE, 22, 4, 2, 3, Mobs.Kind.ASH_SPIDER, Mobs.Kind.WITHERED, Mobs.Kind.ASH_ARCHER),
-            new SpawnZones.Zone("f1_pillars", PILLARS, 22, 4, 2, 3, Mobs.Kind.ASH_ARCHER, Mobs.Kind.WITHERED),
-            new SpawnZones.Zone("f1_south", new BlockPos(3, Y, 640), 14, 3, 3, 3, Mobs.Kind.ASH_ZOMBIE, Mobs.Kind.WITHERED, Mobs.Kind.ASH_ARCHER));
+            new SpawnZones.Zone("f1_mid", new BlockPos(24, Y, 515), 16, 3, 2, 3, Mobs.Kind.WITHERED, Mobs.Kind.ASH_ARCHER),
+            new SpawnZones.Zone("f1_ruins_s", new BlockPos(-40, Y, 522), 15, 3, 2, 3, Mobs.Kind.ASH_ARCHER, Mobs.Kind.WITHERED),
+            new SpawnZones.Zone("f1_east", new BlockPos(80, Y, 528), 13, 3, 2, 3, Mobs.Kind.ASH_SPIDER, Mobs.Kind.ASH_ZOMBIE),
+            new SpawnZones.Zone("f1_grove", GROVE, 22, 4, 3, 4, Mobs.Kind.ASH_SPIDER, Mobs.Kind.WITHERED, Mobs.Kind.ASH_ARCHER),
+            new SpawnZones.Zone("f1_pillars", PILLARS, 22, 4, 3, 4, Mobs.Kind.ASH_ARCHER, Mobs.Kind.WITHERED),
+            new SpawnZones.Zone("f1_south", new BlockPos(3, Y, 640), 14, 3, 4, 4, Mobs.Kind.ASH_ZOMBIE, Mobs.Kind.WITHERED, Mobs.Kind.ASH_ARCHER));
 
     private final List<BlockPos> lights = new ArrayList<>();
 
@@ -123,6 +123,7 @@ public final class Floor1 extends Builder {
         b.decor();
         b.bridges();
         for (BlockPos p : b.lights) level.setBlock(p, Blocks.SOUL_LANTERN.defaultBlockState(), Block.UPDATE_ALL);
+        b.fixShapes();
     }
 
     private void terrain() {
@@ -137,8 +138,7 @@ public final class Floor1 extends Builder {
                         : hash < 9 ? Blocks.COARSE_DIRT : hash < 13 ? Blocks.GRAVEL : hash < 16 ? Blocks.SMOOTH_BASALT : hash < 18 ? Blocks.ROOTED_DIRT : Blocks.PACKED_MUD;
                 if (dist(x, z, PILLARS) < 36 && hash < 8) top = Blocks.BLACKSTONE;
                 if (dist(x, z, GROVE) < 36 && hash < 10) top = Blocks.PODZOL;
-                set(x, h, z, top);
-                for (int y = h - 1; y >= Y - 4; y--) set(x, y, z, y > h - 3 ? Blocks.DIRT : Blocks.STONE);
+                for (int y = Y - 4; y <= h - 1; y++) set(x, y, z, y > h - 3 ? Blocks.DIRT : Blocks.STONE);
                 // низ острова: сталактиты к центру, тонко у краёв
                 double ed = edgeDist(x, z);
                 int depth = (int) Math.min(16, ed * 0.35) + Math.floorMod(x * 31 + z * 17, 3);
@@ -147,6 +147,7 @@ public final class Floor1 extends Builder {
                 // стенки разлома — обнажённая порода с тлеющими прожилками
                 if (chasm(x, z + 1) || chasm(x, z - 1))
                     for (int y = h - 1; y >= Y - 8; y--) set(x, y, z, rnd.nextFloat() < 0.12f ? Blocks.MAGMA_BLOCK : pick(Blocks.BLACKSTONE, Blocks.BASALT, Blocks.TUFF));
+                set(x, h, z, top);   // верх — последним, чтобы под гравием уже была опора
             }
     }
 
@@ -335,7 +336,7 @@ public final class Floor1 extends Builder {
         set(cx, Y, cz + 3, Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.SOUTH));
         set(cx - 6, Y, cz - 4, Blocks.STONE_BRICKS);
         set(cx - 6, Y + 1, cz - 4, Blocks.STONE_BRICKS);
-        sign(new BlockPos(cx - 5, Y + 1, cz - 4), Direction.EAST, DyeColor.ORANGE, "ЭТАЖ 1", "Пепельная", "пустошь", "ур. мобов 1–3");
+        sign(new BlockPos(cx - 5, Y + 1, cz - 4), Direction.EAST, DyeColor.ORANGE, "ЭТАЖ 1", "Пепельная", "пустошь", "ур. мобов 1–4");
         set(cx + 6, Y, cz - 4, Blocks.STONE_BRICKS);
         set(cx + 6, Y + 1, cz - 4, Blocks.STONE_BRICKS);
         sign(new BlockPos(cx + 5, Y + 1, cz - 4), Direction.WEST, DyeColor.LIGHT_BLUE, "← Руины  Арена →", "↓ Разлом, роща,", "столпы, Логово", "Громилы (PvP)");
@@ -375,7 +376,17 @@ public final class Floor1 extends Builder {
         for (int y = Y; y <= Y + 8; y++) { set(cx - 20, y, cz - 4, Blocks.CHISELED_STONE_BRICKS); set(cx - 20, y, cz + 4, Blocks.CHISELED_STONE_BRICKS); }
         set(cx, Y, cz, ModRegistry.ARENA_CORE.get());
         for (int[] o : new int[][]{{3, 3}, {-3, 3}, {3, -3}, {-3, -3}}) set(cx + o[0], Y, cz + o[1], Blocks.SOUL_LANTERN);
-        sign(new BlockPos(cx - 21, Y + 2, cz - 4), Direction.WEST, DyeColor.ORANGE, "ПЕПЕЛЬНАЯ", "АРЕНА • данж", "ПКМ по Ядру", "3 волны, ур. 2–4");
+        sign(new BlockPos(cx - 21, Y + 2, cz - 4), Direction.WEST, DyeColor.ORANGE, "ПЕПЕЛЬНАЯ", "АРЕНА • данж", "ПКМ по Ядру", "3 волны, ур. 2–5");
+    }
+
+    /** 0.7.1: обновить табличку у логова. */
+    public static void lairSign(net.minecraft.server.level.ServerLevel level) {
+        BlockPos p = new BlockPos(LAIR.getX() - 4, Y + 1, LAIR.getZ() - LAIR_R - 3);
+        if (level.getBlockEntity(p) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sb) {
+            sb.setText(sb.getFrontText().setMessage(2, net.minecraft.network.chat.Component.literal("Раз в 20 минут")), true);
+            sb.setChanged();
+            level.sendBlockUpdated(p, sb.getBlockState(), sb.getBlockState(), 3);
+        }
     }
 
     private void lair() {
@@ -399,6 +410,6 @@ public final class Floor1 extends Builder {
         set(cx - 2, Y, cz - 2, Blocks.WITHER_SKELETON_SKULL);
         set(cx - 4, Y, cz - LAIR_R - 2, Blocks.STONE_BRICKS);
         set(cx - 4, Y + 1, cz - LAIR_R - 2, Blocks.STONE_BRICKS);
-        sign(new BlockPos(cx - 4, Y + 1, cz - LAIR_R - 3), Direction.NORTH, DyeColor.RED, "ЛОГОВО", "ГРОМИЛЫ", "Босс раз в час", "! PvP-зона !");
+        sign(new BlockPos(cx - 4, Y + 1, cz - LAIR_R - 3), Direction.NORTH, DyeColor.RED, "ЛОГОВО", "ГРОМИЛЫ", "Раз в 20 минут", "! PvP-зона !");
     }
 }

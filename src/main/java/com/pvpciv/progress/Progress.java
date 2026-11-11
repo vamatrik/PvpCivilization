@@ -15,20 +15,20 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 
-/** Уровень, опыт и Искры игрока. 30 уровней на мир, 3 на этаж. */
+/** Уровень, опыт и Искры игрока. 50 уровней на мир, 5 на этаж (с 0.7). */
 public final class Progress {
     private static final ResourceLocation HP_ID = PvpCiv.id("level_hp");
 
     public static StoryData d(ServerPlayer p) { return p.getData(ModRegistry.STORY.get()); }
     private static void save(ServerPlayer p, StoryData d) { p.setData(ModRegistry.STORY.get(), d); }
 
-    public static long xpToNext(int level) { return Math.round(60 * Math.pow(1.22, level - 1)); }
+    public static long xpToNext(int level) { return Math.round(150 * Math.pow(1.12, level - 1)); }
 
     /** Опыт за моба уровня mobLevel с учётом разницы уровней. */
     public static long xpFor(int playerLevel, int mobLevel, double mult) {
-        double base = 6 * Math.pow(1.15, mobLevel - 1) * mult;
+        double base = 6 * Math.pow(1.08, mobLevel - 1) * mult;
         int below = playerLevel - mobLevel;
-        double k = below <= 2 ? 1.0 : below == 3 ? 0.5 : below <= 5 ? 0.2 : 0.05;
+        double k = below <= 3 ? 1.0 : below <= 5 ? 0.5 : below <= 8 ? 0.2 : 0.05;
         return Math.max(1, Math.round(base * k));
     }
 
@@ -45,7 +45,7 @@ public final class Progress {
         if (up) {
             applyStats(p);
             p.setHealth(p.getMaxHealth());
-            Story.title(p, "УРОВЕНЬ " + d.level, "+1 ❤ к здоровью, +1% к урону", 0xFFD166);
+            Story.title(p, "УРОВЕНЬ " + d.level, "+½ ❤ к здоровью, +0.6% к урону", 0xFFD166);
             p.level().playSound(null, p.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1f, 1.1f);
             p.serverLevel().sendParticles(ParticleTypes.TOTEM_OF_UNDYING, p.getX(), p.getY() + 1, p.getZ(), 40, 0.5, 1, 0.5, 0.2);
         }
@@ -69,7 +69,7 @@ public final class Progress {
         if (hp == null) return;
         hp.removeModifier(HP_ID);
         int lvl = d(p).level;
-        if (lvl > 1) hp.addPermanentModifier(new AttributeModifier(HP_ID, 2.0 * (lvl - 1), AttributeModifier.Operation.ADD_VALUE));
+        if (lvl > 1) hp.addPermanentModifier(new AttributeModifier(HP_ID, 1.0 * (lvl - 1), AttributeModifier.Operation.ADD_VALUE));
         Titles.apply(p);
         if (p.getHealth() > p.getMaxHealth()) p.setHealth(p.getMaxHealth());
     }

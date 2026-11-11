@@ -1,0 +1,16 @@
+{
+ "variants": {
+  "facing=north": {
+   "model": "pvpciv:block/infusion_pedestal"
+  },
+  "facing=east": {
+   "model": "pvpciv:block/infusion_pedestal"
+  },
+  "facing=south": {
+   "model": "pvpciv:block/infusion_pedestal"
+  },
+  "facing=west": {
+   "model": "pvpciv:block/infusion_pedestal"
+  }
+ }
+}

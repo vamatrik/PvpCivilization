@@ -67,6 +67,30 @@ public final class Bag {
         return false;
     }
 
+    /** Сколько предметов под условие в сумке и инвентаре. */
+    public static int count(Player p, Predicate<ItemStack> pred) {
+        int n = 0;
+        ItemStackHandler h = get(p);
+        for (int i = 0; i < h.getSlots(); i++) if (pred.test(h.getStackInSlot(i))) n += h.getStackInSlot(i).getCount();
+        Inventory inv = p.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) if (pred.test(inv.getItem(i))) n += inv.getItem(i).getCount();
+        return n;
+    }
+
+    /** Забрать n предметов под условие (сначала сумка). Возвращает, сколько не хватило. */
+    public static int take(Player p, Predicate<ItemStack> pred, int n) {
+        ItemStackHandler h = get(p);
+        for (int i = 0; i < h.getSlots() && n > 0; i++) if (!h.getStackInSlot(i).isEmpty() && pred.test(h.getStackInSlot(i))) n -= h.extractItem(i, n, false).getCount();
+        Inventory inv = p.getInventory();
+        for (int i = 0; i < inv.getContainerSize() && n > 0; i++) {
+            ItemStack st = inv.getItem(i);
+            if (st.isEmpty() || !pred.test(st)) continue;
+            int k = Math.min(n, st.getCount());
+            st.shrink(k); n -= k;
+        }
+        return n;
+    }
+
     /** Переносит предметы из ванильных слотов 9–35 в сумку. */
     public static void sweep(ServerPlayer p) {
         if (p.isCreative() || p.isSpectator()) return;

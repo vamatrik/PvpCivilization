@@ -30,6 +30,11 @@ public final class Titles {
     public static final Map<String, Def> DEFS = new LinkedHashMap<>();
     static {
         add(new Def("vampire_victim", "Жертва вампиризма", 0xD23A54, "Побывай в подвале у Кармиллы", "+2.5% к макс. здоровью", Bonus.HP, 0.025));
+        add(new Def("hammer_hands", "Молотилка", 0xE05050, "Веха Тимофея: 25 000 ударов", "+3% к урону", Bonus.DAMAGE, 0.03));
+        add(new Def("marathon", "Марафонец", 0x60D060, "Веха Тимофея: 100 км пешком", "+4% к скорости бега", Bonus.SPEED, 0.04));
+        add(new Def("exterminator", "Истребитель", 0xD0A040, "Веха Тимофея: 5 000 убитых мобов", "+3% к здоровью", Bonus.HP, 0.03));
+        add(new Def("donor", "Почётный донор", 0xC02040, "Веха Тимофея: 20 укусов Кармиллы", "+3% к здоровью", Bonus.HP, 0.03));
+        add(new Def("sky_pass", "Пропуск в небо", 0xC0A0FF, "Получи у Луны допуск к Небесному лифту", "+2% к здоровью", Bonus.HP, 0.02));
         add(new Def("uninvited", "Незваный гость", 0xFF8AD8, "Проберись в комнату Луны", "+3% к скорости бега", Bonus.SPEED, 0.03));
         add(new Def("contractor", "Кровавый подрядчик", 0xE0B040, "Выполни 5 контрактов Кармиллы", "+3% к урону", Bonus.DAMAGE, 0.03));
         add(new Def("ice_racer", "Ледяной гонщик", 0x9ADFFF, "Пройди Ледяную Трассу быстрее 1:20", "+6% к скорости лодки", Bonus.BOAT, 0.06));

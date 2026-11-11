@@ -17,23 +17,63 @@ import java.util.List;
 
 /** Личный тайник: у каждого игрока свой таймер, лут сразу в инвентарь. */
 public final class Stash {
-    public static final long COOLDOWN = 20L * 60 * 30;
+    /** Отправить игроку, какие тайники он уже обчистил (для открытой крышки). */
+    public static void sync(ServerPlayer p) {
+        CivData data = CivData.get(p.server);
+        String suffix = "|" + p.getUUID();
+        long now = System.currentTimeMillis();
+        java.util.List<Long> pos = new java.util.ArrayList<>(), ready = new java.util.ArrayList<>();
+        for (var e : data.stash.entrySet()) {
+            if (!e.getKey().endsWith(suffix) || e.getValue() <= now || e.getValue() > now * 2) continue;
+            boolean kf2 = e.getKey().startsWith("f2:");
+            if (kf2 != com.pvpciv.world.CivWorld.isF2(p.level())) continue;   // крышки — только тайников своего измерения
+            String[] c = e.getKey().substring(kf2 ? 3 : 0, e.getKey().indexOf('|')).split(",");
+            pos.add(BlockPos.asLong(Integer.parseInt(c[0]), Integer.parseInt(c[1]), Integer.parseInt(c[2])));
+            ready.add(e.getValue());
+        }
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.pvpciv.net.Network.StashState(pos, ready));
+    }
+
+    /** Тайник обновляется через 8 часов реального времени (у каждого игрока свой таймер). */
+    public static final long COOLDOWN_MS = 8L * 60 * 60 * 1000;
+
+    private static String key(BlockPos pos, ServerPlayer p) {
+        return (com.pvpciv.world.CivWorld.isF2(p.level()) ? "f2:" : "") + pos.getX() + "," + pos.getY() + "," + pos.getZ() + "|" + p.getUUID();
+    }
+
+    /** Минимальный уровень: тайник локации открывается только с её уровня. */
+    public static int minLevel(BlockPos pos) {
+        if (pos.getZ() < -560 && Math.abs(pos.getX() - 3) < 12) return 6;   // Ледяной Склеп
+        if (pos.getZ() < 0) return 5;                                       // Инеевый Кряж
+        return 1;
+    }
 
     public static void open(ServerPlayer p, BlockPos pos) {
         ServerLevel lvl = p.serverLevel();
         CivData data = CivData.get(p.server);
-        String key = pos.getX() + "," + pos.getY() + "," + pos.getZ() + "|" + p.getUUID();
-        long now = lvl.getGameTime();
+        boolean f2 = com.pvpciv.world.CivWorld.isF2(lvl);
+        int need = f2 ? com.pvpciv.floor.Floor2.stashLevel(pos) : minLevel(pos);
+        if (com.pvpciv.progress.Progress.d(p).level < need) {
+            p.displayClientMessage(Component.literal("Ты слишком слаб, чтобы открыть этот тайник (нужен ур. " + need + ").").withStyle(ChatFormatting.RED), true);
+            lvl.playSound(null, pos, SoundEvents.CHEST_LOCKED, SoundSource.BLOCKS, 0.8f, 0.8f);
+            return;
+        }
+        String key = key(pos, p);
+        long now = System.currentTimeMillis();
         long ready = data.stash.getOrDefault(key, 0L);
+        if (ready > now * 2) ready = 0;   // старые записи (в тиках игры) — сбросить
         if (now < ready) {
-            long min = (ready - now) / 1200 + 1;
-            p.displayClientMessage(Component.literal("Тайник пуст. Ты его уже обчистил — загляни через " + min + " мин.").withStyle(ChatFormatting.GRAY), true);
+            long min = (ready - now) / 60000 + 1;
+            String t = min >= 60 ? (min / 60) + " ч " + (min % 60) + " мин" : min + " мин";
+            p.displayClientMessage(Component.literal("Тайник пуст. Ты его уже обчистил — загляни через " + t + ".").withStyle(ChatFormatting.GRAY), true);
             lvl.playSound(null, pos, SoundEvents.BARREL_CLOSE, SoundSource.BLOCKS, 0.6f, 0.7f);
             return;
         }
-        data.stash.put(key, now + COOLDOWN);
+        data.stash.put(key, now + COOLDOWN_MS);
+        com.pvpciv.progress.Progress.d(p).stashesOpened++;
         data.setDirty();
-        String table = com.pvpciv.floor.FloorNorth.CRYPT_STASHES.contains(pos) || (pos.getZ() < -560 && Math.abs(pos.getX() - 3) < 10) ? "floor1b_crypt"
+        sync(p);
+        String table = f2 ? com.pvpciv.floor.Floor2.stashTable(pos) : com.pvpciv.floor.FloorNorth.CRYPT_STASHES.contains(pos) || (pos.getZ() < -560 && Math.abs(pos.getX() - 3) < 10) ? "floor1b_crypt"
                 : pos.getZ() < 0 ? "floor1b_stash" : "floor1_stash";
         List<ItemStack> loot = LootTables.roll(table, lvl.random, 1.0);
         MutableComponent msg = Component.literal("Тайник: ").withStyle(ChatFormatting.GOLD);

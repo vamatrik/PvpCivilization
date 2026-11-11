@@ -1,1 +1,19 @@
-{ "variants": { "": { "model": "pvpciv:block/dismantle_table" } } }
+{
+ "variants": {
+  "facing=north": {
+   "model": "pvpciv:block/dismantle_table"
+  },
+  "facing=east": {
+   "model": "pvpciv:block/dismantle_table",
+   "y": 90
+  },
+  "facing=south": {
+   "model": "pvpciv:block/dismantle_table",
+   "y": 180
+  },
+  "facing=west": {
+   "model": "pvpciv:block/dismantle_table",
+   "y": 270
+  }
+ }
+}

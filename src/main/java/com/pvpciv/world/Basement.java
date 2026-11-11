@@ -31,7 +31,7 @@ public final class Basement extends Builder {
     }
 
     public static boolean inCell(Vec3 p) {
-        return p.x >= 4 && p.x < 10 && p.z >= -10 && p.z < -4 && p.y >= FY - 1 && p.y < FY + 4;
+        return p.x >= 3 && p.x < 11 && p.z >= -11 && p.z < -3 && p.y >= FY - 1 && p.y < FY + 4;   // с запасом в блок — у стен не дёргает
     }
 
     public static void build(ServerLevel level) {
@@ -42,6 +42,7 @@ public final class Basement extends Builder {
         b.cell(true);
         b.ritual();
         b.decor();
+        b.fixShapes();
     }
 
     private void shell() {
@@ -91,6 +92,8 @@ public final class Basement extends Builder {
             }
         }
         for (int x = -14; x <= -13; x++) set(x, Y0, 12, Blocks.DARK_OAK_FENCE);
+        // стенка над спуском (видна, когда идёшь вниз) — отделать, а не голая земля
+        for (int x = -15; x <= -12; x++) for (int y = FY + 5; y <= Y0 - 1; y++) set(x, y, Z1, y == Y0 - 1 ? Blocks.POLISHED_BLACKSTONE_BRICKS : Blocks.DEEPSLATE_BRICKS);
         for (int x = -15; x <= -12; x++) for (int y = Y0 - 10; y <= Y0 - 1; y++) set(x, y, 21, Blocks.DEEPSLATE_BRICKS);
         for (int x = -14; x <= -13; x++) set(x, Y0, 21, Blocks.AIR);
         // арка над входом
@@ -139,7 +142,7 @@ public final class Basement extends Builder {
         set(4, FY + 3, -9, Blocks.CHAIN);
         set(9, FY + 4, -6, Blocks.SOUL_LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
         setDoor(level, open);
-        sign(new BlockPos(5, FY + 2, -3), Direction.SOUTH, DyeColor.RED, "ДОЛЖНИКИ", "Кто не сдал", "контракт —", "посидит.");
+        sign(new BlockPos(5, FY + 2, -3), Direction.SOUTH, DyeColor.RED, "ДОЛЖНИКИ", "Не сдал", "контракт?", "Посиди.");
     }
 
     public static void setDoor(ServerLevel level, boolean open) {
@@ -147,9 +150,29 @@ public final class Basement extends Builder {
         for (int x = CELL_DOOR.getX(); x <= CELL_DOOR.getX() + 1; x++)
             for (int y = CELL_DOOR.getY(); y <= CELL_DOOR.getY() + 1; y++)
                 level.setBlock(new BlockPos(x, y, CELL_DOOR.getZ()), s, Block.UPDATE_ALL);
+        fixArea(level, CELL_DOOR.getX() - 1, CELL_DOOR.getX() + 2, CELL_DOOR.getY(), CELL_DOOR.getY() + 3, CELL_DOOR.getZ() - 1, CELL_DOOR.getZ() + 1);
     }
 
-    /** Ритуальный круг: 8 пьедесталов вокруг центра — место будущего стола инфузии. */
+    /** 0.7: поставить алтарь и пьедесталы в уже построенный круг. */
+    public static void placeAltar(net.minecraft.server.level.ServerLevel level) {
+        int cx = RITUAL.getX(), cz = RITUAL.getZ();
+        for (int i = 0; i < 8; i++) {
+            double a = Math.PI * 2 * i / 8;
+            BlockPos p = new BlockPos(cx + (int) Math.round(Math.cos(a) * 3), FY, cz + (int) Math.round(Math.sin(a) * 3));
+            level.setBlock(p.above(), Blocks.AIR.defaultBlockState(), 3);
+            level.setBlock(p, Blocks.AIR.defaultBlockState(), 3);
+            level.setBlock(p, com.pvpciv.registry.ModRegistry.INFUSION_PEDESTAL.get().defaultBlockState(), 3);
+        }
+        level.setBlock(new BlockPos(cx, FY, cz), Blocks.AIR.defaultBlockState(), 3);
+        level.setBlock(new BlockPos(cx, FY, cz), com.pvpciv.registry.ModRegistry.INFUSION_ALTAR.get().defaultBlockState(), 3);
+        if (level.getBlockEntity(new BlockPos(cx, FY, cz + 4)) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sb) {
+            sb.setText(sb.getFrontText().setMessage(3, net.minecraft.network.chat.Component.literal("ПКМ по алтарю")), true);
+            sb.setChanged();
+            level.sendBlockUpdated(sb.getBlockPos(), sb.getBlockState(), sb.getBlockState(), 3);
+        }
+    }
+
+    /** Ритуальный круг: 8 пьедесталов вокруг алтаря инфузии. */
     private void ritual() {
         int cx = RITUAL.getX(), cz = RITUAL.getZ();
         for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) {
@@ -159,11 +182,10 @@ public final class Basement extends Builder {
         for (int i = 0; i < 8; i++) {
             double a = Math.PI * 2 * i / 8;
             int x = cx + (int) Math.round(Math.cos(a) * 3), z = cz + (int) Math.round(Math.sin(a) * 3);
-            set(x, FY, z, Blocks.POLISHED_BLACKSTONE_BRICK_WALL);
-            setLit(x, FY + 1, z, Blocks.RED_CANDLE.defaultBlockState().setValue(CandleBlock.LIT, true).setValue(CandleBlock.CANDLES, 2));
+            set(x, FY, z, com.pvpciv.registry.ModRegistry.INFUSION_PEDESTAL.get());
         }
-        set(cx, FY, cz, Blocks.LODESTONE);
-        sign(new BlockPos(cx, FY, cz + 4), Direction.SOUTH, DyeColor.PURPLE, "Круг Инфузии", "8 звёзд вокруг,", "в центре — дар.", "(скоро)");
+        set(cx, FY, cz, com.pvpciv.registry.ModRegistry.INFUSION_ALTAR.get());
+        sign(new BlockPos(cx, FY, cz + 4), Direction.SOUTH, DyeColor.PURPLE, "Круг Инфузии", "8 звёзд вокруг,", "в центре — дар.", "ПКМ по алтарю");
     }
 
     private void decor() {

@@ -37,6 +37,13 @@ public final class ClientPayloads {
         ClientState.zone = p.zone();
         ClientState.zoneType = p.zoneType();
         ClientState.bossSeconds = p.bossSeconds();
+        ClientState.keeperSeconds = p.keeperSeconds();
+        ClientState.bossTimers.clear();
+        for (String e : p.bosses().split(",")) { int i = e.indexOf(':'); if (i > 0) ClientState.bossTimers.put(e.substring(0, i), Integer.parseInt(e.substring(i + 1))); }
+        ClientState.trophies = p.trophies();
+        String[] bt = p.boats().split("\\|", -1);
+        ClientState.boats = bt[0].isEmpty() ? java.util.List.of() : java.util.List.of(bt[0].split(","));
+        ClientState.activeBoat = bt.length > 1 ? bt[1] : "";
         ClientState.quest = p.quest();
         ClientState.questSeconds = p.questSeconds();
         ClientState.jailSeconds = p.jailSeconds();
@@ -44,10 +51,19 @@ public final class ClientPayloads {
         ClientState.activeTitle = p.activeTitle();
     }
 
+    public static void stash(Network.StashState p) {
+        ClientState.stash.clear();
+        for (int i = 0; i < p.pos().size(); i++) ClientState.stash.put(p.pos().get(i), p.readyMs().get(i));
+    }
+
     public static void cinematic(Network.Cinematic p) {
         ClientState.cineKind = p.kind();
         ClientState.cineStart = System.currentTimeMillis();
         ClientState.cineLen = p.ticks() * 50L;
         ClientState.cineText = p.text();
+    }
+
+    public static void openLift(com.pvpciv.net.Network.OpenLift p) {
+        net.minecraft.client.Minecraft.getInstance().setScreen(new com.pvpciv.client.screen.LiftScreen(p.mask(), p.current()));
     }
 }

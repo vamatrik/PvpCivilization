@@ -21,6 +21,12 @@ public final class Zones {
     public static final Zone CRYPT = new Zone("Этаж 1 · Ледяной Склеп", Type.PVP);
     public static final Zone ABYSS = new Zone("Бездна", Type.SAFE);
 
+    /** С учётом измерения (этаж 2 — своё небо). */
+    public static Zone at(net.minecraft.world.entity.Entity e) {
+        if (com.pvpciv.world.CivWorld.isF2(e.level())) return Floor2.zone(e.position());
+        return at(e.position());
+    }
+
     public static Zone at(Vec3 p) {
         if (Basement.contains(p)) return BASEMENT;
         if (Math.max(Math.abs(p.x), Math.abs(p.z)) <= 33 && p.y > DormBuilder.Y0 - 4) return HUB;

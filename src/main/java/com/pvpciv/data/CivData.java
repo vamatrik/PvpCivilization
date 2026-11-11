@@ -63,7 +63,9 @@ public class CivData extends SavedData {
     public boolean built = false;
     public int version = 0;
     public final List<Apartment> apartments = new ArrayList<>();
-    public long bossNext = -1;
+    /** Когда проснётся босс (игровое время мира 1), по id: brute, keeper. -1 — не задано. */
+    public final Map<String, Long> bossNext = new HashMap<>();
+    public long bossNext(String id) { return bossNext.getOrDefault(id, -1L); }
     public final Map<String, Long> stash = new HashMap<>();
     public final Map<UUID, Long> trackBest = new HashMap<>();
     public long trackRecord = 0;
@@ -80,7 +82,9 @@ public class CivData extends SavedData {
         d.version = tag.getInt("version");
         ListTag list = tag.getList("apartments", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) d.apartments.add(Apartment.load(list.getCompound(i)));
-        d.bossNext = tag.contains("bossNext") ? tag.getLong("bossNext") : -1;
+        if (tag.contains("bossNext")) d.bossNext.put("brute", tag.getLong("bossNext"));
+        CompoundTag bt = tag.getCompound("bossTimers");
+        for (String k : bt.getAllKeys()) d.bossNext.put(k, bt.getLong(k));
         CompoundTag st = tag.getCompound("stash");
         for (String k : st.getAllKeys()) d.stash.put(k, st.getLong(k));
         CompoundTag tb = tag.getCompound("trackBest");
@@ -97,7 +101,9 @@ public class CivData extends SavedData {
         ListTag list = new ListTag();
         for (Apartment a : apartments) list.add(a.save());
         tag.put("apartments", list);
-        tag.putLong("bossNext", bossNext);
+        CompoundTag bt = new CompoundTag();
+        bossNext.forEach(bt::putLong);
+        tag.put("bossTimers", bt);
         CompoundTag st = new CompoundTag();
         stash.forEach(st::putLong);
         tag.put("stash", st);

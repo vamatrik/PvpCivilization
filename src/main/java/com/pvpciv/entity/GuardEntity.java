@@ -27,6 +27,9 @@ public class GuardEntity extends StoryNpc {
     private BlockPos doorPos;
     private int knock = 40, cooldown = 0, leave = -1, tries = 0;
     private boolean doorOpened = false;
+    /** Двери, которые держит открытыми охранник, пока идёт знакомство. */
+    private static final java.util.Set<BlockPos> HOLD = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    public static boolean holds(BlockPos door) { return HOLD.contains(door); }
 
     public GuardEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level, "Тимофей Глыба", COLOR);
@@ -55,7 +58,7 @@ public class GuardEntity extends StoryNpc {
         super.tick();
         if (level().isClientSide) return;
         ServerPlayer p = target == null ? null : (ServerPlayer) level().getPlayerByUUID(target);
-        if (p == null) { if (tickCount > 40) discard(); return; }
+        if (p == null) { if (tickCount > 40) { if (doorPos != null) HOLD.remove(doorPos); discard(); } return; }
         if (leave >= 0) {
             if (--leave <= 0) {
                 ((ServerLevel) level()).sendParticles(ParticleTypes.POOF, getX(), getY() + 1, getZ(), 20, 0.3, 0.6, 0.3, 0.02);
@@ -63,7 +66,11 @@ public class GuardEntity extends StoryNpc {
             }
             return;
         }
-        if (Story.data(p).stage > Story.NEW) { leave = 60; return; }
+        if (Story.data(p).stage > Story.NEW) {
+            leave = 60;
+            if (doorPos != null) { HOLD.remove(doorPos); level().scheduleTick(doorPos, level().getBlockState(doorPos).getBlock(), 60); }   // теперь можно закрыть
+            return;
+        }
         this.getLookControl().setLookAt(p);
         if (cooldown > 0) cooldown--;
         double dist = distanceTo(p);
@@ -90,7 +97,7 @@ public class GuardEntity extends StoryNpc {
     /** Игрок открыл дверь квартиры ключ-картой: охранник у порога заговаривает. */
     public static void onDoorOpened(ServerPlayer p, BlockPos door) {
         for (GuardEntity g : p.serverLevel().getEntitiesOfClass(GuardEntity.class, new AABB(door).inflate(8)))
-            if (p.getUUID().equals(g.target) && !g.doorOpened) { g.doorOpened = true; g.cooldown = 8; }
+            if (p.getUUID().equals(g.target) && !g.doorOpened) { g.doorOpened = true; g.cooldown = 8; HOLD.add(door); }
     }
 
     @Override

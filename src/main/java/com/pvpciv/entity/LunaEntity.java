@@ -158,7 +158,7 @@ public class LunaEntity extends GeoNpc {
         BlockState s = sl.getBlockState(low);
         if (s.getBlock() instanceof DoorBlock door && !s.getValue(DoorBlock.OPEN)) {
             door.setOpen(null, sl, s, low, true);
-            sl.scheduleTick(low, door, 50);
+            sl.scheduleTick(low, door, 100);   // 5 секунд, чтобы успеть проскочить
             sl.playSound(null, low, SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.BLOCKS, 0.6f, 1.6f);
         }
     }

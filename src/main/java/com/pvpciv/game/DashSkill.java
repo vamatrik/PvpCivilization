@@ -14,7 +14,7 @@ import java.util.UUID;
 
 /** Скилл слота R: «Рывок». */
 public final class DashSkill {
-    public static final int COOLDOWN_TICKS = 60;
+    public static final int COOLDOWN_TICKS = 140;   // 7 с
     private static final Map<UUID, Long> LAST = new HashMap<>();
 
     public static void tryDash(ServerPlayer p) {

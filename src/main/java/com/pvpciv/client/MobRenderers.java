@@ -22,6 +22,17 @@ public final class MobRenderers {
         skeleton(e, ModMobs.FROST_ARCHER.get(), "frost_archer");
         spider(e, ModMobs.ASH_SPIDER.get(), "ash_spider");
         spider(e, ModMobs.FROST_SPIDER.get(), "frost_spider");
+        zombie(e, ModMobs.POLICE.get(), "police");
+        zombie(e, ModMobs.THUG.get(), "thug");
+        zombie(e, ModMobs.GHOUL.get(), "sewer_ghoul");
+        ResourceLocation gt = tex("gunner");
+        e.registerEntityRenderer(ModMobs.GUNNER.get(), ctx -> new HumanoidMobRenderer<net.minecraft.world.entity.monster.Skeleton, net.minecraft.client.model.HumanoidModel<net.minecraft.world.entity.monster.Skeleton>>(
+                ctx, new net.minecraft.client.model.HumanoidModel<>(ctx.bakeLayer(net.minecraft.client.model.geom.ModelLayers.ZOMBIE)), 0.5f) {
+            @Override public ResourceLocation getTextureLocation(net.minecraft.world.entity.monster.Skeleton s) { return gt; }
+        });
+        e.registerEntityRenderer(ModMobs.RAT.get(), ctx -> new BeastRenderer<>(ctx, 0.3f));
+        e.registerEntityRenderer(ModMobs.PET_RAT.get(), ctx -> new BeastRenderer<>(ctx, 0.3f));
+        e.registerEntityRenderer(ModMobs.STREET_DOG.get(), ctx -> new BeastRenderer<>(ctx, 0.45f));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

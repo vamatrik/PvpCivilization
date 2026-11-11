@@ -63,6 +63,9 @@ public final class GameEvents {
         bus.addListener(GameEvents::onPickup);
         bus.addListener(GameEvents::onEntityJoin);
         bus.addListener(GameEvents::onRightClickBlock);
+        bus.addListener((net.neoforged.neoforge.event.entity.living.LivingDeathEvent e) -> {
+            if (e.getEntity() instanceof net.minecraft.world.entity.Mob m && !m.level().isClientSide) com.pvpciv.floor.EliteSpots.onDeath(m);
+        });
         bus.addListener(GameEvents::onNameFormat);
         CombatEvents.register(bus);
     }
@@ -92,6 +95,8 @@ public final class GameEvents {
         r.getRule(GameRules.RULE_LIMITED_CRAFTING).set(true, server);
         lvl.setWeatherParameters(6000000, 0, false, false);
         server.overworld().setWeatherParameters(6000000, 0, false, false);
+        for (var bd : BossManager.DEFS) data.bossNext.put(bd.id(), 0L);   // при запуске сервера боссы сразу живы (просыпаются, когда кто-то рядом)
+        data.setDirty();
     }
 
     private static void onLogin(PlayerEvent.PlayerLoggedInEvent e) {
@@ -117,11 +122,14 @@ public final class GameEvents {
         ArenaManager.tick(server);
         BossManager.tick(server);
         if (ticks % 60 == 0) SpawnZones.tick(server);
+        if (ticks % 20 == 7) com.pvpciv.floor.EliteSpots.tick(server);
         if (ticks % 20 == 0) for (ServerPlayer p : server.getPlayerList().getPlayers()) Story.tickPlayer(p);
         if (ticks % 10 == 0) for (ServerPlayer p : server.getPlayerList().getPlayers()) com.pvpciv.inv.Bag.sweep(p);
+        if (ticks % 5 == 0) for (ServerPlayer p : server.getPlayerList().getPlayers()) Falling.tick(p);
         if (ticks % 100 == 0) {
             LunaEntity.ensure(server); TraderEntity.ensure(server);
             com.pvpciv.entity.CarmillaEntity.ensure(server); com.pvpciv.entity.EleonoraEntity.ensure(server);
+            com.pvpciv.floor.Floor2.ensureNpcs(server);
         }
         com.pvpciv.world.IceTrack.tick(server);
     }
@@ -200,7 +208,10 @@ public final class GameEvents {
         }
         int idle = t.getInt("idle") + 1;
         t.putInt("idle", idle);
-        if (idle > 20 * 60 * 5 || e.getEntity().getY() < 0) e.getEntity().discard();
+        if (idle > 200 || e.getEntity().getY() < 0) {   // пустая лодка исчезает через 10 с
+            if (e.getEntity().level() instanceof ServerLevel sl) sl.sendParticles(net.minecraft.core.particles.ParticleTypes.CLOUD, e.getEntity().getX(), e.getEntity().getY() + 0.5, e.getEntity().getZ(), 12, 0.5, 0.2, 0.5, 0.02);
+            e.getEntity().discard();
+        }
     }
 
     private static void onBreak(BlockEvent.BreakEvent e) {
@@ -229,7 +240,7 @@ public final class GameEvents {
         String line = String.format("[%s] %s | v%s | ур.%d | %s | %d %d %d | %s%n",
                 java.time.LocalDateTime.now().withNano(0).toString().replace('T', ' '), p.getGameProfile().getName(),
                 net.neoforged.fml.ModList.get().getModFileById(com.pvpciv.PvpCiv.MODID).versionString(),
-                Progress.d(p).level, com.pvpciv.floor.Zones.at(p.position()).name(), p.getBlockX(), p.getBlockY(), p.getBlockZ(), text);
+                Progress.d(p).level, com.pvpciv.floor.Zones.at(p).name(), p.getBlockX(), p.getBlockY(), p.getBlockZ(), text);
         try {
             java.nio.file.Files.writeString(f, line, java.nio.charset.StandardCharsets.UTF_8, java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
         } catch (java.io.IOException ex) {
@@ -295,7 +306,17 @@ public final class GameEvents {
                                 case "lair" -> Floor1.LAIR.north(14); case "ruins" -> Floor1.RUINS; case "eleonora" -> DormBuilder.ELEONORA_SPOT.north(1);
                                 default -> DormBuilder.ATRIUM_CENTER;
                             };
-                            p.teleportTo(com.pvpciv.world.CivWorld.level(p.server), to.getX() + 0.5, to.getY(), to.getZ() + 0.5, p.getYRot(), 0);
+                            boolean f2 = switch (w) { case "f2", "sewer", "club", "throne", "tower", "gym" -> true; default -> false; };
+                            if (f2) to = switch (w) {
+                                case "sewer" -> com.pvpciv.floor.Floor2.polar(22, com.pvpciv.floor.Floor2.MID, com.pvpciv.floor.Floor2.YS);
+                                case "club" -> com.pvpciv.floor.Floor2.polar(315, 100, com.pvpciv.floor.Floor2.Y);
+                                case "throne" -> com.pvpciv.floor.Floor2.RAT_THRONE.offset(10, 0, 0);
+                                case "tower" -> com.pvpciv.floor.Floor2.TOWER.offset(-8, 0, 0);
+                                case "gym" -> com.pvpciv.floor.Floor2.GYM.south(3);
+                                default -> net.minecraft.core.BlockPos.containing(com.pvpciv.floor.Floor2.LIFT_ARRIVE);
+                            };
+                            if (w.equals("roof")) to = net.minecraft.core.BlockPos.containing(com.pvpciv.world.RoofBuilder.ARRIVE);
+                            p.teleportTo(f2 ? com.pvpciv.world.CivWorld.f2(p.server) : com.pvpciv.world.CivWorld.level(p.server), to.getX() + 0.5, to.getY(), to.getZ() + 0.5, p.getYRot(), 0);
                             return 1;
                         })))
                 .then(Commands.literal("cd").requires(s -> s.hasPermission(2)).executes(c -> {
@@ -308,15 +329,36 @@ public final class GameEvents {
                     c.getSource().sendSuccess(() -> Component.literal("Кулдаун контрактов и заточение сброшены."), false);
                     return 1;
                 }))
+                .then(Commands.literal("rebuild2").requires(s -> s.hasPermission(2)).executes(c -> {
+                    com.pvpciv.floor.Floor2.build(com.pvpciv.world.CivWorld.f2(c.getSource().getServer()));
+                    com.pvpciv.world.RoofBuilder.build(com.pvpciv.world.CivWorld.level(c.getSource().getServer()));
+                    c.getSource().sendSuccess(() -> Component.literal("Этаж 2 и крыша перестроены."), false);
+                    return 1;
+                }))
+                .then(Commands.literal("unlock2").requires(s -> s.hasPermission(2)).executes(c -> {
+                    ServerPlayer p = c.getSource().getPlayerOrException();
+                    StoryData d = Story.data(p);
+                    d.trophies |= 3; d.showcase |= 3;
+                    p.setData(ModRegistry.STORY.get(), d);
+                    c.getSource().sendSuccess(() -> Component.literal("Трофеи этажа 1 засчитаны и выставлены (тест). Поговори с Луной у лифта."), false);
+                    return 1;
+                }))
                 .then(Commands.literal("jail").requires(s -> s.hasPermission(2)).executes(c -> {
                     Vampire.abduct(c.getSource().getPlayerOrException());
                     return 1;
                 }))
                 .then(Commands.literal("boss").requires(s -> s.hasPermission(2)).executes(c -> {
-                    BossManager.forceSpawn(c.getSource().getServer());
+                    BossManager.forceSpawn(c.getSource().getServer(), "brute");
                     c.getSource().sendSuccess(() -> Component.literal("Громила проснётся, как только рядом с логовом будет игрок."), false);
                     return 1;
-                }))
+                }).then(Commands.argument("id", com.mojang.brigadier.arguments.StringArgumentType.word())
+                        .suggests((c, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(BossManager.DEFS.stream().map(BossManager.Def::id), b))
+                        .executes(c -> {
+                            String id = com.mojang.brigadier.arguments.StringArgumentType.getString(c, "id");
+                            if (!BossManager.forceSpawn(c.getSource().getServer(), id)) { c.getSource().sendFailure(Component.literal("Нет такого босса или он уже жив.")); return 0; }
+                            c.getSource().sendSuccess(() -> Component.literal("Босс «" + id + "» проснётся, как только рядом будет игрок."), false);
+                            return 1;
+                        })))
                 .then(Commands.literal("loot").requires(s -> s.hasPermission(2))
                         .then(Commands.argument("table", com.mojang.brigadier.arguments.StringArgumentType.word()).executes(c -> {
                             ServerPlayer p = c.getSource().getPlayerOrException();

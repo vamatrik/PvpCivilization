@@ -87,9 +87,9 @@ def axe(name, shaft=19, head='#3A3A3E', edge='#FF7A2E', wood='#4A2E1E', band='#2
         m.box(x+sgn*1.6, top-4.4, x+sgn*3.2, top+0.8, 0.9, head, True)
         m.box(x+sgn*3.2, top-5.2, x+sgn*4.0, top+1.6, 0.6, head, True)
         m.box(x+sgn*4.0, top-5.6, x+sgn*4.6, top+2.0, 0.35, edge, True)
-    half(1)
-    if double: half(-1)
-    else: m.box(6.2, top-2.6, 7.2, top-1.0, 1.0, head)
+    half(-1)   # лезвие наружу, в сторону удара
+    if double: half(1)
+    else: m.box(8.8, top-2.6, 9.8, top-1.0, 1.0, head)
     return m
 
 def hammer(name, shaft=18, head='#5E6B52', face='#9FB08A', dark='#2F3A28', wood='#5A3A22', band='#C9A24A', accent='#8B2020', head_w=9.0, head_h=5.0):
@@ -101,6 +101,37 @@ def hammer(name, shaft=18, head='#5E6B52', face='#9FB08A', dark='#2F3A28', wood=
     m.c(8, y0+head_h/2-0.4, y0+head_h/2+0.4, head_w-2.0, 3.9, dark)
     m.c(8, y0+head_h, y0+head_h+1.2, 1.6, 1.6, band)
     m.c(8+head_w/2-0.5, y0+0.6, y0+1.6, 1.05, 4.3, accent)
+    return m
+
+def spear(name, shaft=22, shaft_c='#C8D8EA', band='#3AB0FF', head='#8FD8FF', edge='#F4FDFF', dark='#4A6A8A'):
+    m = Model(name); m.c(8, 0, 1.0, 1.5, 1.5, dark); m.c(8, 1.0, shaft, 0.9, 0.9, shaft_c)
+    for y in (3.0, 4.6, shaft - 2.2): m.c(8, y, y + 0.6, 1.2, 1.2, band)
+    m.c(8, shaft, shaft + 0.8, 3.6, 1.0, head, True)                         # крестовина-льдинки
+    m.c(8 - 2.0, shaft - 0.6, shaft + 1.6, 0.8, 0.8, edge, True); m.c(8 + 2.0, shaft - 0.6, shaft + 1.6, 0.8, 0.8, edge, True)
+    blade(m, shaft + 0.8, shaft + 9.5, 2.2, head, edge, tip=4.0)
+    return m
+
+def bat(name, length=19, wood='#B08850', dark='#6A4A2A', nails='#C8C8D0', grip='#2A2A2A', thin=False):
+    m = Model(name); m.c(8, 0, 0.8, 1.8, 1.8, dark); m.c(8, 0.8, 5, 1.2, 1.2, grip)
+    w0, w1 = (1.3, 1.6) if thin else (1.4, 2.8)
+    steps = 5
+    for i in range(steps):
+        y0 = 5 + (length - 5) * i / steps; y1 = 5 + (length - 5) * (i + 1) / steps
+        w = w0 + (w1 - w0) * i / (steps - 1)
+        m.c(8, y0, y1, w, w, wood if i % 2 == 0 or thin else dark if False else wood, i >= 3)
+    if not thin:
+        for y in (length - 5, length - 3, length - 1.5):
+            m.box(8 - 2.0, y, 8 + 2.0, y + 0.4, 0.4, nails, True)
+    else:
+        m.c(8, length - 0.6, length, 1.5, 1.5, grip)
+        m.box(8 - 1.6, 5.5, 8 + 1.6, 6.2, 0.5, grip)       # поперечная рукоять тонфы
+    return m
+
+def flute(name, length=20, body='#7A5A3A', ring='#E0B840', hole='#1A1008'):
+    m = Model(name); m.c(8, 0, length, 1.3, 1.3, body)
+    for y in (3, length - 1.5): m.c(8, y, y + 0.7, 1.6, 1.6, ring)
+    for y in (7, 9.5, 12, 14.5): m.box(7.6, y, 8.4, y + 0.6, 1.36, hole, True)
+    m.c(8, length, length + 2.2, 2.4, 2.4, ring, True)                # раструб
     return m
 
 # ---------------------------------------------------------------- список оружия (добавляй сюда)
@@ -116,6 +147,22 @@ WEAPONS = [
     saber('frost_rapier', length=18, width=1.4, curve=1.2, core='#9ADFFF', edge='#F4FDFF', guard_c='#3A5A7A', wood='#22303E', pommel='#E8FAFF'),
     dagger('icicle_dagger', length=8.5, width=1.8, core='#B8ECFF', edge='#FFFFFF', guard_c='#5A7A9A', wood='#2A3A4A'),
     axe('glacier_axe', head='#4A6A8A', edge='#9ADFFF', wood='#3A2E2A', band='#C8D6E0', double=True),
+    spear('keeper_spear'),
+    # этаж 2 — улица (тир 2)
+    bat('nail_bat'),
+    dagger('brass_knuckles', length=3.5, width=3.2, core='#D8B040', edge='#F4DC80', guard_c='#A88020', wood='#3A2A1A'),
+    saber('machete', length=15, width=2.8, curve=1.0, core='#8A8E94', edge='#E8ECF0', guard_c='#2A2A2A', wood='#1A1A1A', pommel='#3A3A3A'),
+    axe('fire_axe', head='#C02020', edge='#E8E8E8', wood='#D0A060', band='#2A2A2A'),
+    sword('street_blade', length=14, width=2.4, core='#6A7078', edge='#C8D0D8', guard_w=4.6, guard_c='#3A3A3A', wood='#2A2020', pommel='#5A5A5A'),
+    bat('police_baton', length=17, wood='#1A1A20', dark='#2A2A30', grip='#3A3A40', thin=True),
+    # этаж 2 — канализация (тир 2+)
+    hammer('pipe_wrench', shaft=16, head='#B03020', face='#8A8E94', dark='#5A2010', wood='#B03020', band='#6A6E74', accent='#2A2A2A', head_w=6.0, head_h=4.0),
+    dagger('sewer_shiv', length=8, width=1.6, core='#8A8A7A', edge='#C8C8B0', guard_c='#4A5A3A', wood='#3A3A2A'),
+    sword('rebar_sword', length=16, width=2.2, core='#7A4A2A', edge='#A86A3A', guard_w=4.0, guard_c='#5A3A20', wood='#3A3A3A', pommel='#5A3A20'),
+    axe('toxic_hatchet', head='#4A6A2A', edge='#9AE040', wood='#3A2E2A', band='#6A8A2A'),
+    flute('rat_pipe'),
+    # контрабанда с этажа 3
+    sword('samurai_katana', length=20, width=1.7, core='#D8DCE4', edge='#FFFFFF', guard_w=3.0, guard_c='#C9A24A', wood='#2A1A3A', pommel='#C9A24A'),
 ]
 
 # ---------------------------------------------------------------- вывод

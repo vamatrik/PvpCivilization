@@ -44,22 +44,36 @@ public final class Story {
 
     public static String objective(int stage) {
         if (stage == NEW) return "Кто-то стучит в дверь. Открой её ключ-картой (ПКМ картой по двери) и выйди к гостю.";
-        return "Этаж 1: на юге — Пепельная пустошь (ур. 1–3), на севере за Ледяной Трассой — Инеевый Кряж (ур. 3–5, броня). В подвале — контракты Кармиллы. Хлам продавай Сороке.";
+        return "Этаж 1: юг — Пепельная пустошь (ур. 1–4), север за Трассой — Инеевый Кряж (ур. 5–7). Убей Громилу и Хранительницу, выставь трофеи на витрину — и на крыше тебя ждёт Небесный лифт на этаж 2.";
+    }
+
+    private static String bossTimers(net.minecraft.server.MinecraftServer s) {
+        StringBuilder b = new StringBuilder();
+        for (BossManager.Def d : BossManager.DEFS) b.append(d.id()).append(':').append(BossManager.secondsLeft(s, d.id())).append(',');
+        return b.toString();
     }
 
     public static void sync(ServerPlayer p) {
         StoryData d = data(p);
-        Zones.Zone z = Zones.at(p.position());
+        Zones.Zone z = Zones.at(p);
         int boss = BossManager.secondsLeft(p.server);
         PacketDistributor.sendToPlayer(p, new Network.SyncState(d.stage, objective(d.stage), d.level, d.xp, Progress.xpToNext(d.level),
                 d.money, z.name(), z.type().ordinal(), boss, Vampire.hudLine(d), Vampire.hudSeconds(p, d), Vampire.jailSeconds(p),
-                String.join(",", d.titles), d.activeTitle));
+                String.join(",", d.titles), d.activeTitle, BossManager.secondsLeft(p.server, "keeper"), d.trophies, String.join(",", d.boats) + "|" + d.activeBoat, bossTimers(p.server)));
     }
 
     /** Раз в секунду: зона, таймер босса. */
     public static void tickPlayer(ServerPlayer p) {
         Vampire.tick(p);
-        Zones.Zone z = Zones.at(p.position());
+        Garage.tick(p);
+        // «дневник подвигов»: пройденное расстояние
+        var pt = p.getPersistentData();
+        if (pt.contains("lastX") && !p.isPassenger() && !p.isSpectator()) {
+            double dx = p.getX() - pt.getDouble("lastX"), dz = p.getZ() - pt.getDouble("lastZ"), d = Math.sqrt(dx * dx + dz * dz);
+            if (d < 15) { StoryData sd = data(p); sd.distM += Math.round(d); }
+        }
+        pt.putDouble("lastX", p.getX()); pt.putDouble("lastZ", p.getZ());
+        Zones.Zone z = Zones.at(p);
         Zones.Zone last = LAST_ZONE.put(p.getUUID(), z);
         sync(p);
     }
@@ -86,7 +100,7 @@ public final class Story {
     public static void announceRareDrop(Level level, ItemStack st) {
         if (!(level instanceof ServerLevel sl)) return;
         boolean rare = (st.getItem() instanceof CivWeaponItem || st.getItem() instanceof com.pvpciv.item.CivArmorItem) && Gear.rarity(st).ordinal() >= Rarity.EPIC.ordinal();
-        boolean blessed = st.is(ModRegistry.BLESSED_STAR_W1.get()) || st.is(ModRegistry.RIME_BOAT_T2.get());
+        boolean blessed = st.is(ModRegistry.BLESSED_STAR_W1.get()) || st.is(ModRegistry.RIME_BOAT_T2.get()) || st.is(ModRegistry.BLOOD_STAR_W1.get());
         if (!rare && !blessed) return;
         Component msg = Component.literal("✦ Выпал редкий предмет: ").withStyle(ChatFormatting.GOLD).append(st.getHoverName());
         for (ServerPlayer p : sl.getServer().getPlayerList().getPlayers()) p.sendSystemMessage(msg);
@@ -106,8 +120,8 @@ public final class Story {
             inv.add(KeyCardItem.create(p, apt.number));
         if (!has(inv, s -> s.getItem() instanceof CivWeaponItem) && !Forge.busy(p))
             inv.add(new ItemStack(ModRegistry.NOVICE_SWORD.get()));
-        if (!has(inv, s -> s.getItem() instanceof BoatSummonItem))
-            inv.add(new ItemStack(ModRegistry.OAK_BOAT_T1.get()));
+        if (!has(inv, s -> s.getItem() instanceof BoatSummonItem) && !com.pvpciv.inv.Bag.has(p, s -> s.getItem() instanceof BoatSummonItem))
+            inv.add(Garage.activeStack(p));
         if (!d.starterFood) {
             d.starterFood = true;
             p.setData(ModRegistry.STORY.get(), d);
@@ -123,6 +137,7 @@ public final class Story {
 
     // ------------------------------------------------------------------ onboarding
     public static void onLogin(ServerPlayer p) {
+        Milestones.apply(p);
         CivData civ = CivData.get(p.server);
         StoryData d = data(p);
         d.dash = true;
@@ -155,6 +170,7 @@ public final class Story {
         if (!com.pvpciv.world.CivWorld.is(p.level())) toApartment(p, apt);
         if (d.stage == NEW) GuardEntity.ensureFor(p, apt);
         Vampire.onLogin(p);
+        Stash.sync(p);
         sync(p);
     }
 

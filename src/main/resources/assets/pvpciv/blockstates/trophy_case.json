@@ -1,0 +1,16 @@
+{
+ "variants": {
+  "facing=north": {
+   "model": "pvpciv:block/trophy_case"
+  },
+  "facing=east": {
+   "model": "pvpciv:block/trophy_case"
+  },
+  "facing=south": {
+   "model": "pvpciv:block/trophy_case"
+  },
+  "facing=west": {
+   "model": "pvpciv:block/trophy_case"
+  }
+ }
+}

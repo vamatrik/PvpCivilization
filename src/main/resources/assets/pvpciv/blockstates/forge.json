@@ -1,1 +1,19 @@
-{ "variants": { "": { "model": "pvpciv:block/forge" } } }
+{
+ "variants": {
+  "facing=north": {
+   "model": "pvpciv:block/forge"
+  },
+  "facing=east": {
+   "model": "pvpciv:block/forge",
+   "y": 90
+  },
+  "facing=south": {
+   "model": "pvpciv:block/forge",
+   "y": 180
+  },
+  "facing=west": {
+   "model": "pvpciv:block/forge",
+   "y": 270
+  }
+ }
+}
