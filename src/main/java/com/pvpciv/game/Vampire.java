@@ -116,8 +116,8 @@ public final class Vampire {
         var r = net.minecraft.util.RandomSource.create(p.getUUID().getLeastSignificantBits() ^ (now(p.server) / (20L * 60 * 10)));
         java.util.Collections.shuffle(kinds, new java.util.Random(r.nextLong()));
         int n = 1 + r.nextInt(Math.min(4, kinds.size()));
-        int total = 20 + r.nextInt(9) * 5 + Math.min(20, d.questsDone * 2);   // 20–60, растёт с опытом
-        total = Math.min(60, Math.max(total, n * 5));
+        int total = 16 + r.nextInt(8) * 4 + Math.min(16, d.questsDone * 2);   // 16–50 (бета: −18%), растёт с опытом
+        total = Math.min(50, Math.max(total, n * 4));
         List<Pos> out = new ArrayList<>();
         int left = total;
         for (int i = 0; i < n; i++) {
@@ -305,14 +305,26 @@ public final class Vampire {
     /** jailTicks — сколько сидеть; dropQuest — сгорает ли контракт (для звезды крови — нет). */
     public static void abduct(ServerPlayer p, long jailTicks, boolean dropQuest) { abduct(p, jailTicks, dropQuest, false); }
 
+    /** Похищение по жалобе Элеоноры (звонок во время охоты): у Кармиллы другие реплики. */
+    public static final java.util.Set<java.util.UUID> ELE_CALL = new java.util.HashSet<>();
+
     public static void abduct(ServerPlayer p, long jailTicks, boolean dropQuest, boolean blood) {
         MinecraftServer server = p.server;
+        final boolean ele = ELE_CALL.remove(p.getUUID());
         if (ABDUCTING.contains(p.getUUID())) return;
         if (dropQuest) clearQuest(p);
         ABDUCTING.add(p.getUUID());
         DialogueManager.forget(p);
         PacketDistributor.sendToPlayer(p, new Network.DialogueClose());
         if (p.isPassenger()) p.stopRiding();
+        // бета: на время катсцены — неуязвимость, мобы рядом уходят (исчезают и потом заново появятся на своих точках)
+        p.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 240, 4, false, false));
+        p.getPersistentData().putLong("abductSafeUntil", p.serverLevel().getGameTime() + 240);
+        for (net.minecraft.world.entity.Mob m : p.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.Mob.class, p.getBoundingBox().inflate(20),
+                m -> com.pvpciv.combat.Mobs.level(m) > 0 && !(m instanceof com.pvpciv.entity.boss.CivBoss))) {
+            p.serverLevel().sendParticles(net.minecraft.core.particles.ParticleTypes.POOF, m.getX(), m.getY() + 1, m.getZ(), 8, 0.3, 0.5, 0.3, 0.02);
+            m.discard();
+        }
         if (!CivWorld.is(p.level())) toCell(p);
         ServerLevel lvl = CivWorld.level(server);
         // 0.7: у каждой жертвы своя Кармилла (видна только ей), катсцена ~11 с; саму жертву на это время не видно
@@ -323,7 +335,7 @@ public final class Vampire {
         p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 110, 10, false, false));
         p.addEffect(new MobEffectInstance(MobEffects.JUMP, 110, 128, false, false));   // прыжок отключён
         p.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, 230, 0, false, false));
-        PacketDistributor.sendToPlayer(p, new Network.Cinematic(1, 110, blood ? "Звезда крови требует платы…" : "Кармилла пришла за долгом…"));
+        PacketDistributor.sendToPlayer(p, new Network.Cinematic(1, 110, blood ? "Звезда крови требует платы…" : ele ? "Элеонора нажаловалась…" : "Кармилла пришла за долгом…"));
         lvl.playSound(null, p.blockPosition(), SoundEvents.WARDEN_HEARTBEAT, SoundSource.HOSTILE, 2f, 0.7f);
         if (c != null) {
             CarmillaEntity.puff(lvl, at);
@@ -331,7 +343,7 @@ public final class Vampire {
             c.setAnim("spread");
             lvl.playSound(null, p.blockPosition(), SoundEvents.PHANTOM_BITE, SoundSource.HOSTILE, 1.5f, 0.6f);
         }
-        Story.say(p, NAME, C, blood ? "Звезда на крови треснула? Значит, кровь — моя." : "Попался.");
+        Story.say(p, NAME, C, blood ? "Звезда на крови треснула? Значит, кровь — моя." : ele ? "Мне тут позвонили. Говорят, ты грубишь хорошим девочкам." : "Попался.");
         final Vec3 side = new Vec3(-look.z, 0, look.x);
         GameEvents.later(server, 35, () -> {
             if (c == null || !p.isAlive()) return;
@@ -341,7 +353,7 @@ public final class Vampire {
             c.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, p.getEyePosition());
             c.setAnim("cross");
             lvl.playSound(null, p.blockPosition(), SoundEvents.BAT_AMBIENT, SoundSource.HOSTILE, 1f, 0.6f);
-            Story.say(p, NAME, C, blood ? "Ты же читал мелкий шрифт? Звезда — моя кровь. Провал — твоя." : "Двадцать минут. Ты потратил их на что угодно, кроме меня. Обидно, знаешь ли.");
+            Story.say(p, NAME, C, blood ? "Ты же читал мелкий шрифт? Звезда — моя кровь. Провал — твоя." : ele ? "Элеонора всхлипывала в трубку десять минут. Ты в курсе, что она звонит МНЕ, когда обижается?" : "Двадцать минут. Ты потратил их на что угодно, кроме меня. Обидно, знаешь ли.");
         });
         GameEvents.later(server, 70, () -> {
             if (c == null || !p.isAlive()) return;
@@ -381,7 +393,7 @@ public final class Vampire {
             if (c == null || !p.isAlive()) return;
             c.setAnim("spread");
             lvl.playSound(null, p.blockPosition(), SoundEvents.PHANTOM_FLAP, SoundSource.HOSTILE, 1f, 0.7f);
-            Story.say(p, NAME, C, "М-м-м… Вкусно. Даже жаль, что ты так редко опаздываешь.");
+            Story.say(p, NAME, C, ele ? "М-м-м… Вкусно. Передам Элеоноре, что ты извиняешься." : "М-м-м… Вкусно. Даже жаль, что ты так редко опаздываешь.");
         });
         GameEvents.later(server, 220, () -> {
             ABDUCTING.remove(p.getUUID());
@@ -404,7 +416,7 @@ public final class Vampire {
         p.setDeltaMovement(Vec3.ZERO);
     }
 
-    private static void release(ServerPlayer p) {
+    public static void release(ServerPlayer p) {
         StoryData d = Progress.d(p);
         d.jailUntil = 0;
         d.questCooldown = now(p.server) + COOLDOWN_FAIL;

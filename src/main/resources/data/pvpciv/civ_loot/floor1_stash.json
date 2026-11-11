@@ -42,10 +42,6 @@
   {
    "item": "pvpciv:dorm_stew",
    "chance": 0.2
-  },
-  {
-   "item": "pvpciv:bag_buckle",
-   "chance": 0.01
   }
  ]
 }

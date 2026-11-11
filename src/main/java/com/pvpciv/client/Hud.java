@@ -20,7 +20,6 @@ public final class Hud {
     private static final String[] ZONE_GEM = {"green", "amber", "red"};
     private static final String[] ZONE_SUB = {"Безопасная зона", "PvE-зона: монстры", "PvP-зона: игроки могут атаковать!"};
     private static final int[] SKILL_LEVELS = {1, 8, 18};
-    private static final String[] SKILL_KEYS = {"R", "F", "V"};
 
     public static void render(GuiGraphics g, DeltaTracker dt) {
         Minecraft mc = Minecraft.getInstance();
@@ -32,6 +31,7 @@ public final class Hud {
         int w = g.guiWidth(), h = g.guiHeight();
         if (cinematic(g, font, w, h)) return;
         if (ClientState.jailSeconds >= 0) jail(g, font, w);
+        phone(g, font, w, h);
 
         if (ClientState.zoneType == 2) pvpFrame(g, w, h);
         if (!ClientState.zone.isEmpty()) {
@@ -101,6 +101,28 @@ public final class Hud {
         }
     }
 
+    /** Входящий звонок (трясущаяся плашка) и такси, которое ждёт на точке посадки. */
+    private static void phone(GuiGraphics g, Font font, int w, int h) {
+        long now = System.currentTimeMillis();
+        if (ClientState.callUntil > now) {
+            int s = (int) ((ClientState.callUntil - now) / 1000) + 1;
+            int shake = (int) Math.round(Math.sin(now / 30.0) * 2), x = w - 188 + shake, y = h / 2 - 40;
+            Skin.plate(g, x, y, 182, 46);
+            Skin.glow(g, x + 20, y + 22, 18, 0x6050FF80);
+            g.renderItem(new net.minecraft.world.item.ItemStack(com.pvpciv.registry.ModRegistry.PHONE.get()), x + 12, y + 14);
+            g.drawString(font, "Звонит Элеонора…", x + 36, y + 8, 0xFF8FFF9F, true);
+            String key = com.pvpciv.client.ClientInit.PHONE.getTranslatedKeyMessage().getString().toUpperCase();
+            g.drawString(font, "[" + key + "] — ответить", x + 36, y + 20, 0xFFFFFFFF, true);
+            g.drawString(font, "не ответишь — обидится (" + s + ")", x + 36, y + 31, 0xFFB0B8C8, false);
+        } else if (ClientState.taxiUntil > now) {
+            int s = (int) ((ClientState.taxiUntil - now) / 1000);
+            String t = ClientState.taxiHere ? "Такси здесь: стой спокойно…" : "Такси ждёт у «" + ClientState.taxiFrom + "» " + String.format("%d:%02d", s / 60, s % 60);
+            int tw = font.width(t) + 16, x = w - tw - 6, y = h / 2 - 30;
+            Skin.plate(g, x, y, tw, 16);
+            g.drawString(font, t, x + 8, y + 4, 0xFFFFE070, true);
+        }
+    }
+
     /** Заточение у Кармиллы: крупный таймер сверху по центру. */
     private static void jail(GuiGraphics g, Font font, int w) {
         int s = ClientState.jailSeconds, cx = w / 2, y = 30;
@@ -136,6 +158,23 @@ public final class Hud {
                 g.drawCenteredString(font, ClientState.cineText, 0, 0, Skin.alpha(0xFFFF6A7A, ta));
                 g.pose().popPose();
             }
+        } else if (ClientState.cineKind == 5 || ClientState.cineKind == 6) {   // поездка на лифте: полосы кино, затемнение/проявление, титр
+            int bar = (int) (h * 0.09f);
+            g.fill(0, 0, w, bar, 0xFF000000);
+            g.fill(0, h - bar, w, h, 0xFF000000);
+            float black = ClientState.cineKind == 5 ? Math.max(0, (k - 0.78f) / 0.22f) : Math.max(0, 1 - k / 0.18f);
+            if (black > 0) g.fill(0, 0, w, h, ((int) (Math.min(1, black) * 255)) << 24);
+            if (ClientState.cineKind == 6 && !ClientState.cineText.isEmpty()) {
+                String[] lines = ClientState.cineText.split("\\n");
+                float ta = k < 0.15f ? 0 : k < 0.3f ? (k - 0.15f) / 0.15f : k > 0.85f ? (1 - k) / 0.15f : 1;
+                if (ta > 0.05f) {
+                    g.pose().pushPose(); g.pose().translate(w / 2f, h * 0.22f, 0); g.pose().scale(3f, 3f, 1);
+                    g.drawCenteredString(font, lines[0], 0, 0, Skin.alpha(0xFFFFE08A, ta)); g.pose().popPose();
+                    if (lines.length > 1) { g.pose().pushPose(); g.pose().translate(w / 2f, h * 0.22f + 32, 0); g.pose().scale(1.5f, 1.5f, 1);
+                        g.drawCenteredString(font, lines[1], 0, 0, Skin.alpha(0xFF8FE3FF, ta)); g.pose().popPose(); }
+                }
+            }
+            return true;
         } else if (ClientState.cineKind == 3) {   // Небесный лифт: подъём, затемнение, титр этажа
             int bar = (int) (h * 0.1f);
             if (k < 0.5f) {
@@ -279,7 +318,7 @@ public final class Hud {
             g.pose().pushPose();
             g.pose().translate(ix + 11, iy + 10, 200);
             g.pose().scale(0.75f, 0.75f, 1);
-            g.drawString(font, SKILL_KEYS[i], 0, 0, Skin.GOLD_L, true);
+            g.drawString(font, com.pvpciv.client.ClientInit.SKILL_KEYS[i].getTranslatedKeyMessage().getString().toUpperCase(), 0, 0, Skin.GOLD_L, true);
             g.pose().popPose();
         }
         if (mc.player.isCreative()) return;

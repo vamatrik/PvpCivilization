@@ -153,7 +153,55 @@ public final class Skin {
         g.drawString(f, b.toString(), x + f.width(a.toString()), y, FAINT, false);
     }
 
-    public static String fit(Font f, String s, int w) { return f.width(s) <= w ? s : f.plainSubstrByWidth(s, w - 6) + "…"; }
+    public static String fit(Font f, String s, int w) {
+        if (f.width(s) <= w) return s;
+        overflow(s, w, 1);
+        return f.plainSubstrByWidth(s, w - 6) + "…";
+    }
+
+    // ---------------------------------------------------------------- перенос текста
+    /** Разбить текст на строки шириной ≤ w (по словам; \n — принудительный перенос). */
+    public static java.util.List<String> wrap(Font f, String s, int w) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (var t : f.getSplitter().splitLines(s, w, net.minecraft.network.chat.Style.EMPTY)) out.add(t.getString());
+        if (out.isEmpty()) out.add("");
+        return out;
+    }
+
+    /** Сколько строк займёт текст. */
+    public static int lines(Font f, String s, int w) { return wrap(f, s, w).size(); }
+
+    /**
+     * Абзац с переносом по словам. Не больше maxLines строк: если не влезло — последняя строка с «…»
+     * (и предупреждение в лог, см. tools/ui_fit.py). Возвращает высоту нарисованного.
+     */
+    public static int para(GuiGraphics g, Font f, String s, int x, int y, int w, int lineH, int maxLines, int color, boolean shadow) {
+        java.util.List<String> ls = wrap(f, s, w);
+        if (ls.size() > maxLines) {
+            overflow(s, w, maxLines);
+            StringBuilder rest = new StringBuilder();
+            for (int i = maxLines - 1; i < ls.size(); i++) rest.append(ls.get(i)).append(' ');
+            ls = new java.util.ArrayList<>(ls.subList(0, maxLines - 1));
+            ls.add(f.plainSubstrByWidth(rest.toString().trim(), w - 6) + "…");
+        }
+        for (int i = 0; i < ls.size(); i++) g.drawString(f, ls.get(i), x, y + i * lineH, color, shadow);
+        return ls.size() * lineH;
+    }
+
+    /** То же, но строки по центру cx. */
+    public static int paraCentered(GuiGraphics g, Font f, String s, int cx, int y, int w, int lineH, int maxLines, int color) {
+        java.util.List<String> ls = wrap(f, s, w);
+        if (ls.size() > maxLines) { overflow(s, w, maxLines); ls = ls.subList(0, maxLines); }
+        for (int i = 0; i < ls.size(); i++) g.drawCenteredString(f, ls.get(i), cx, y + i * lineH, color);
+        return ls.size() * lineH;
+    }
+
+    private static final java.util.Set<String> REPORTED = new java.util.HashSet<>();
+    /** Текст не влез в форму: пишем в лог один раз (строка «[UI-FIT]» — её ищет tools/ui_fit.py --log). */
+    private static void overflow(String s, int w, int maxLines) {
+        if (REPORTED.add(s + "|" + w))
+            com.mojang.logging.LogUtils.getLogger().warn("[UI-FIT] не влезает в {}px × {} стр.: \"{}\"", w, maxLines, s);
+    }
 
     public static int alpha(int argb, float a) { return (Math.round(((argb >>> 24) & 255) * Math.max(0, Math.min(1, a))) << 24) | (argb & 0xFFFFFF); }
 }

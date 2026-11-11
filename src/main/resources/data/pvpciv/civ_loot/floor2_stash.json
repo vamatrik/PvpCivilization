@@ -34,6 +34,10 @@
   {
    "item": "pvpciv:temper_scroll",
    "chance": 0.06
+  },
+  {
+   "item": "pvpciv:neon_taxi_t3",
+   "chance": 0.01
   }
  ]
 }

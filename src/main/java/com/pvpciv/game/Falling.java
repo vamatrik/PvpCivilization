@@ -17,7 +17,7 @@ import net.minecraft.world.effect.MobEffects;
 /** Падение с этажа 2 — на этаж 1 с неба. Парашют (в сумке или инвентаре) раскрывается сам при долгом падении. */
 public final class Falling {
     public static void tick(ServerPlayer p) {
-        if (p.isCreative() || p.isSpectator()) return;
+        if (p.isCreative() || p.isSpectator() || p.getVehicle() instanceof com.pvpciv.entity.LiftCabin) return;
         if (CivWorld.isF2(p.level()) && p.getY() < Floor2.YS - 16) {
             double a = p.getRandom().nextDouble() * Math.PI * 2, r = 8 + p.getRandom().nextDouble() * 18;
             double x = Floor1.CAMP.getX() + 0.5 + Math.cos(a) * r, z = Floor1.CAMP.getZ() + 40 + Math.sin(a) * r;

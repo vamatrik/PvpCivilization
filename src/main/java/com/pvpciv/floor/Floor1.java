@@ -43,11 +43,11 @@ public final class Floor1 extends Builder {
             new SpawnZones.Zone("f1_dunes_w", new BlockPos(-42, Y, 405), 16, 3, 1, 1, Mobs.Kind.ASH_ZOMBIE, Mobs.Kind.ASH_SPIDER),
             new SpawnZones.Zone("f1_dunes_e", new BlockPos(46, Y, 400), 16, 3, 1, 2, Mobs.Kind.ASH_ZOMBIE, Mobs.Kind.ASH_SPIDER),
             new SpawnZones.Zone("f1_ruins", RUINS, 22, 4, 1, 2, Mobs.Kind.ASH_ZOMBIE, Mobs.Kind.WITHERED),
-            new SpawnZones.Zone("f1_mid", new BlockPos(24, Y, 515), 16, 3, 2, 3, Mobs.Kind.WITHERED, Mobs.Kind.ASH_ARCHER),
-            new SpawnZones.Zone("f1_ruins_s", new BlockPos(-40, Y, 522), 15, 3, 2, 3, Mobs.Kind.ASH_ARCHER, Mobs.Kind.WITHERED),
+            new SpawnZones.Zone("f1_mid", new BlockPos(24, Y, 515), 16, 3, 2, 3, Mobs.Kind.WITHERED, Mobs.Kind.ASH_ARCHER, Mobs.Kind.ASH_ZOMBIE),
+            new SpawnZones.Zone("f1_ruins_s", new BlockPos(-40, Y, 522), 15, 3, 2, 3, Mobs.Kind.ASH_ARCHER, Mobs.Kind.WITHERED, Mobs.Kind.ASH_ZOMBIE),
             new SpawnZones.Zone("f1_east", new BlockPos(80, Y, 528), 13, 3, 2, 3, Mobs.Kind.ASH_SPIDER, Mobs.Kind.ASH_ZOMBIE),
-            new SpawnZones.Zone("f1_grove", GROVE, 22, 4, 3, 4, Mobs.Kind.ASH_SPIDER, Mobs.Kind.WITHERED, Mobs.Kind.ASH_ARCHER),
-            new SpawnZones.Zone("f1_pillars", PILLARS, 22, 4, 3, 4, Mobs.Kind.ASH_ARCHER, Mobs.Kind.WITHERED),
+            new SpawnZones.Zone("f1_grove", GROVE, 22, 4, 3, 4, Mobs.Kind.ASH_SPIDER, Mobs.Kind.WITHERED, Mobs.Kind.ASH_ARCHER, Mobs.Kind.ASH_ZOMBIE),
+            new SpawnZones.Zone("f1_pillars", PILLARS, 22, 4, 3, 4, Mobs.Kind.ASH_ARCHER, Mobs.Kind.WITHERED, Mobs.Kind.ASH_ZOMBIE),
             new SpawnZones.Zone("f1_south", new BlockPos(3, Y, 640), 14, 3, 4, 4, Mobs.Kind.ASH_ZOMBIE, Mobs.Kind.WITHERED, Mobs.Kind.ASH_ARCHER));
 
     private final List<BlockPos> lights = new ArrayList<>();
@@ -258,6 +258,7 @@ public final class Floor1 extends Builder {
             else for (int y = Y - 1; y >= Y - 4; y--) set(cx + x, y, cz + z, y == Y - 4 ? Blocks.SOUL_SOIL : Blocks.AIR);
         }
         set(cx, Y - 4, cz, Blocks.SOUL_FIRE);
+        for (int y = Y - 3; y <= Y - 1; y++) setLit(cx - 1, y, cz - 1, Blocks.LADDER.defaultBlockState().setValue(LadderBlock.FACING, Direction.SOUTH));   // бета: из колодца можно вылезти
         for (int[] o : new int[][]{{2, 2}, {-2, -2}}) for (int y = Y + 1; y <= Y + 3; y++) set(cx + o[0], y, cz + o[1], Blocks.DARK_OAK_FENCE);
         for (int x = -2; x <= 2; x++) set(cx + x, Y + 4, cz, Blocks.DARK_OAK_SLAB);
         set(cx, Y + 3, cz, Blocks.CHAIN);

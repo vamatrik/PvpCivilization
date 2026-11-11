@@ -217,6 +217,7 @@ public final class BossManager {
             }
             p.sendSystemMessage(Component.literal("Личная награда («" + d.name() + "»): " + loot.size() + " предметов (ты нанёс " + Math.round(share * 100) + "% урона)").withStyle(ChatFormatting.GOLD));
             Progress.addXp(p, Progress.xpFor(sd.level, d.level(), 12));
+            com.pvpciv.game.Marks.onBossKill(p, d.id());
         }
         for (ItemStack st : LootTables.roll(d.ground(), lvl.random, 1.0)) {
             ItemEntity ie = new ItemEntity(lvl, boss.getX(), boss.getY() + 1, boss.getZ(), st);

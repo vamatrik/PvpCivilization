@@ -56,6 +56,8 @@ public final class CombatEvents {
             e.setCanceled(true);
             return;
         }
+        // похищение Кармиллой: жертву никто не трогает
+        if (target instanceof ServerPlayer tp && tp.getPersistentData().getLong("abductSafeUntil") > tp.serverLevel().getGameTime()) { e.setCanceled(true); return; }
         // оглушённый не атакует
         if (src instanceof LivingEntity le && le.hasEffect(com.pvpciv.registry.ModRegistry.STUN) && e.getSource().getDirectEntity() == src) { e.setCanceled(true); return; }
         if (src instanceof ServerPlayer hp && e.getSource().getDirectEntity() == hp) com.pvpciv.game.WeaponSkills.onHit(hp, target);
@@ -112,6 +114,7 @@ public final class CombatEvents {
             lvl.sendParticles(net.minecraft.core.particles.ParticleTypes.ITEM_SNOWBALL, p.getX(), p.getY() + 1, p.getZ(), 30, 0.4, 0.8, 0.4, 0.1);
             p.displayClientMessage(Component.literal("❄ ЗАМОРОЖЕН").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), true);
         } else {
+            p.setTicksFrozen(Math.max(p.getTicksFrozen(), stacks * 32));   // ванильный иней по краям экрана растёт со стаками
             if (stacks >= 3) p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 120, 0, false, false));
             p.displayClientMessage(Component.literal("❄ Холод " + stacks + "/5").withStyle(ChatFormatting.AQUA), true);
         }
@@ -132,6 +135,7 @@ public final class CombatEvents {
         if (target instanceof Mob mob && Mobs.level(mob) > 0) {
             Progress.d(p).hits++;
             BossManager.recordDamage(mob, p, dmg);
+            if (mob instanceof com.pvpciv.entity.boss.CivBoss cb) com.pvpciv.game.Marks.onHitBoss(p, cb);
             Component name = mob.getCustomName() != null ? mob.getCustomName() : mob.getName();
             p.displayClientMessage(name.copy().append(Component.literal(String.format("  ❤ %d/%d", (int) Math.ceil(Math.max(0, mob.getHealth())), (int) mob.getMaxHealth())).withStyle(ChatFormatting.RED)), true);
         }

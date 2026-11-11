@@ -3,6 +3,7 @@ package com.pvpciv.game;
 import com.pvpciv.data.StoryData;
 import com.pvpciv.entity.CarmillaEntity;
 import com.pvpciv.entity.LunaGuideEntity;
+import com.pvpciv.entity.LiftCabin;
 import com.pvpciv.net.Network;
 import com.pvpciv.progress.Progress;
 import com.pvpciv.registry.ModRegistry;
@@ -58,9 +59,10 @@ public final class SkyLift {
         }
         LunaGuideEntity g = ModRegistry.LUNA_GUIDE.get().create(lvl);
         if (g == null) return;
-        Vec3 look = p.getLookAngle().multiply(1, 0, 1).normalize();
-        Vec3 at = p.position().add(look.scale(2.5));
-        g.moveTo(at.x, p.getY(), at.z, p.getYRot() + 180, 0);
+        // катсцена: Луна выходит из кабины, игрок стоит напротив двери (без застреваний в стенах)
+        Vec3 at = new Vec3(0.5, com.pvpciv.world.RoofBuilder.RY, -24.2);
+        p.teleportTo(p.serverLevel(), 0.5, com.pvpciv.world.RoofBuilder.RY, -21.0, 180, 8);
+        g.moveTo(at.x, at.y, at.z, 0, 0);
         g.onlyFor = p.getUUID();
         lvl.addFreshEntity(g);
         lvl.sendParticles(ParticleTypes.WITCH, at.x, at.y + 1, at.z, 40, 0.4, 0.8, 0.4, 0.05);
@@ -103,7 +105,7 @@ public final class SkyLift {
         DialogueManager.open(p, g, dl);
     }
 
-    /** Поездка: 7-секундная катсцена, телепорт в середине (на чёрном экране). */
+    /** Поездка: кабина едет по монорельсу с игроком внутри, на чёрном экране — переход между этажами, вторая кабина довозит до станции. */
     public static void ride(ServerPlayer p, int floor) {
         StoryData d = Progress.d(p);
         if ((unlocked(d) & (1 << (floor - 1))) == 0 || RIDING.contains(p.getUUID())) return;
@@ -111,27 +113,47 @@ public final class SkyLift {
         if (floor == cur) return;
         RIDING.add(p.getUUID());
         if (p.isPassenger()) p.stopRiding();
-        p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 10, false, false));
-        p.addEffect(new MobEffectInstance(MobEffects.JUMP, 80, 128, false, false));
-        p.addEffect(new MobEffectInstance(MobEffects.LEVITATION, 60, 0, false, false));
+        p.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 300, 4, false, false));
         String title = "ЭТАЖ " + floor + "\n" + FLOORS[floor - 1];
-        PacketDistributor.sendToPlayer(p, new Network.Cinematic(3, 150, title));
         ServerLevel from = (ServerLevel) p.level();
+        boolean up = floor > cur;
+        java.util.List<Vec3> path1 = cur == 1 ? com.pvpciv.world.Monorail.roofPath(0, 110) : com.pvpciv.world.Monorail.f2Path(0, -60);
+        int dur1 = cur == 1 ? 130 : 90;
+        PacketDistributor.sendToPlayer(p, new Network.Cinematic(5, dur1, ""));
         from.playSound(null, p.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.2f, 0.6f);
-        from.sendParticles(ParticleTypes.END_ROD, p.getX(), p.getY() + 1, p.getZ(), 40, 0.5, 1.5, 0.5, 0.05);
-        GameEvents.later(p.server, 68, () -> {
-            RIDING.remove(p.getUUID());
-            if (!p.isAlive() || p.hasDisconnected()) return;
-            p.removeEffect(MobEffects.LEVITATION);
+        LiftCabin c1 = cabin(from, path1.get(0));
+        if (c1 == null) { RIDING.remove(p.getUUID()); return; }
+        p.startRiding(c1, true);
+        c1.start(path1, dur1, true, false, cab -> {
+            p.stopRiding();
+            if (!p.isAlive() || p.hasDisconnected()) { RIDING.remove(p.getUUID()); return; }
+            ServerLevel to = floor == 2 ? CivWorld.f2(p.server) : CivWorld.level(p.server);
+            java.util.List<Vec3> path2 = floor == 2 ? com.pvpciv.world.Monorail.f2Path(-60, 0) : com.pvpciv.world.Monorail.roofPath(110, 0);
+            Vec3 s = path2.get(0);
+            p.teleportTo(to, s.x, s.y, s.z, 0, 0);
             p.resetFallDistance();
-            if (floor == 2) {
-                Vec3 a = com.pvpciv.floor.Floor2.LIFT_ARRIVE;
-                p.teleportTo(CivWorld.f2(p.server), a.x, a.y, a.z, 0, 0);
-            } else {
-                Vec3 a = com.pvpciv.world.DormBuilder.LIFT_ARRIVE;
-                p.teleportTo(CivWorld.level(p.server), a.x, a.y, a.z, 0, 0);
-            }
-            p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1f, 1.4f);
+            LiftCabin c2 = cabin(to, s);
+            PacketDistributor.sendToPlayer(p, new Network.Cinematic(6, 120, title));
+            if (c2 == null) { arrive(p, floor); return; }
+            p.startRiding(c2, true);
+            c2.start(path2, 110, false, true, cc -> arrive(p, floor));
         });
+    }
+
+    private static LiftCabin cabin(ServerLevel l, Vec3 at) {
+        LiftCabin c = ModRegistry.LIFT_CABIN.get().create(l);
+        if (c == null) return null;
+        c.moveTo(at.x, at.y, at.z, 0, 0);
+        l.addFreshEntity(c);
+        return c;
+    }
+
+    private static void arrive(ServerPlayer p, int floor) {
+        RIDING.remove(p.getUUID());
+        p.stopRiding();
+        p.resetFallDistance();
+        Vec3 a = floor == 2 ? com.pvpciv.floor.Floor2.LIFT_ARRIVE : com.pvpciv.world.DormBuilder.LIFT_ARRIVE;
+        p.teleportTo(floor == 2 ? CivWorld.f2(p.server) : CivWorld.level(p.server), a.x, a.y, a.z, 0, 0);
+        p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1f, 1.4f);
     }
 }

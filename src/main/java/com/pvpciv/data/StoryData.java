@@ -19,6 +19,16 @@ public class StoryData implements INBTSerializable<CompoundTag> {
     /** Трофеи, выставленные на витрину (биты как у trophies); liftOk — Луна пустила к лифту. */
     public int showcase = 0;
     public boolean liftOk = false;
+    /** Элеонора: 0 — не знакомы, 1 — квест на Крысиного короля, 2 — выполнен (телефон). КД приложений телефона. */
+    public int eleStage = 0;
+    public net.minecraft.nbt.CompoundTag phoneCd = new net.minecraft.nbt.CompoundTag();
+    /** Метки Элеоноры: жетоны (вне инфляции), активная метка "boss:TYPE" и день её выдачи, сданные метки (boss → день), покупки в её лавке. */
+    public int eleTokens = 0;
+    public String eleMark = "";
+    public long eleMarkDay = 0;
+    public net.minecraft.nbt.CompoundTag eleDone = new net.minecraft.nbt.CompoundTag(), eleShop = new net.minecraft.nbt.CompoundTag();
+    /** «Шпиль.Еда»: текущий заказ и раскупленный склад. */
+    public net.minecraft.nbt.CompoundTag food = new net.minecraft.nbt.CompoundTag(), foodStock = new net.minecraft.nbt.CompoundTag();
     /** Счётчики «дневника подвигов» Тимофея и сданные вехи. */
     public long hits = 0, distM = 0, stashesOpened = 0;
     public net.minecraft.nbt.CompoundTag milestones = new net.minecraft.nbt.CompoundTag();
@@ -58,6 +68,9 @@ public class StoryData implements INBTSerializable<CompoundTag> {
         t.putInt("trophies", trophies);
         t.putInt("showcase", showcase);
         t.putBoolean("liftOk", liftOk);
+        t.putInt("eleStage", eleStage); t.put("phoneCd", phoneCd);
+        t.putInt("eleTokens", eleTokens); t.putString("eleMark", eleMark); t.putLong("eleMarkDay", eleMarkDay); t.put("eleDone", eleDone); t.put("eleShop", eleShop);
+        t.put("food", food); t.put("foodStock", foodStock);
         t.putLong("hits", hits); t.putLong("distM", distM); t.putLong("stashesOpened", stashesOpened);
         t.put("milestones", milestones);
         t.putInt("forgeLvl", forgeLvl);
@@ -91,6 +104,9 @@ public class StoryData implements INBTSerializable<CompoundTag> {
         trophies = t.getInt("trophies");
         showcase = t.getInt("showcase");
         liftOk = t.getBoolean("liftOk");
+        eleStage = t.getInt("eleStage"); phoneCd = t.getCompound("phoneCd");
+        eleTokens = t.getInt("eleTokens"); eleMark = t.getString("eleMark"); eleMarkDay = t.getLong("eleMarkDay"); eleDone = t.getCompound("eleDone"); eleShop = t.getCompound("eleShop");
+        food = t.getCompound("food"); foodStock = t.getCompound("foodStock");
         hits = t.getLong("hits"); distM = t.getLong("distM"); stashesOpened = t.getLong("stashesOpened");
         milestones = t.getCompound("milestones");
         forgeLvl = Math.max(1, t.getInt("forgeLvl"));

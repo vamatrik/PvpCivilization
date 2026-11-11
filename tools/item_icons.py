@@ -287,3 +287,23 @@ art('parachute', [
     "................"], PAR)
 
 recolor('bag_buckle', 'smuggler_pack', 0.78, 0.55, 1.0)
+recolor('rime_boat_t2', 'neon_taxi_t3', 0.9, 0.7, 1.05)
+
+PH = {'o': hx('101014'), 's': hx('2a3a70'), 'S': hx('1a2440'), 'a': hx('b03040'), 'b': hx('40a050'), 'c': hx('e0b020'), 'w': hx('d0d8f0'), 'k': hx('606878')}
+art('phone', [
+    "................",
+    ".....oooooo.....",
+    "....oookoooo....",
+    "....osssssso....",
+    "....oswwwwso....",
+    "....oSSSSSSo....",
+    "....oSaaSbbo....",
+    "....oSaaSbbo....",
+    "....oSSSSSSo....",
+    "....oSccSSSo....",
+    "....oSccSwSo....",
+    "....oSSSSSSo....",
+    "....oSwSSSSo....",
+    "....oookkooo....",
+    ".....oooooo.....",
+    "................"], PH)

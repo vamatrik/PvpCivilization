@@ -54,6 +54,7 @@ public abstract class CivBoss extends Monster implements GeoEntity {
     protected boolean enraged;
     protected float castYaw = Float.NaN;
     protected Vec3 home;
+    private int lastPlayerHit;
     private final List<Zone> zones = new ArrayList<>();
     private final List<Wave> waves = new ArrayList<>();
     private final List<Later> later = new ArrayList<>();
@@ -127,6 +128,11 @@ public abstract class CivBoss extends Monster implements GeoEntity {
         }
         if (!enraged && getHealth() < getMaxHealth() * 0.5f) { enraged = true; onEnrage(lvl); }
         passive(lvl);
+        // бета: никто не бьёт минуту — босс восстанавливается (2% в секунду)
+        if (tickCount - lastPlayerHit > 1200 && getHealth() < getMaxHealth() && tickCount % 20 == 0) {
+            heal(getMaxHealth() * 0.02f);
+            if (tickCount % 100 == 0) lvl.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART, getX(), getY() + getBbHeight(), getZ(), 3, 0.5, 0.3, 0.5, 0);
+        }
         if (--cooldown <= 0 && castTicks <= 0 && getTarget() instanceof ServerPlayer p && p.isAlive() && distanceTo(p) < 20) ability(lvl, p);
     }
 
@@ -207,7 +213,7 @@ public abstract class CivBoss extends Monster implements GeoEntity {
     private void impact(ServerLevel lvl, Zone z) {
         if (z.fx != null) z.fx.accept(z.c);
         if (!isAlive()) return;
-        for (ServerPlayer p : victims(lvl, 64)) if (z.inside(p.position()) && z.hit != null) z.hit.accept(p);
+        for (ServerPlayer p : victims(lvl, 64)) if (z.inside(p.position()) && z.hit != null) { z.hit.accept(p); com.pvpciv.game.Marks.onZoneHit(p); }
     }
 
     // ------------------------------------------------------------------ ударные волны
@@ -233,6 +239,7 @@ public abstract class CivBoss extends Monster implements GeoEntity {
             double d = Math.hypot(p.getX() - w.c.x, p.getZ() - w.c.z);
             if (Math.abs(d - w.r) < 0.8 && p.onGround() && Math.abs(p.getY() - w.c.y) < 1.5 && w.hit.add(p.getUUID())) {
                 p.hurt(damageSources().mobAttack(this), w.dmg);
+                com.pvpciv.game.Marks.onZoneHit(p);
                 Vec3 push = p.position().subtract(w.c).multiply(1, 0, 1).normalize().scale(0.7);
                 p.setDeltaMovement(push.x, 0.45, push.z);
                 p.hurtMarked = true;
@@ -260,6 +267,7 @@ public abstract class CivBoss extends Monster implements GeoEntity {
     public boolean hurt(DamageSource src, float amount) {
         if (src.is(net.minecraft.tags.DamageTypeTags.IS_FALL) || src.is(net.minecraft.tags.DamageTypeTags.IS_DROWNING)) return false;
         if (src.getEntity() instanceof net.minecraft.world.entity.Mob m && com.pvpciv.combat.Mobs.level(m) > 0) return false;   // мобы не ранят босса (питомцы игроков — могут)
+        if (src.getEntity() instanceof Player) lastPlayerHit = tickCount;
         return super.hurt(src, amount);
     }
 

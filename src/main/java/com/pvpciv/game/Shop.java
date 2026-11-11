@@ -39,7 +39,35 @@ public final class Shop {
     public static final java.util.Map<java.util.UUID, String> VENDOR = new java.util.HashMap<>();
 
     public static List<Offer> offers(ServerPlayer p) {
-        return "smuggler".equals(VENDOR.get(p.getUUID())) ? smuggler() : offers();
+        String v = VENDOR.get(p.getUUID());
+        return "smuggler".equals(v) ? smuggler() : "eleonora".equals(v) ? eleonora() : offers();
+    }
+
+    public static boolean tokenShop(ServerPlayer p) { return "eleonora".equals(VENDOR.get(p.getUUID())); }
+
+    /** Лавка Элеоноры (за жетоны): зелья пачками (лимит в день) и звёзды — по одной за завоз. */
+    public static List<Offer> eleonora() {
+        List<Offer> out = new ArrayList<>();
+        out.add(new Offer("p_heal", new ItemStack(ModRegistry.POTION_HEAL.get(), 3), 3, 5));
+        out.add(new Offer("p_regen", new ItemStack(ModRegistry.POTION_REGEN.get(), 3), 4, 5));
+        out.add(new Offer("p_swift", new ItemStack(ModRegistry.POTION_SWIFT.get(), 3), 3, 5));
+        out.add(new Offer("p_might", new ItemStack(ModRegistry.POTION_MIGHT.get(), 2), 5, 4));
+        out.add(new Offer("p_stone", new ItemStack(ModRegistry.POTION_STONE.get(), 2), 5, 4));
+        out.add(new Offer("u_blessed", new ItemStack(ModRegistry.BLESSED_STAR_W1.get()), 40, 1));
+        out.add(new Offer("u_blood", new ItemStack(ModRegistry.BLOOD_STAR_W1.get()), 160, 1));
+        return out;
+    }
+
+    /** Покупки у Элеоноры: все лимиты (и зелья, и звёзды) сбрасываются с завозом её лавки — раз в сутки в полночь по Москве. */
+    private static CompoundTag eleBought(StoryData d) {
+        long day = Marks.day();
+        if (d.eleShop.getLong("day") != day) { d.eleShop = new CompoundTag(); d.eleShop.putLong("day", day); }
+        return d.eleShop;
+    }
+
+    private static int eleCount(StoryData d, String id) {
+        CompoundTag b = eleBought(d);
+        return b.getInt(id);
     }
 
     /** Контрабандист: еда, золотые яблоки (лимит), товар с этажа 3 (катана), второй рюкзак — один раз за игру. */
@@ -88,6 +116,7 @@ public final class Shop {
 
     public static int left(ServerPlayer p, Offer o) {
         StoryData d = Progress.d(p);
+        if (tokenShop(p)) return o.limit() - eleCount(d, o.id());
         if (o.id().equals("buckle") && d.boughtBuckle) return 0;   // пряжка у Сороки — один раз за игру
         if (o.id().equals("pack") && d.boughtPack) return 0;
         return o.limit() - bought(d).getInt(o.id());
@@ -98,6 +127,7 @@ public final class Shop {
         if (idx < 0 || idx >= list.size()) return;
         Offer o = list.get(idx);
         StoryData d = Progress.d(p);
+        if (tokenShop(p)) { buyEle(p, d, o); return; }
         CompoundTag b = bought(d);
         if (b.getInt(o.id()) >= o.limit() || (o.id().equals("buckle") && d.boughtBuckle) || (o.id().equals("pack") && d.boughtPack)) { p.displayClientMessage(Component.literal("Распродано! Новый завоз скоро.").withStyle(ChatFormatting.GRAY), true); return; }
         if (d.money < o.price()) { p.displayClientMessage(Component.literal("Не хватает Искр: нужно " + o.price() + " ✦").withStyle(ChatFormatting.RED), true); return; }
@@ -120,10 +150,25 @@ public final class Shop {
         sendOffers(p);
     }
 
+    private static void buyEle(ServerPlayer p, StoryData d, Offer o) {
+        if (eleCount(d, o.id()) >= o.limit()) {
+            p.displayClientMessage(Component.literal(o.id().startsWith("u_") ? "«Звезда — одна за завоз. Приходи завтра.»" : "«На сегодня хватит. Завтра сварю ещё.»").withStyle(ChatFormatting.GRAY), true);
+            return;
+        }
+        if (d.eleTokens < o.price()) { p.displayClientMessage(Component.literal("Не хватает жетонов: нужно " + o.price()).withStyle(ChatFormatting.RED), true); return; }
+        d.eleTokens -= o.price();
+        CompoundTag b = eleBought(d);
+        b.putInt(o.id(), b.getInt(o.id()) + 1);
+        p.setData(ModRegistry.STORY.get(), d);
+        Bag.give(p, o.stack().copy());
+        p.level().playSound(null, p.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.NEUTRAL, 0.8f, 1.2f);
+        sendOffers(p);
+    }
+
     public static void sendOffers(ServerPlayer p) {
         List<Network.OfferView> views = new ArrayList<>();
         for (Offer o : offers(p)) views.add(new Network.OfferView(o.stack(), o.price(), Math.max(0, left(p, o))));
-        PacketDistributor.sendToPlayer(p, new Network.TraderOffers(views, msLeft()));
+        PacketDistributor.sendToPlayer(p, new Network.TraderOffers(views, tokenShop(p) ? 86_400_000L - (System.currentTimeMillis() + 3 * 3600_000L) % 86_400_000L : msLeft(), tokenShop(p) ? Progress.d(p).eleTokens : -1));
     }
 
     /** Цена продажи одной штуки (0 — не продаётся). */
@@ -142,6 +187,7 @@ public final class Shop {
     }
 
     public static void sellStack(ServerPlayer p, ItemStack st) {
+        if (tokenShop(p)) { p.displayClientMessage(Component.literal("«Я охотница, а не скупщица.»").withStyle(ChatFormatting.GRAY), true); return; }
         int price = sellPrice(st);
         if (price <= 0) return;
         long total = (long) price * st.getCount();

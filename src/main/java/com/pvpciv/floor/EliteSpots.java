@@ -29,14 +29,21 @@ public final class EliteSpots {
         public Spot(String id, BlockPos pos, Mobs.Kind kind, int level, String name, String loot) { this(id, pos, kind, level, name, loot, false); }
     }
 
-    public static final List<Spot> SPOTS = List.of(
+    public static final List<Spot> SPOTS = twins(List.of(
             new Spot("e_hall", new BlockPos(Floor1.RUINS.getX(), Floor1.Y, Floor1.RUINS.getZ() - 20), Mobs.Kind.WITHERED, 4, "Пепельный капрал", "floor1_mob"),
             new Spot("e_grove", Floor1.GROVE.offset(5, 0, 3), Mobs.Kind.ASH_SPIDER, 4, "Хозяйка рощи", "floor1_mob"),
             new Spot("e_pillars", Floor1.PILLARS.offset(-4, 0, 6), Mobs.Kind.ASH_ARCHER, 4, "Снайпер столпов", "floor1_mob"),
             new Spot("e_spires", FloorNorth.SPIRES.offset(-5, 0, 4), Mobs.Kind.FROST_ZOMBIE, 7, "Хрустальный страж", "floor1b_mob"),
             new Spot("e_pines", FloorNorth.PINES.offset(4, 0, -5), Mobs.Kind.FROST_ARCHER, 7, "Егерь кладбища", "floor1b_mob"),
             new Spot("e_crypt1", FloorNorth.CRYPT.offset(-5, 0, -3), Mobs.Kind.FROST_ZOMBIE, 7, "Страж склепа", "floor1b_mob"),
-            new Spot("e_crypt2", FloorNorth.CRYPT.offset(5, 0, -3), Mobs.Kind.FROST_ARCHER, 7, "Лучница склепа", "floor1b_mob"));
+            new Spot("e_crypt2", FloorNorth.CRYPT.offset(5, 0, -3), Mobs.Kind.FROST_ARCHER, 7, "Лучница склепа", "floor1b_mob")));
+
+    /** Бета 11.11: по две элиты на точку (вторая — в 6 блоках, «_b»). */
+    public static List<Spot> twins(List<Spot> base) {
+        List<Spot> out = new java.util.ArrayList<>(base);
+        for (Spot s : base) out.add(new Spot(s.id() + "_b", s.pos().offset(s.id().contains("crypt") ? 0 : 6, 0, s.id().contains("crypt") ? 5 : 3), s.kind(), s.level(), s.name(), s.loot(), s.f2()));
+        return out;
+    }
 
     private static final Map<String, Long> RESPAWN = new HashMap<>();
 

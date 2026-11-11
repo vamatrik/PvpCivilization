@@ -1,0 +1,12 @@
+{
+ "phone_ring": {
+  "category": "player",
+  "subtitle": "subtitles.pvpciv.phone_ring",
+  "sounds": [
+   {
+    "name": "pvpciv:phone_ring",
+    "stream": true
+   }
+  ]
+ }
+}

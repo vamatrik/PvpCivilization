@@ -58,6 +58,34 @@ public final class Milestones {
         return dl;
     }
 
+    public static void open(ServerPlayer p) {
+        StoryData d = Progress.d(p);
+        java.util.List<Long> v = new java.util.ArrayList<>(); java.util.List<Integer> c = new java.util.ArrayList<>();
+        for (Track t : Track.values()) { v.add(value(d, t)); c.add(claimed(d, t)); }
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.pvpciv.net.Network.OpenMilestones(v, c));
+    }
+
+    /** Забрать все доступные вехи одного раздела. */
+    public static void claim(ServerPlayer p, int idx) {
+        if (idx < 0 || idx >= Track.values().length) return;
+        StoryData d = Progress.d(p);
+        Track t = Track.values()[idx];
+        int c = claimed(d, t);
+        long v = value(d, t);
+        boolean any = false;
+        while (c < t.steps.length && v >= t.steps[c]) {
+            c++; any = true;
+            p.sendSystemMessage(Component.literal("✦ Веха «" + t.title + " " + t.steps[c - 1] + "»: " + t.bonus).withStyle(ChatFormatting.GOLD));
+            if (c == t.steps.length && t.titleId != null) com.pvpciv.progress.Titles.grant(p, t.titleId);
+        }
+        if (!any) return;
+        d.milestones.putInt(t.name(), c);
+        p.setData(ModRegistry.STORY.get(), d);
+        p.serverLevel().playSound(null, p.blockPosition(), net.minecraft.sounds.SoundEvents.PLAYER_LEVELUP, net.minecraft.sounds.SoundSource.PLAYERS, 0.8f, 1.2f);
+        apply(p);
+        Story.sync(p);
+    }
+
     private static void claimAll(ServerPlayer p) {
         StoryData d = Progress.d(p);
         for (Track t : Track.values()) {

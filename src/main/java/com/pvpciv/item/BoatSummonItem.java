@@ -58,8 +58,16 @@ public class BoatSummonItem extends Item {
             }
         }
         BlockPos pos = ctx.getClickedPos().relative(ctx.getClickedFace());
-        Boat boat = new Boat(level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
-        boat.setVariant(look);
+        Boat boat;
+        if (tier >= 2) {   // 3D-модели: Инеевая лодка, Неоновое такси
+            var cb = com.pvpciv.registry.ModRegistry.CIV_BOAT.get().create(level);
+            cb.setTier(tier);
+            cb.setPos(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+            boat = cb;
+        } else {
+            boat = new Boat(level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+            boat.setVariant(look);
+        }
         boat.getPersistentData().putInt("tier", tier);
         boat.setYRot(p.getYRot());
         if (!level.noCollision(boat, boat.getBoundingBox())) {
@@ -72,6 +80,7 @@ public class BoatSummonItem extends Item {
         t.putUUID("boat", id);
         st.set(DataComponents.CUSTOM_DATA, CustomData.of(t));
         level.playSound(null, pos, SoundEvents.BOAT_PADDLE_WATER, SoundSource.PLAYERS, 1f, 1.2f);
+        p.getCooldowns().addCooldown(this, 60);   // бета: не абузить лодку как телепорт
         p.displayClientMessage(Component.literal("Лодка на льду! ПКМ по блоку рядом — убрать").withStyle(ChatFormatting.AQUA), true);
         return InteractionResult.SUCCESS;
     }

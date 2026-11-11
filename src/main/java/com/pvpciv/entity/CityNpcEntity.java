@@ -17,10 +17,15 @@ import static com.pvpciv.game.DialogueManager.opt;
 
 /** NPC Неонового города: Тимофей (вехи), парашютистка Ника (парашют), сантехник Гоша (канализация). */
 public class CityNpcEntity extends StoryNpc {
-    public enum Role { TIMOFEY("Тимофей Глыба", 0xE05050), PARACHUTIST("Ника-парашютистка", 0xF09040), PLUMBER("Сантехник Гоша", 0x4A8AE0), SMUGGLER("Контрабандист Шнырь", 0xA070E0);
+    public enum Role { TIMOFEY("Тимофей Глыба", 0xE05050), PARACHUTIST("Ника-парашютистка", 0xF09040), PLUMBER("Сантехник Гоша", 0x4A8AE0), SMUGGLER("Контрабандист Шнырь", 0xA070E0),
+        COURIER("Курьер «Шпиль.Еды»", 0xF2C230);
         public final String name; public final int color;
         Role(String n, int c) { name = n; color = c; } }
     public final Role role;
+    /** Курьер: чей заказ привёз (не сохраняется — курьер живёт только пока ждёт у двери). */
+    public java.util.UUID owner;
+    public net.minecraft.world.phys.Vec3 home;
+    public int leaveAt = -1;
 
     public CityNpcEntity(EntityType<? extends PathfinderMob> type, Level level, Role role) {
         super(type, level, role.name, role.color);
@@ -30,10 +35,33 @@ public class CityNpcEntity extends StoryNpc {
     @Override public boolean shouldBeSaved() { return false; }
 
     @Override
+    public void tick() {
+        super.tick();
+        if (role != Role.COURIER || level().isClientSide) return;
+        if (home != null && position().distanceToSqr(home) > 1) { teleportTo(home.x, home.y, home.z); setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO); }
+        if (owner == null) {
+            if (leaveAt > 0 && tickCount >= leaveAt) {
+                if (level() instanceof net.minecraft.server.level.ServerLevel l) l.sendParticles(net.minecraft.core.particles.ParticleTypes.POOF, getX(), getY() + 1, getZ(), 12, 0.3, 0.5, 0.3, 0.02);
+                discard();
+            } else if (leaveAt < 0 && tickCount > 200) discard();
+            return;
+        }
+        if (tickCount % 20 == 0 && getServer() != null) {
+            var pl = getServer().getPlayerList().getPlayer(owner);
+            if (pl == null || (com.pvpciv.progress.Progress.d(pl).food.getInt("state") != 2 && !com.pvpciv.game.DialogueManager.inDialogue(pl))) { discard(); return; }
+            if (pl.level() == level() && distanceToSqr(pl) < 100) getLookControl().setLookAt(pl);
+        }
+    }
+
+    @Override
     protected void onTalk(ServerPlayer p) {
         if (DialogueManager.inDialogue(p)) return;
         switch (role) {
-            case TIMOFEY -> DialogueManager.open(p, this, Milestones.dialogue(p));
+            case COURIER -> com.pvpciv.game.FoodApp.talk(p, this);
+            case TIMOFEY -> {
+                Story.say(p, role.name, role.color, "Дневник подвигов открыт! Смотри, как растёшь — прям как акции.");
+                Milestones.open(p);
+            }
             case PARACHUTIST -> {
                 boolean has = Bag.has(p, s -> s.is(ModRegistry.PARACHUTE.get()));
                 DialogueManager.Dialogue d = new DialogueManager.Dialogue("a");

@@ -17,9 +17,14 @@ import org.lwjgl.glfw.GLFW;
 
 public final class ClientInit {
     public static final KeyMapping DASH = new KeyMapping("key.pvpciv.dash", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, "key.categories.pvpciv");
+    /** Навыки 2 и 3 (F занята второй рукой): G и V — рядом с WASD и свободны в ванилле. Телефон — Y. */
+    public static final KeyMapping SKILL2 = new KeyMapping("key.pvpciv.skill2", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, "key.categories.pvpciv");
+    public static final KeyMapping SKILL3 = new KeyMapping("key.pvpciv.skill3", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, "key.categories.pvpciv");
+    public static final KeyMapping PHONE = new KeyMapping("key.pvpciv.phone", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Y, "key.categories.pvpciv");
+    public static final KeyMapping[] SKILL_KEYS = {DASH, SKILL2, SKILL3};
 
     public static void init(IEventBus modBus) {
-        modBus.addListener((RegisterKeyMappingsEvent e) -> e.register(DASH));
+        modBus.addListener((RegisterKeyMappingsEvent e) -> { e.register(DASH); e.register(SKILL2); e.register(SKILL3); e.register(PHONE); });
         modBus.addListener((net.neoforged.neoforge.client.event.ModelEvent.RegisterAdditional e) -> e.register(StashRenderer.LID));
         modBus.addListener((net.neoforged.fml.event.lifecycle.FMLClientSetupEvent e) -> e.enqueueWork(() -> {
             for (var h : ModRegistry.ITEMS.getEntries())
@@ -31,9 +36,12 @@ public final class ClientInit {
             e.registerEntityRenderer(ModRegistry.GUARD.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/guard.png")));
             e.registerEntityRenderer(ModRegistry.LUNA.get(), GeoNpcRenderer::new);
             e.registerEntityRenderer(ModRegistry.LUNA_GUIDE.get(), GeoNpcRenderer::new);
+            e.registerEntityRenderer(ModRegistry.CIV_BOAT.get(), CivBoatRenderer::new);
+            e.registerEntityRenderer(ModRegistry.LIFT_CABIN.get(), LiftCabinRenderer::new);
             e.registerEntityRenderer(ModRegistry.TIMOFEY.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/timofey.png")));
             e.registerEntityRenderer(ModRegistry.PARACHUTIST.get(), ctx -> new NpcRenderer<>(ctx, true, PvpCiv.id("textures/entity/parachutist.png")));
             e.registerEntityRenderer(ModRegistry.PLUMBER.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/plumber.png")));
+            e.registerEntityRenderer(ModRegistry.COURIER.get(), CourierRenderer::new);
             e.registerEntityRenderer(ModRegistry.SMUGGLER.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/smuggler.png")));
             e.registerEntityRenderer(ModRegistry.CARMILLA.get(), GeoNpcRenderer::new);
             e.registerEntityRenderer(ModRegistry.ELEONORA.get(), GeoNpcRenderer::new);
@@ -101,7 +109,8 @@ public final class ClientInit {
     /** Лодки выше тира 1 и титул «Ледяной гонщик» — меньше трения на льду (лодкой управляет клиент). */
     private static void boatBoost(Minecraft mc) {
         if (mc.player == null || !(mc.player.getVehicle() instanceof net.minecraft.world.entity.vehicle.Boat b) || b.getControllingPassenger() != mc.player) return;
-        double bonus = b.getVariant() == net.minecraft.world.entity.vehicle.Boat.Type.BIRCH ? com.pvpciv.item.BoatSummonItem.speedBonus(2) : 0;
+        double bonus = b instanceof com.pvpciv.entity.CivBoat cb ? com.pvpciv.item.BoatSummonItem.speedBonus(cb.tier())
+                : b.getVariant() == net.minecraft.world.entity.vehicle.Boat.Type.BIRCH ? com.pvpciv.item.BoatSummonItem.speedBonus(2) : 0;
         if ("ice_racer".equals(ClientState.activeTitle)) bonus += 0.06;
         if (bonus <= 0 || !b.onGround()) return;
         var v = b.getDeltaMovement();
@@ -110,9 +119,24 @@ public final class ClientInit {
         b.setDeltaMovement(v.x * k, v.y, v.z * k);
     }
 
+    private static boolean calibrated = false;
+
     private static void onTick() {
         Minecraft mc = Minecraft.getInstance();
         boatBoost(mc);
+        if (!calibrated && mc.font != null && mc.player != null) {
+            calibrated = true;
+            com.mojang.logging.LogUtils.getLogger().info("[UI-FIT] калибровка шрифта: Поко X3 Про={} Золотая морковь={} Жетоны: 200={} ★✦={}",
+                    mc.font.width("Поко X3 Про"), mc.font.width("Золотая морковь"), mc.font.width("Жетоны: 200"), mc.font.width("★✦"));
+        }
+        while (PHONE.consumeClick()) if (mc.player != null && mc.screen == null) PacketDistributor.sendToServer(new Network.PhoneCmd("open"));
+        for (int k = 1; k <= 2; k++) while (SKILL_KEYS[k].consumeClick()) {
+            if (mc.player == null) continue;
+            int need = k == 1 ? 8 : 18;
+            mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal(ClientState.level < need
+                    ? "Слот навыка " + (k + 1) + " откроется на " + need + " уровне."
+                    : "Слот навыка " + (k + 1) + " пуст — навыки для него появятся с этажом 3.").withStyle(net.minecraft.ChatFormatting.GRAY), true);
+        }
         while (DASH.consumeClick()) {
             if (mc.player == null || mc.level == null) continue;
             long now = mc.level.getGameTime();

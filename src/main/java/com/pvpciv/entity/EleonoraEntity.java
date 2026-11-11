@@ -51,6 +51,10 @@ public class EleonoraEntity extends GeoNpc {
 
     @Override
     protected void onTalk(ServerPlayer p) {
+        if (com.pvpciv.game.DialogueManager.inDialogue(p)) return;
+        var d = com.pvpciv.progress.Progress.d(p);
+        if (d.liftOk && d.eleStage < 2) { com.pvpciv.game.DialogueManager.open(p, this, quest(p, d)); return; }
+        if (d.eleStage >= 2) { com.pvpciv.game.DialogueManager.open(p, this, com.pvpciv.game.Marks.dialogue(p, this)); return; }
         String[] lines = {
                 "Не сейчас. Я выслеживаю кое-кого. ...От тебя пахнет подвалом.",
                 "Серебро, святая вода, осиновый кол. Всё при мне. Не хватает только приказа.",
@@ -58,6 +62,31 @@ public class EleonoraEntity extends GeoNpc {
                 "Комендант говорит, внизу «просто склад». Склады не пьют кровь, новенький.",
         };
         Story.say(p, "Элеонора", COLOR, lines[random.nextInt(lines.length)]);
+    }
+
+    private com.pvpciv.game.DialogueManager.Dialogue quest(ServerPlayer p, com.pvpciv.data.StoryData d) {
+        var dl = new com.pvpciv.game.DialogueManager.Dialogue("a");
+        if (d.eleStage == 0) {
+            dl.node("a", "Элеонора", COLOR, "Ты был на втором этаже? Значит, слышал про Крысиного короля. Вампиры — те хотя бы честные: пьют кровь и не скрывают. "
+                            + "А эта тварь гноит город изнутри, разносит заразу по стокам. Он хуже вампиров, понимаешь?",
+                            com.pvpciv.game.DialogueManager.opt("Что от меня нужно?", "b"))
+              .node("b", "Элеонора", COLOR, "Убей его. Тронный сток, запад канализации. Принеси мне весть о его смерти — и я сделаю тебя своим.",
+                      pp -> { var dd = com.pvpciv.progress.Progress.d(pp); dd.eleStage = 1; pp.setData(com.pvpciv.registry.ModRegistry.STORY.get(), dd);
+                          pp.sendSystemMessage(net.minecraft.network.chat.Component.literal("✦ Квест Элеоноры: убей Крысиного короля (канализация этажа 2).").withStyle(net.minecraft.ChatFormatting.AQUA)); },
+                      com.pvpciv.game.DialogueManager.opt("Сделаю", null));
+        } else if ((d.trophies & 8) == 0) {
+            dl.node("a", "Элеонора", COLOR, "Крысиный король ещё жив. Я чую его отсюда. Тронный сток, запад канализации.", com.pvpciv.game.DialogueManager.opt("Иду", null));
+        } else {
+            dl.node("a", "Элеонора", COLOR, "Он мёртв. Я знала, что ты справишься. Держи — мой старый телефон. Номер мой там уже есть.",
+                    pp -> {
+                        var dd = com.pvpciv.progress.Progress.d(pp); dd.eleStage = 2; pp.setData(com.pvpciv.registry.ModRegistry.STORY.get(), dd);
+                        com.pvpciv.inv.Bag.give(pp, new net.minecraft.world.item.ItemStack(com.pvpciv.registry.ModRegistry.PHONE.get()));
+                        com.pvpciv.game.Phone.ringtone(pp);
+                        com.pvpciv.game.GameEvents.later(pp.server, 100, () -> com.pvpciv.game.Phone.stopRingtone(pp));
+                        pp.sendSystemMessage(net.minecraft.network.chat.Component.literal("📱 Получен телефон «Поко X3 Про»: выкуп из темницы, «Шпиль.Еда», такси. ПКМ телефоном или клавиша [Y]. А ещё у Элеоноры теперь есть метки на боссов и своя лавка.").withStyle(net.minecraft.ChatFormatting.GOLD));
+                    }, com.pvpciv.game.DialogueManager.opt("Спасибо!", null));
+        }
+        return dl;
     }
 
     @Override

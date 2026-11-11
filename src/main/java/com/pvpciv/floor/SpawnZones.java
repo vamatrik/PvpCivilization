@@ -53,6 +53,7 @@ public final class SpawnZones {
         ServerLevel w1 = com.pvpciv.world.CivWorld.level(server), f2 = com.pvpciv.world.CivWorld.f2(server);
         for (Zone z : zones()) {
             ServerLevel lvl = z.f2() ? f2 : w1;
+            int maxN = (int) Math.ceil(z.max() * 1.3);   // бета 11.11: спавнов ×1.3
             int baseY = z.y() >= 0 ? z.y() : Floor1.Y;
             Vec3 c = Vec3.atBottomCenterOf(z.center());
             boolean playerNear = false;
@@ -65,7 +66,7 @@ public final class SpawnZones {
             long now = lvl.getGameTime();
             java.util.List<Long> pend = PENDING.getOrDefault(z.id(), java.util.List.of());
             if (!pend.isEmpty()) pend.removeIf(t -> t <= now);
-            if (!playerNear || mobs.size() + pend.size() >= z.max()) continue;
+            if (!playerNear || mobs.size() + pend.size() >= maxN) continue;
             if (lvl.random.nextFloat() < 0.5f) continue;   // не все зоны сразу: популяция восстанавливается плавно
             for (int attempt = 0; attempt < 6; attempt++) {
                 double a = lvl.random.nextDouble() * Math.PI * 2, r = Math.sqrt(lvl.random.nextDouble()) * z.radius();

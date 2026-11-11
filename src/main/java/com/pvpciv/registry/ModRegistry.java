@@ -127,12 +127,15 @@ public final class ModRegistry {
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> CHARRED_COIN = simple("charred_coin", 12, false, 64, "Старая монета, оплавленная пеплом.", "Хлам, но ценный.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> ASH_RELIC = simple("ash_relic", 60, true, 16, "Реликвия Пепельной пустоши.", "Очень ценный хлам.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> WEAPON_SHARDS = simple("weapon_shards", 15, false, 64, "Всё, что осталось от оружия после неудачной заточки.", "Скоро: разбор в кузнице.");
-    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> STAR_W1 = simple("star_w1", 25, false, 64, "Звезда заточки мира 1.", "Кузница: ПКМ с оружием в руке.", "При неудаче оружие ЛОМАЕТСЯ.");
-    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> BLESSED_STAR_W1 = simple("blessed_star_w1", 150, true, 64, "Благословенная звезда мира 1.", "Кузница: Shift+ПКМ с оружием в руке.", "При неудаче заточка падает на 1.");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> STAR_W1 = simple("star_w1", 25, false, 64, "Звезда заточки мира 1.", "Наковальня в квартире: оружие + звезда.", "Неудача — оружие ЛОМАЕТСЯ. Алтарь: 8 звёзд → ✦.");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> BLESSED_STAR_W1 = simple("blessed_star_w1", 150, true, 64, "Благословенная звезда мира 1.", "Наковальня: неудача — заточка −1, оружие цело.", "Алтарь инфузии: из оружия +5 и 8 звёзд.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> BRUTE_CRYSTAL = simple("brute_crystal", 40, true, 64, "Кристалл Гнилого Громилы.", "10 шт. — обмен на Тесак Громилы (скоро).");
-    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> BRUTE_TROPHY = simple("brute_trophy", 0, true, 1, "Трофей: Гнилой Громила повержен.", "Для витрины в квартире (скоро).");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> BRUTE_TROPHY = simple("brute_trophy", 0, true, 1, "Трофей: Гнилой Громила повержен.", "ПКМ по витрине в квартире — выставить.");
     public static final DeferredItem<com.pvpciv.item.BoatSummonItem> OAK_BOAT_T1 = ITEMS.register("oak_boat_t1",
             () -> new com.pvpciv.item.BoatSummonItem(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<com.pvpciv.item.BoatSummonItem> NEON_TAXI_T3 = ITEMS.register("neon_taxi_t3",
+            () -> new com.pvpciv.item.BoatSummonItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC), 3, net.minecraft.world.entity.vehicle.Boat.Type.OAK, "Неоновое такси",
+                    "«Шашечки не врут: по неоновому асфальту — как по льду.»"));
     public static final DeferredItem<com.pvpciv.item.BoatSummonItem> RIME_BOAT_T2 = ITEMS.register("rime_boat_t2",
             () -> new com.pvpciv.item.BoatSummonItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE), 2, net.minecraft.world.entity.vehicle.Boat.Type.BIRCH,
                     "Инеевая", "«Скользит так, будто лёд сам её толкает.» — Ледоруб"));
@@ -157,7 +160,7 @@ public final class ModRegistry {
     public static final DeferredItem<com.pvpciv.item.CivWeaponItem> KEEPER_SPEAR = ITEMS.register("keeper_spear",
             () -> new com.pvpciv.item.CivWeaponItem(1, true, com.pvpciv.item.CivWeaponItem.WClass.SABER, com.pvpciv.loot.Rarity.EPIC, "Копьё Хранительницы Склепа. Холодное даже сквозь перчатку.").skill(com.pvpciv.game.WeaponSkills.Skill.FROST_LUNGE));
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> KEEPER_CRYSTAL = simple("keeper_crystal", 70, true, 64, "Осколок короны Хранительницы Склепа.", "Редкий материал Кряжа: ядро брони и инфузия.");
-    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> KEEPER_TROPHY = simple("keeper_trophy", 0, true, 1, "Трофей: Хранительница Склепа повержена.", "Для витрины в квартире (скоро).");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> KEEPER_TROPHY = simple("keeper_trophy", 0, true, 1, "Трофей: Хранительница Склепа повержена.", "ПКМ по витрине в квартире — выставить.");
     public static final DeferredItem<com.pvpciv.item.ArmorCoreItem> ARMOR_CORE = ITEMS.register("armor_core", () -> new com.pvpciv.item.ArmorCoreItem(new Item.Properties().stacksTo(16)));
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> TEMPER_SCROLL = simple("temper_scroll", 50, true, 16, "Свиток закалки.", "Стол брони: нужен для улучшения до +5 и до +10.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> RIME_SHARD = simple("rime_shard", 4, false, 64, "Материал брони тира 1+.", "Остаётся от инеевых мобов и брони.");
@@ -190,6 +193,11 @@ public final class ModRegistry {
             () -> EntityType.Builder.<com.pvpciv.entity.CityNpcEntity>of((t, l) -> new com.pvpciv.entity.CityNpcEntity(t, l, com.pvpciv.entity.CityNpcEntity.Role.PLUMBER), MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("plumber"));
     public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.CityNpcEntity>> SMUGGLER = ENTITIES.register("smuggler",
             () -> EntityType.Builder.<com.pvpciv.entity.CityNpcEntity>of((t, l) -> new com.pvpciv.entity.CityNpcEntity(t, l, com.pvpciv.entity.CityNpcEntity.Role.SMUGGLER), MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("smuggler"));
+    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.LiftCabin>> LIFT_CABIN = ENTITIES.register("lift_cabin",
+            () -> EntityType.Builder.<com.pvpciv.entity.LiftCabin>of(com.pvpciv.entity.LiftCabin::new, MobCategory.MISC).sized(2.6F, 3.0F).clientTrackingRange(16).updateInterval(1).build("lift_cabin"));
+    public static final DeferredItem<Item> MONORAIL_SEGMENT = ITEMS.register("monorail_segment", () -> new Item(new Item.Properties()));
+    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.CivBoat>> CIV_BOAT = ENTITIES.register("civ_boat",
+            () -> EntityType.Builder.<com.pvpciv.entity.CivBoat>of(com.pvpciv.entity.CivBoat::new, MobCategory.MISC).sized(1.375F, 0.5625F).clientTrackingRange(10).build("civ_boat"));
     public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.CarmillaEntity>> CARMILLA = ENTITIES.register("carmilla",
             () -> EntityType.Builder.of(com.pvpciv.entity.CarmillaEntity::new, MobCategory.MISC).sized(0.6F, 1.95F).clientTrackingRange(10).build("carmilla"));
     public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.EleonoraEntity>> ELEONORA = ENTITIES.register("eleonora",
@@ -253,6 +261,16 @@ public final class ModRegistry {
             () -> new com.pvpciv.item.BagBuckleItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC), 4));
     public static final DeferredItem<com.pvpciv.item.CivWeaponItem> SAMURAI_KATANA = ITEMS.register("samurai_katana",
             () -> new com.pvpciv.item.CivWeaponItem(3, false, com.pvpciv.item.CivWeaponItem.WClass.SWORD, com.pvpciv.loot.Rarity.RARE, "Контрабанда с этажа 3. Сталь, сложенная тысячу раз. Говорят."));
+    public static final DeferredItem<Item> PHONE = ITEMS.register("phone", () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)) {
+        @Override public net.minecraft.world.InteractionResultHolder<ItemStack> use(net.minecraft.world.level.Level l, net.minecraft.world.entity.player.Player p, net.minecraft.world.InteractionHand h) {
+            if (p instanceof net.minecraft.server.level.ServerPlayer sp) com.pvpciv.game.Phone.open(sp);
+            return net.minecraft.world.InteractionResultHolder.sidedSuccess(p.getItemInHand(h), l.isClientSide);
+        }
+        @Override public void appendHoverText(ItemStack st, TooltipContext c, java.util.List<net.minecraft.network.chat.Component> tip, net.minecraft.world.item.TooltipFlag f) {
+            tip.add(net.minecraft.network.chat.Component.literal("Подарок Элеоноры. Экран в трещинах, но работает.").withStyle(net.minecraft.ChatFormatting.GRAY));
+            tip.add(net.minecraft.network.chat.Component.literal("ПКМ — выкуп из темницы, доставка еды, такси.").withStyle(net.minecraft.ChatFormatting.DARK_AQUA));
+        }
+    });
     public static final DeferredItem<Item> PARACHUTE = ITEMS.register("parachute", () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)) {
         @Override public void appendHoverText(ItemStack st, TooltipContext c, java.util.List<net.minecraft.network.chat.Component> tip, net.minecraft.world.item.TooltipFlag f) {
             tip.add(net.minecraft.network.chat.Component.literal("Раскрывается сам, если долго падаешь.").withStyle(net.minecraft.ChatFormatting.GRAY));
@@ -310,8 +328,25 @@ public final class ModRegistry {
                 for (var it : ITEMS.getEntries()) if (it.get() != KEY_CARD.get()) out.accept(it.get());
             }).build());
 
+    // ------------------------------------------------------------------ 0.8.4: звуки, курьер, зелья Элеоноры
+    public static final DeferredRegister<net.minecraft.sounds.SoundEvent> SOUNDS = DeferredRegister.create(Registries.SOUND_EVENT, PvpCiv.MODID);
+    public static final DeferredHolder<net.minecraft.sounds.SoundEvent, net.minecraft.sounds.SoundEvent> PHONE_RING = SOUNDS.register("phone_ring",
+            () -> net.minecraft.sounds.SoundEvent.createVariableRangeEvent(PvpCiv.id("phone_ring")));
+    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.CityNpcEntity>> COURIER = ENTITIES.register("courier",
+            () -> EntityType.Builder.<com.pvpciv.entity.CityNpcEntity>of((t, l) -> new com.pvpciv.entity.CityNpcEntity(t, l, com.pvpciv.entity.CityNpcEntity.Role.COURIER), MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("courier"));
+    public static final DeferredItem<com.pvpciv.item.CivPotionItem> POTION_HEAL = potion("potion_heal", com.pvpciv.item.CivPotionItem.Kind.HEAL);
+    public static final DeferredItem<com.pvpciv.item.CivPotionItem> POTION_REGEN = potion("potion_regen", com.pvpciv.item.CivPotionItem.Kind.REGEN);
+    public static final DeferredItem<com.pvpciv.item.CivPotionItem> POTION_SWIFT = potion("potion_swift", com.pvpciv.item.CivPotionItem.Kind.SWIFT);
+    public static final DeferredItem<com.pvpciv.item.CivPotionItem> POTION_MIGHT = potion("potion_might", com.pvpciv.item.CivPotionItem.Kind.MIGHT);
+    public static final DeferredItem<com.pvpciv.item.CivPotionItem> POTION_STONE = potion("potion_stone", com.pvpciv.item.CivPotionItem.Kind.STONE);
+
+    private static DeferredItem<com.pvpciv.item.CivPotionItem> potion(String id, com.pvpciv.item.CivPotionItem.Kind k) {
+        return ITEMS.register(id, () -> new com.pvpciv.item.CivPotionItem(new Item.Properties().stacksTo(16), k));
+    }
+
     public static void register(IEventBus bus) {
         ModMobs.init();
+        SOUNDS.register(bus);
         BLOCKS.register(bus);
         ITEMS.register(bus);
         ENTITIES.register(bus);
@@ -331,6 +366,7 @@ public final class ModRegistry {
         e.put(TIMOFEY.get(), StoryNpc.createAttributes().build());
         e.put(PARACHUTIST.get(), StoryNpc.createAttributes().build());
         e.put(PLUMBER.get(), StoryNpc.createAttributes().build());
+        e.put(COURIER.get(), StoryNpc.createAttributes().build());
         e.put(SMUGGLER.get(), StoryNpc.createAttributes().build());
         e.put(TRADER.get(), StoryNpc.createAttributes().build());
         e.put(CARMILLA.get(), StoryNpc.createAttributes().build());

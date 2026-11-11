@@ -18,6 +18,7 @@ public final class ClientPayloads {
     public static void offers(Network.TraderOffers p) {
         ClientState.offers = p.offers();
         ClientState.shopRotationAt = System.currentTimeMillis() + p.msLeft();
+        ClientState.shopTokens = p.tokens();
     }
 
     public static void death(Network.DeathInfo p) { ClientState.death = p; }
@@ -65,5 +66,32 @@ public final class ClientPayloads {
 
     public static void openLift(com.pvpciv.net.Network.OpenLift p) {
         net.minecraft.client.Minecraft.getInstance().setScreen(new com.pvpciv.client.screen.LiftScreen(p.mask(), p.current()));
+    }
+
+    public static void openMilestones(com.pvpciv.net.Network.OpenMilestones p) {
+        long[] v = p.values().stream().mapToLong(Long::longValue).toArray();
+        int[] c = p.claimed().stream().mapToInt(Integer::intValue).toArray();
+        net.minecraft.client.Minecraft.getInstance().setScreen(new com.pvpciv.client.screen.MilestonesScreen(v, c));
+    }
+
+    public static void phone(com.pvpciv.net.Network.PhoneData p) {
+        var mc = net.minecraft.client.Minecraft.getInstance();
+        com.google.gson.JsonObject j = com.google.gson.JsonParser.parseString(p.json()).getAsJsonObject();
+        switch (p.kind()) {
+            case 0, 1, 2 -> {
+                if (mc.screen instanceof com.pvpciv.client.screen.PhoneScreen ps) ps.data(p.kind(), j);
+                else mc.setScreen(new com.pvpciv.client.screen.PhoneScreen(p.kind(), j));
+            }
+            case 3 -> ClientState.callUntil = System.currentTimeMillis() + (j.has("sec") ? j.get("sec").getAsInt() : 10) * 1000L;
+            case 4 -> ClientState.callUntil = 0;
+            case 5 -> {
+                if (!j.has("name")) { ClientState.taxiUntil = 0; return; }
+                ClientState.taxiFrom = j.get("name").getAsString();
+                ClientState.taxiTo = j.get("to").getAsString();
+                ClientState.taxiUntil = System.currentTimeMillis() + j.get("sec").getAsLong() * 1000L;
+                ClientState.taxiHere = j.get("here").getAsBoolean();
+            }
+            default -> {}
+        }
     }
 }

@@ -89,6 +89,33 @@ public final class Network {
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    /** Сервер → клиент: открыть дневник подвигов (значения и сданные вехи по разделам). */
+    public record OpenMilestones(java.util.List<Long> values, java.util.List<Integer> claimed) implements CustomPacketPayload {
+        public static final Type<OpenMilestones> TYPE = new Type<>(PvpCiv.id("open_milestones"));
+        public static final StreamCodec<ByteBuf, OpenMilestones> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_LONG.apply(ByteBufCodecs.list()), OpenMilestones::values, ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list()), OpenMilestones::claimed, OpenMilestones::new);
+        @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+    /** Сервер → клиент: данные телефона. kind: 0 — главный экран, 1 — «Шпиль.Еда», 2 — такси, 3 — входящий звонок, 4 — звонок окончен, 5 — такси ждёт. */
+    public record PhoneData(int kind, String json) implements CustomPacketPayload {
+        public static final Type<PhoneData> TYPE = new Type<>(PvpCiv.id("phone_data"));
+        public static final StreamCodec<ByteBuf, PhoneData> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, PhoneData::kind, ByteBufCodecs.STRING_UTF8, PhoneData::json, PhoneData::new);
+        @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+    /** Клиент → сервер: команда приложения телефона (см. Phone.cmd); "open" — открыть телефон. */
+    public record PhoneCmd(String cmd) implements CustomPacketPayload {
+        public static final Type<PhoneCmd> TYPE = new Type<>(PvpCiv.id("phone_cmd"));
+        public static final StreamCodec<ByteBuf, PhoneCmd> CODEC = StreamCodec.composite(ByteBufCodecs.STRING_UTF8, PhoneCmd::cmd, PhoneCmd::new);
+        @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    /** Клиент → сервер: забрать вехи раздела. */
+    public record ClaimMilestones(int track) implements CustomPacketPayload {
+        public static final Type<ClaimMilestones> TYPE = new Type<>(PvpCiv.id("claim_milestones"));
+        public static final StreamCodec<ByteBuf, ClaimMilestones> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, ClaimMilestones::track, ClaimMilestones::new);
+        @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     /** Клиент → сервер: выбрать лодку в гараже. */
     public record SelectBoat(String id) implements CustomPacketPayload {
         public static final Type<SelectBoat> TYPE = new Type<>(PvpCiv.id("select_boat"));
@@ -125,11 +152,12 @@ public final class Network {
     }
 
     /** Сервер → клиент: ассортимент магазина. */
-    public record TraderOffers(List<OfferView> offers, long msLeft) implements CustomPacketPayload {
+    /** tokens ≥ 0 — лавка Элеоноры: цены в жетонах, tokens — баланс. */
+    public record TraderOffers(List<OfferView> offers, long msLeft, int tokens) implements CustomPacketPayload {
         public static final Type<TraderOffers> TYPE = new Type<>(PvpCiv.id("trader_offers"));
         public static final StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, TraderOffers> CODEC = StreamCodec.composite(
                 OfferView.CODEC.apply(ByteBufCodecs.list()), TraderOffers::offers,
-                ByteBufCodecs.VAR_LONG, TraderOffers::msLeft, TraderOffers::new);
+                ByteBufCodecs.VAR_LONG, TraderOffers::msLeft, ByteBufCodecs.INT, TraderOffers::tokens, TraderOffers::new);
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
@@ -166,6 +194,16 @@ public final class Network {
         r.playToClient(OpenLift.TYPE, OpenLift.CODEC, (p, ctx) -> com.pvpciv.client.ClientPayloads.openLift(p));
         r.playToServer(LiftGo.TYPE, LiftGo.CODEC, (p, ctx) -> {
             if (ctx.player() instanceof ServerPlayer sp) com.pvpciv.game.SkyLift.ride(sp, p.floor());
+        });
+        r.playToClient(OpenMilestones.TYPE, OpenMilestones.CODEC, (p, ctx) -> com.pvpciv.client.ClientPayloads.openMilestones(p));
+        r.playToServer(ClaimMilestones.TYPE, ClaimMilestones.CODEC, (p, ctx) -> {
+            if (ctx.player() instanceof ServerPlayer sp) com.pvpciv.game.Milestones.claim(sp, p.track());
+        });
+        r.playToClient(PhoneData.TYPE, PhoneData.CODEC, (p, ctx) -> com.pvpciv.client.ClientPayloads.phone(p));
+        r.playToServer(PhoneCmd.TYPE, PhoneCmd.CODEC, (p, ctx) -> {
+            if (ctx.player() instanceof ServerPlayer sp) {
+                if (p.cmd().equals("open")) com.pvpciv.game.Phone.open(sp); else com.pvpciv.game.Phone.cmd(sp, p.cmd());
+            }
         });
         r.playToServer(SelectBoat.TYPE, SelectBoat.CODEC, (p, ctx) -> {
             if (ctx.player() instanceof ServerPlayer sp) com.pvpciv.game.Garage.select(sp, p.id());

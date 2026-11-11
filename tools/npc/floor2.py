@@ -231,3 +231,94 @@ if __name__ == '__main__':
         rat(); dog(); don(); rat_king()
     beast_anims(); boss_anims()
     print('этаж 2: модели готовы')
+
+
+# ------------------------------------------------------------------ лодки (бета 11.11): Инеевая лодка (Т2) и Неоновое такси (Т3)
+def rime_boat():
+    m = G.Model('rime_boat', 512)
+    ice_c, deep = hexc('8fd8ff'), hexc('3a7ab8')
+    icep = B.ice(ice_c, seed=31, glow=0.35)
+    deepp = B.ice(deep, seed=32, glow=0.2)
+    m.bone('root', None, [0, 0, 0])
+    cubes = [([-7, 0, -14], [14, 2, 28], deepp, 2),                       # днище
+             ([-8, 2, -13], [1.5, 5, 26], icep, 2), ([6.5, 2, -13], [1.5, 5, 26], icep, 2),   # борта
+             ([-7, 2, 12], [14, 5, 1.5], icep, 2), ([-6, 2, -15], [12, 5, 2], icep, 2),        # корма, нос
+             ([-4, 2, -18], [8, 4, 3], icep, 3), ([-2, 3, -20.5], [4, 3, 2.5], icep, 3),       # острый нос
+             ([-6.5, 4, -2], [13, 1, 3], flat(hexc('e8f6ff')), 3)]                             # банка-сиденье
+    for z in (-10, 0, 9):                                                                      # кристаллы-рёбра
+        cubes.append(([-8.5, 6.5, z], [1.5, 2.5, 1.2], flat(hexc('d8f4ff'), noise=0.05), 6))
+        cubes.append(([7, 6.5, z], [1.5, 2.5, 1.2], flat(hexc('d8f4ff'), noise=0.05), 6))
+    m.bone('hull', 'root', [0, 0, 0], cubes)
+    m.save('rime_boat')
+
+
+def neon_car():
+    m = G.Model('neon_car', 512)
+    paint = hexc('d02a8a'); dark = hexc('1a1a22'); glass = hexc('60c8ff'); neon = hexc('40f0ff')
+    def body(fc, d, r):
+        flat(paint, noise=0.04)(fc, d, r)
+        x0, y0, x1, y1 = r
+        if fc in ('east', 'west'): d.line([(x0, y0 + (y1 - y0) * 0.45), (x1, y0 + (y1 - y0) * 0.45)], fill=(255, 220, 255, 255), width=1)
+    m.bone('root', None, [0, 0, 0])
+    m.bone('body', 'root', [0, 3, 0], [([-8, 3, -15], [16, 5, 30], body, 2),                   # кузов
+                                       ([-7, 8, -6], [14, 5, 13], flat(dark), 2),               # кабина
+                                       ([-6.5, 8.5, -6.4], [13, 4, 0.6], flat(glass, noise=0.03), 4),   # лобовое
+                                       ([-7.4, 8.5, -5], [0.6, 4, 10], flat(glass, noise=0.03), 4), ([6.8, 8.5, -5], [0.6, 4, 10], flat(glass, noise=0.03), 4),
+                                       ([-6, 13, -4], [12, 1, 9], flat(paint), 3),               # крыша
+                                       ([-2, 14, -1], [4, 1.5, 3], flat(hexc('ffd030'), noise=0.05), 6),  # шашечка такси
+                                       ([-7, 4.5, -15.4], [3, 2, 0.6], flat(hexc('fff6c0')), 6), ([4, 4.5, -15.4], [3, 2, 0.6], flat(hexc('fff6c0')), 6),  # фары
+                                       ([-7, 4.5, 14.8], [3, 1.5, 0.6], flat(hexc('ff2030')), 6), ([4, 4.5, 14.8], [3, 1.5, 0.6], flat(hexc('ff2030')), 6),
+                                       ([-8.4, 2.6, -13], [0.6, 0.6, 26], flat(neon), 6), ([7.8, 2.6, -13], [0.6, 0.6, 26], flat(neon), 6)])  # подсветка
+    for nm, x, z in (('wheel_fl', -8.5, -10), ('wheel_fr', 6.5, -10), ('wheel_bl', -8.5, 10), ('wheel_br', 6.5, 10)):
+        m.bone(nm, 'root', [x + 1, 3, z], [([x, 0, z - 3], [2, 6, 6], flat(hexc('202020')), 4), ([x - 0.2 if x < 0 else x + 0.2, 1.5, z - 1.5], [2, 3, 3], flat(hexc('b0b0b8')), 6)])
+    m.save('neon_car')
+
+
+def boat_anims():
+    S = lambda t: math.sin(2 * math.pi * t)
+    A = {'idle': {'loop': True, 'animation_length': 2.0, 'bones': {'root': {'rotation': B.keys(lambda t: [1.2 * S(t), 0, 1.5 * S(t + 0.25)], 2.0)}}},
+         'walk': {'loop': True, 'animation_length': 0.5, 'bones': {
+             **{w: {'rotation': B.keys(lambda t: [-360 * t, 0, 0], 0.5)} for w in ('wheel_fl', 'wheel_fr', 'wheel_bl', 'wheel_br')},
+             'body': {'position': B.keys(lambda t: [0, 0.2 * S(t * 2), 0], 0.5)}}}}
+    json.dump({'format_version': '1.8.0', 'animations': A}, open(G.ensure(os.path.join(G.ROOT, 'animations', 'civ_boat.animation.json')), 'w'))
+
+
+if __name__ == '__main__' and '--boats' in sys.argv:
+    rime_boat(); neon_car(); boat_anims(); print('лодки готовы')
+
+
+# ------------------------------------------------------------------ Небесный лифт: кабина (бета 11.11)
+def lift_cabin():
+    m = G.Model('lift_cabin', 1024)
+    # нейтральный «настоящий» лифт: графит, латунь, дымчатое стекло, тёплый свет — один на все этажи
+    steel, dark, glass, neon = hexc('3a3d44'), hexc('1e2026'), (120, 120, 130, 80), hexc('ffe6b0')
+    def glassp(fc, d, r):
+        x0, y0, x1, y1 = r
+        d.rectangle([x0, y0, x1 - 1, y1 - 1], fill=glass)
+        for x in range(x0, x1, 6): d.line([(x, y0), (x + 4, y1 - 1)], fill=(220, 245, 255, 120), width=1)
+    m.bone('root', None, [0, 0, 0])
+    cubes = [([-22, 0, -22], [44, 2, 44], flat(dark, noise=0.05), 2),                 # пол
+             ([-22, 46, -22], [44, 3, 44], flat(steel, noise=0.04), 2),              # крыша
+             ([-6, 49, -6], [12, 2, 12], flat(neon), 4)]                              # маяк
+    for x, z in ((-22, -22), (19, -22), (-22, 19), (19, 19)):
+        cubes.append(([x, 2, z], [3, 44, 3], flat(hexc('c9a24a'), noise=0.05), 2))  # латунные стойки
+    cubes += [([-19, 2, -22], [38, 44, 1], glassp, 1),                                # стёкла: север
+              ([-22, 2, -19], [1, 44, 38], glassp, 1), ([21, 2, -19], [1, 44, 38], glassp, 1),
+              ([-19, 2, 21], [10, 44, 1], glassp, 1), ([9, 2, 21], [10, 44, 1], glassp, 1),   # юг с проёмом
+              ([-22, 1.6, -22], [44, 0.6, 44], flat(neon), 2),                       # подсветка пола
+              ([-14, 2, -18], [28, 7, 7], flat(hexc('3a4a6a')), 2),                   # диван
+              ([-14, 9, -21], [28, 9, 3], flat(hexc('3a4a6a')), 2)]
+    m.bone('cabin', 'root', [0, 0, 0], cubes)
+    # пульт с кнопкой внутри (справа у входа)
+    m.bone('panel', 'cabin', [15, 0, 14], [([14, 2, 12], [5, 16, 5], flat(steel), 4),
+                                            ([13.6, 13, 12.5], [0.6, 6, 4], flat(hexc('102030')), 8),
+                                            ([13.2, 15, 13.6], [0.6, 2, 2], flat(hexc('ff3050')), 10)])
+    m.bone('clamp', 'root', [0, 0, -24], [([-6, 10, -26], [12, 30, 4], flat(dark), 2)])   # захват за рельс (сзади)
+    m.save('lift_cabin')
+    A = {'idle': {'loop': True, 'animation_length': 2.0, 'bones': {'panel': {'scale': B.keys(lambda t: [1, 1, 1], 2.0)}}},
+         'walk': {'loop': True, 'animation_length': 0.4, 'bones': {'cabin': {'position': B.keys(lambda t: [0, 0.15 * math.sin(2 * math.pi * t), 0], 0.4)}}}}
+    json.dump({'format_version': '1.8.0', 'animations': A}, open(G.ensure(os.path.join(G.ROOT, 'animations', 'lift_cabin.animation.json')), 'w'))
+
+
+if __name__ == '__main__' and '--lift' in sys.argv:
+    lift_cabin(); print('кабина готова')

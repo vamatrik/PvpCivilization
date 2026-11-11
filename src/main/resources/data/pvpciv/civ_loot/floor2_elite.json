@@ -36,6 +36,10 @@
   {
    "item": "pvpciv:blood_star_w1",
    "chance": 0.02
+  },
+  {
+   "item": "pvpciv:neon_taxi_t3",
+   "chance": 0.01
   }
  ]
 }

@@ -45,7 +45,16 @@ public final class ClientState {
     public static long cineStart = 0, cineLen = 0;
     public static String cineText = "";
 
+    /** Лавка Элеоноры: ≥0 — цены в жетонах (баланс). */
+    public static int shopTokens = -1;
+    /** Входящий звонок (до какого момента звонит, мс) и ожидающее такси. */
+    public static long callUntil = 0;
+    public static String taxiFrom = "", taxiTo = "";
+    public static long taxiUntil = 0;
+    public static boolean taxiHere = false;
+
     public static void reset() {
+        callUntil = 0; taxiUntil = 0; shopTokens = -1;
         quest = ""; questSeconds = -1; jailSeconds = -1; cineKind = 0;
         stage = 0; objective = ""; level = 1; xp = 0; money = 0; zone = ""; zoneType = 0; bossSeconds = -1; keeperSeconds = -1; trophies = 0; dashReadyAt = 0;
     }

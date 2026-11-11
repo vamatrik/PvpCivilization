@@ -93,4 +93,19 @@ skin('plumber', face(SKIN, hx('4a3020'), cap=hx('2a6ad0'), cap_rows=2, beard=hx(
 skin('smuggler', face(SKIN2, hx('1a1a1e'), mask=hx('3a2a4a'), cap=hx('2a1e36'), cap_rows=3),
      cloth(hx('2a1e36'), lambda x, y, w, h: gold if (x, y) in ((2, 1), (5, 1)) else hx('4a3a5a') if x in (3, 4) else None, belt=hx('5a3a20')),
      limb(hx('2a1e36'), hand=hx('1a1a1a'), hand_rows=3), limb(hx('1e1e24'), hand=hx('3a2a1a'), hand_rows=3), sub=None)
+# бета: иссохший — мумия в бинтах (отличается от пепельного зомби)
+BAND, BAND2, GAP = hx('cbbf9a'), hx('a8996e'), hx('3a2a1e')
+def bandage(f, x, y, w, h):
+    if (y + (x // 3)) % 3 == 0: return GAP if (x + y) % 4 == 0 else BAND2
+    return BAND
+def mummy_head(f, x, y, w, h):
+    if f == 'front' and y == 4 and x in (2, 5): return hx('ff4020')
+    if f == 'front' and y == 4 and x in (1, 6): return hx('200a05')
+    return bandage(f, x, y, w, h)
+skin('withered', mummy_head, bandage, bandage, bandage)
+# 0.8.4: курьер «Шпиль.Еды» — жёлтая куртка, кепка (рюкзак-куб рисуется слоем рендера)
+YEL, YEL2 = hx('f2c230'), hx('c89a18')
+skin('courier', face(SKIN, hx('6a4020'), cap=YEL, cap_rows=2),
+     cloth(YEL, lambda x, y, w, h: hx('1a1a1e') if x in (0, 7) and y < 6 else (hx('1a1a1e') if y == 7 else None), belt=hx('2a2a30')),
+     limb(YEL, cuff=YEL2, cuff_rows=1, hand=SKIN, hand_rows=2), limb(hx('2a2a36'), hand=hx('e8e8f0'), hand_rows=2), sub=None)
 print('ok')

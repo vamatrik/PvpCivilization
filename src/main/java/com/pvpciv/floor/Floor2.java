@@ -26,7 +26,7 @@ public class Floor2 extends Builder {
     public static final int HUB_R = 26, R_EDGE = 150;
     public static final double MID = 89.5;
     public static final BlockPos LIFT_PANEL = new BlockPos(2, Y, 3);
-    public static final Vec3 LIFT_ARRIVE = new Vec3(0.5, Y, 4.5);
+    public static final Vec3 LIFT_ARRIVE = new Vec3(0.5, Y, 5.5);
     public static final BlockPos NEON = polar(45, 120, Y), MARKET = polar(135, 120, Y), PARK = polar(225, 120, Y);
     public static final BlockPos CLUB = polar(315, 120, Y);
     public static final int CLUB_R = 15, PLAZA_R = 17;
@@ -71,6 +71,8 @@ public class Floor2 extends Builder {
         ELITES.add(new EliteSpots.Spot("e2_park", PARK.offset(4, 0, -6), Mobs.Kind.STREET_DOG, 8, "Вожак стаи", "floor2_mob", true));
         ELITES.add(new EliteSpots.Spot("e2_sewer1", polar(90, MID, YS), Mobs.Kind.GHOUL, 10, "Утопленник", "floor2b_mob", true));
         ELITES.add(new EliteSpots.Spot("e2_sewer2", polar(270, MID, YS), Mobs.Kind.GUNNER, 10, "Ствол", "floor2b_mob", true));
+        List<EliteSpots.Spot> tw = EliteSpots.twins(new ArrayList<>(ELITES));
+        ELITES.clear(); ELITES.addAll(tw);
     }
 
     // ------------------------------------------------------------------ зоны HUD
@@ -327,20 +329,12 @@ public class Floor2 extends Builder {
 
     // ------------------------------------------------------------------ хаб: станция лифта и зал Тимофея
     private void hub() {
-        for (int x = -3; x <= 3; x++) for (int z = -3; z <= 3; z++) {
-            boolean post = Math.abs(x) == 3 && Math.abs(z) == 3, wall = Math.abs(x) == 3 || z == -3;
-            for (int y = Y; y < Y + 6; y++) {
-                if (post) set(x, y, z, Blocks.IRON_BLOCK);
-                else if (wall) set(x, y, z, y == Y + 5 ? Blocks.IRON_BLOCK : Blocks.LIGHT_BLUE_STAINED_GLASS);
-            }
-            set(x, Y + 6, z, (x + z) % 2 == 0 ? Blocks.IRON_BLOCK : Blocks.SEA_LANTERN);
-            set(x, Y - 1, z, Blocks.POLISHED_DEEPSLATE);
-        }
-        set(0, Y - 1, 0, Blocks.BEACON); set(0, Y - 2, 0, Blocks.IRON_BLOCK);
-        // монорельс сверху — уходит вниз, к этажу 1
-        for (int t = 0; t < 60; t++) for (int x = -1; x <= 1; x++) set(x, Y + 7 + t / 3, 3 + t, x == 0 ? (t % 7 == 0 ? Blocks.SEA_LANTERN : Blocks.LIGHT_BLUE_STAINED_GLASS) : Blocks.POLISHED_BLACKSTONE);
-        setLit(LIFT_PANEL.getX(), LIFT_PANEL.getY(), LIFT_PANEL.getZ(), ModRegistry.LIFT_PANEL.get().defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, Direction.SOUTH));
-        sign(new BlockPos(-2, Y + 1, 4), Direction.SOUTH, DyeColor.LIGHT_BLUE, "НЕБЕСНЫЙ", "ЛИФТ", "табло — справа", "↓ этаж 1");
+        // станция: кабина — 3D-сущность (Monorail.ensure), под ней стеклянная шахта, рельс уходит в бездну и в небо
+        for (int x = -3; x <= 3; x++) for (int z = -3; z <= 3; z++) for (int y = Y; y < Y + 7; y++) set(x, y, z, Blocks.AIR);
+        for (int t = 0; t < 60; t++) for (int x = -1; x <= 1; x++) set(x, Y + 7 + t / 3, 3 + t, Blocks.AIR);   // старый блок-монорельс 0.8.0
+        for (int x = -2; x <= 2; x++) for (int z = -3; z <= 3; z++) { set(x, Y - 1, z, Blocks.GRAY_STAINED_GLASS); set(x, Y - 2, z, Blocks.AIR); }
+        for (int a = 0; a < 360; a += 45) { BlockPos q = polar(a, 4.5, Y); set(q.getX(), Y, q.getZ(), Blocks.POLISHED_BLACKSTONE_WALL); setLit(q.getX(), Y + 1, q.getZ(), Blocks.SEA_LANTERN.defaultBlockState()); }
+        sign(new BlockPos(-3, Y, 4), Direction.SOUTH, DyeColor.LIGHT_BLUE, "НЕБЕСНЫЙ", "ЛИФТ", "ПКМ по кабине —", "табло этажей");
         // зал Тимофея (север хаба)
         int gx = GYM.getX(), gz = GYM.getZ();
         for (int x = gx - 7; x <= gx + 7; x++) for (int z = gz - 6; z <= gz + 5; z++) {

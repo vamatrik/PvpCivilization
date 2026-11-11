@@ -123,5 +123,18 @@
  "block.pvpciv.neon_road_line": "Неоновый асфальт с разметкой",
  "item.pvpciv.samurai_katana": "Катана самурая",
  "item.pvpciv.smuggler_pack": "Рюкзак контрабандиста",
- "entity.pvpciv.smuggler": "Контрабандист Шнырь"
+ "entity.pvpciv.smuggler": "Контрабандист Шнырь",
+ "item.pvpciv.neon_taxi_t3": "Неоновое такси (Т3)",
+ "entity.pvpciv.civ_boat": "Лодка",
+ "item.pvpciv.phone": "Телефон «Поко X3 Про»",
+ "key.pvpciv.skill2": "Навык 2",
+ "key.pvpciv.skill3": "Навык 3",
+ "key.pvpciv.phone": "Телефон (ответить на звонок)",
+ "item.pvpciv.potion_heal": "Зелье лечения",
+ "item.pvpciv.potion_regen": "Зелье регенерации",
+ "item.pvpciv.potion_swift": "Зелье ловкости",
+ "item.pvpciv.potion_might": "Зелье силы",
+ "item.pvpciv.potion_stone": "Зелье каменной кожи",
+ "entity.pvpciv.courier": "Курьер «Шпиль.Еды»",
+ "subtitles.pvpciv.phone_ring": "Звонит телефон"
 }

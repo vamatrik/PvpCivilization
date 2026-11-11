@@ -72,7 +72,10 @@ public class DialogueScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
         renderBackground(g, mx, my, pt);
-        int x0 = 24, x1 = width - 24, y1 = height - 10, y0 = y1 - 82;
+        int x0 = 24, x1 = width - 24, y1 = height - 10;
+        // окно растёт под длинную реплику (перенос по словам, до 7 строк)
+        int nLines = Math.min(7, font.split(Component.literal(text), x1 - x0 - 36).size());
+        int y0 = y1 - Math.max(82, 16 + nLines * 11 + 24);
 
         // портрет говорящего
         Entity e = minecraft.level != null && entityId >= 0 ? minecraft.level.getEntity(entityId) : null;

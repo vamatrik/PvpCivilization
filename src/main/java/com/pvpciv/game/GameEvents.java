@@ -63,10 +63,17 @@ public final class GameEvents {
         bus.addListener(GameEvents::onPickup);
         bus.addListener(GameEvents::onEntityJoin);
         bus.addListener(GameEvents::onRightClickBlock);
+        bus.addListener(GameEvents::onMount);
         bus.addListener((net.neoforged.neoforge.event.entity.living.LivingDeathEvent e) -> {
             if (e.getEntity() instanceof net.minecraft.world.entity.Mob m && !m.level().isClientSide) com.pvpciv.floor.EliteSpots.onDeath(m);
         });
         bus.addListener(GameEvents::onNameFormat);
+        bus.addListener((net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish e) -> {
+            if (e.getEntity() instanceof ServerPlayer p && e.getItem().has(net.minecraft.core.component.DataComponents.FOOD)) Marks.onEat(p);
+        });
+        bus.addListener((net.neoforged.neoforge.event.entity.living.LivingDeathEvent e) -> {
+            if (e.getEntity() instanceof ServerPlayer p) Marks.onDeath(p);
+        });
         CombatEvents.register(bus);
     }
 
@@ -104,7 +111,7 @@ public final class GameEvents {
     }
 
     private static void onLogout(PlayerEvent.PlayerLoggedOutEvent e) {
-        if (e.getEntity() instanceof ServerPlayer p) DialogueManager.forget(p);
+        if (e.getEntity() instanceof ServerPlayer p) { DialogueManager.forget(p); Marks.forget(p); Taxi.cancel(p); }
     }
 
     private static void onRespawn(PlayerEvent.PlayerRespawnEvent e) {
@@ -126,10 +133,13 @@ public final class GameEvents {
         if (ticks % 20 == 0) for (ServerPlayer p : server.getPlayerList().getPlayers()) Story.tickPlayer(p);
         if (ticks % 10 == 0) for (ServerPlayer p : server.getPlayerList().getPlayers()) com.pvpciv.inv.Bag.sweep(p);
         if (ticks % 5 == 0) for (ServerPlayer p : server.getPlayerList().getPlayers()) Falling.tick(p);
+        if (ticks % 10 == 3) for (ServerPlayer p : server.getPlayerList().getPlayers()) { Marks.tick(p); Taxi.tick(p); }
+        if (ticks % 20 == 7) for (ServerPlayer p : server.getPlayerList().getPlayers()) FoodApp.tick(p);
         if (ticks % 100 == 0) {
             LunaEntity.ensure(server); TraderEntity.ensure(server);
             com.pvpciv.entity.CarmillaEntity.ensure(server); com.pvpciv.entity.EleonoraEntity.ensure(server);
             com.pvpciv.floor.Floor2.ensureNpcs(server);
+            com.pvpciv.world.Monorail.ensure(server);
         }
         com.pvpciv.world.IceTrack.tick(server);
     }
@@ -163,6 +173,11 @@ public final class GameEvents {
     }
 
     /** Комната Луны: дневник и шкатулка. */
+    /** Из кабины лифта на ходу не выйти. */
+    private static void onMount(net.neoforged.neoforge.event.entity.EntityMountEvent e) {
+        if (e.isDismounting() && e.getEntityBeingMounted() instanceof com.pvpciv.entity.LiftCabin c && c.ride() && c.locked && c.isAlive()) e.setCanceled(true);
+    }
+
     private static void onRightClickBlock(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock e) {
         if (!(e.getEntity() instanceof ServerPlayer p) || e.getHand() != net.minecraft.world.InteractionHand.MAIN_HAND) return;
         if (!com.pvpciv.world.CivWorld.is(p.level())) return;
@@ -252,6 +267,17 @@ public final class GameEvents {
     }
 
     private static void onCommands(RegisterCommandsEvent e) {
+        e.getDispatcher().register(Commands.literal("spawn")
+                .executes(c -> {
+                    c.getSource().sendSuccess(() -> Component.literal("/spawn — застрял? Это УБЬЁТ персонажа (как обычная смерть: штраф и возрождение в квартире). Подтверди: /spawn confirm").withStyle(ChatFormatting.YELLOW), false);
+                    return 1;
+                })
+                .then(Commands.literal("confirm").executes(c -> {
+                    ServerPlayer p = c.getSource().getPlayerOrException();
+                    if (Vampire.jailed(p)) { c.getSource().sendFailure(Component.literal("Из клетки Кармиллы так не сбежать.")); return 0; }
+                    p.hurt(p.damageSources().genericKill(), Float.MAX_VALUE);
+                    return 1;
+                })));
         e.getDispatcher().register(Commands.literal("beta")
                 .then(Commands.argument("text", com.mojang.brigadier.arguments.StringArgumentType.greedyString()).executes(GameEvents::beta)));
         e.getDispatcher().register(Commands.literal("civ")
@@ -333,6 +359,19 @@ public final class GameEvents {
                     com.pvpciv.floor.Floor2.build(com.pvpciv.world.CivWorld.f2(c.getSource().getServer()));
                     com.pvpciv.world.RoofBuilder.build(com.pvpciv.world.CivWorld.level(c.getSource().getServer()));
                     c.getSource().sendSuccess(() -> Component.literal("Этаж 2 и крыша перестроены."), false);
+                    return 1;
+                }))
+                .then(Commands.literal("phone").requires(s -> s.hasPermission(2)).executes(c -> {
+                    ServerPlayer p = c.getSource().getPlayerOrException();
+                    StoryData d = Story.data(p);
+                    d.eleStage = 2; d.liftOk = true; d.trophies |= 15; d.eleTokens += 200;
+                    p.setData(ModRegistry.STORY.get(), d);
+                    com.pvpciv.inv.Bag.give(p, new ItemStack(ModRegistry.PHONE.get()));
+                    c.getSource().sendSuccess(() -> Component.literal("Тест: телефон, этаж 2, все трофеи, +200 жетонов."), false);
+                    return 1;
+                }))
+                .then(Commands.literal("call").requires(s -> s.hasPermission(2)).executes(c -> {
+                    Marks.testCall(c.getSource().getPlayerOrException());
                     return 1;
                 }))
                 .then(Commands.literal("unlock2").requires(s -> s.hasPermission(2)).executes(c -> {
