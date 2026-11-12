@@ -109,21 +109,43 @@ public final class Vampire {
         return out;
     }
 
-    /** Предложение: 1–4 вида, всего 20–60 мобов; меняется раз в 10 минут. */
+    /** Как часто вид встречается в зонах спавна (сумма «мест» по всем зонам) — доли контракта по ней. */
+    private static double share(Mobs.Kind k) {
+        double s = 0;
+        for (var z : com.pvpciv.floor.SpawnZones.zones()) {
+            int c = 0;
+            for (Mobs.Kind x : z.kinds()) if (x == k) c++;
+            if (c > 0) s += z.max() * (double) c / z.kinds().length;
+        }
+        return Math.max(0.5, s);
+    }
+
+    /**
+     * Предложение: 2–4 вида из одной части этажа (обычно — самой дальней, где игрок уже был), всего 16–50 мобов.
+     * Сколько каких — пропорционально тому, как часто они спавнятся (крыс много — их и больше в контракте). Меняется раз в 10 минут.
+     */
     private static List<Pos> offerFor(ServerPlayer p) {
         StoryData d = Progress.d(p);
-        List<String> kinds = known(d);
         var r = net.minecraft.util.RandomSource.create(p.getUUID().getLeastSignificantBits() ^ (now(p.server) / (20L * 60 * 10)));
+        List<Mobs.Kind> known = new ArrayList<>();
+        for (Mobs.Kind k : Mobs.Kind.values()) if (d.kills.getInt(k.name()) > 0) known.add(k);
+        Mobs.Kind top = known.stream().max(java.util.Comparator.comparingInt(k -> k.defLevel)).orElse(Mobs.Kind.ASH_ZOMBIE);
+        String group = r.nextFloat() < 0.7f ? top.loot : known.get(r.nextInt(known.size())).loot;
+        List<Mobs.Kind> kinds = new ArrayList<>(known.stream().filter(k -> k.loot.equals(group)).toList());
         java.util.Collections.shuffle(kinds, new java.util.Random(r.nextLong()));
-        int n = 1 + r.nextInt(Math.min(4, kinds.size()));
-        int total = 16 + r.nextInt(8) * 4 + Math.min(16, d.questsDone * 2);   // 16–50 (бета: −18%), растёт с опытом
-        total = Math.min(50, Math.max(total, n * 4));
+        int n = kinds.size() <= 1 ? 1 : 2 + r.nextInt(Math.min(3, kinds.size() - 1));
+        kinds = kinds.subList(0, Math.min(n, kinds.size()));
+        int total = 16 + r.nextInt(8) * 4 + Math.min(16, d.questsDone * 2);
+        total = Math.min(50, Math.max(total, kinds.size() * 4));
+        double sum = 0;
+        for (Mobs.Kind k : kinds) sum += share(k);
         List<Pos> out = new ArrayList<>();
         int left = total;
-        for (int i = 0; i < n; i++) {
-            int part = i == n - 1 ? left : Math.max(5, total / n + (r.nextInt(5) - 2));
+        for (int i = 0; i < kinds.size(); i++) {
+            int part = i == kinds.size() - 1 ? left : Math.max(3, (int) Math.round(total * share(kinds.get(i)) / sum));
+            part = Math.max(3, Math.min(part, left - 3 * (kinds.size() - 1 - i)));
             left -= part;
-            out.add(new Pos(kinds.get(i), part, 0));
+            out.add(new Pos(kinds.get(i).name(), part, 0));
         }
         return out;
     }

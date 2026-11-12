@@ -60,8 +60,8 @@ public final class SkyLift {
         LunaGuideEntity g = ModRegistry.LUNA_GUIDE.get().create(lvl);
         if (g == null) return;
         // катсцена: Луна выходит из кабины, игрок стоит напротив двери (без застреваний в стенах)
-        Vec3 at = new Vec3(0.5, com.pvpciv.world.RoofBuilder.RY, -24.2);
-        p.teleportTo(p.serverLevel(), 0.5, com.pvpciv.world.RoofBuilder.RY, -21.0, 180, 8);
+        Vec3 at = new Vec3(0.5, com.pvpciv.world.RoofBuilder.RY, -24.6);
+        p.teleportTo(p.serverLevel(), 0.5, com.pvpciv.world.RoofBuilder.RY, -23.3, 180, 8);   // внутри зала (z=-21 — уже над атриумом общаги)
         g.moveTo(at.x, at.y, at.z, 0, 0);
         g.onlyFor = p.getUUID();
         lvl.addFreshEntity(g);
@@ -93,7 +93,7 @@ public final class SkyLift {
               .node("d", "Луна", C, "Потому что ты забавный. Этаж 2 — Неоновый город. Улицы держит мафия, внизу, в канализации, — крысы со своим королём. "
                             + "Упадёшь с края — полетишь обратно сюда, вниз. Без парашюта не советую.",
                             opt("Поехали!", "e"))
-              .node("e", "Луна", C, "Лифт твой. Табло — у кабины. И… не разочаруй меня, ладно?", pp -> {
+              .node("e", "Луна", C, "Лифт твой. Табло этажей — в кабине: просто нажми на неё. И… не разочаруй меня, ладно?", pp -> {
                   StoryData dd = Progress.d(pp);
                   dd.liftOk = true;
                   pp.setData(ModRegistry.STORY.get(), dd);

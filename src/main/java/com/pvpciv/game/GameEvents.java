@@ -68,6 +68,11 @@ public final class GameEvents {
             if (e.getEntity() instanceof net.minecraft.world.entity.Mob m && !m.level().isClientSide) com.pvpciv.floor.EliteSpots.onDeath(m);
         });
         bus.addListener(GameEvents::onNameFormat);
+        // реген от сытости и эффекта «Регенерация» — в процентах от макс. HP (ваниль лечит по 1 HP — при 100 HP это вечность)
+        bus.addListener((net.neoforged.neoforge.event.entity.living.LivingHealEvent e) -> {
+            if (e.getEntity() instanceof ServerPlayer p && e.getAmount() <= 1.0001f && p.getMaxHealth() > 20)
+                e.setAmount(e.getAmount() * p.getMaxHealth() / 20f);
+        });
         bus.addListener((net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish e) -> {
             if (e.getEntity() instanceof ServerPlayer p && e.getItem().has(net.minecraft.core.component.DataComponents.FOOD)) Marks.onEat(p);
         });
@@ -111,7 +116,7 @@ public final class GameEvents {
     }
 
     private static void onLogout(PlayerEvent.PlayerLoggedOutEvent e) {
-        if (e.getEntity() instanceof ServerPlayer p) { DialogueManager.forget(p); Marks.forget(p); Taxi.cancel(p); }
+        if (e.getEntity() instanceof ServerPlayer p) { DialogueManager.forget(p); Marks.forget(p); Taxi.cancel(p); CombatEvents.forget(p); }
     }
 
     private static void onRespawn(PlayerEvent.PlayerRespawnEvent e) {
@@ -176,6 +181,9 @@ public final class GameEvents {
     /** Из кабины лифта на ходу не выйти. */
     private static void onMount(net.neoforged.neoforge.event.entity.EntityMountEvent e) {
         if (e.isDismounting() && e.getEntityBeingMounted() instanceof com.pvpciv.entity.LiftCabin c && c.ride() && c.locked && c.isAlive()) e.setCanceled(true);
+        // мобов в лодки не сажаем (абуз с беты: мобы в лодке беспомощны)
+        if (e.isMounting() && e.getEntityBeingMounted() instanceof net.minecraft.world.entity.vehicle.Boat
+                && e.getEntityMounting() instanceof net.minecraft.world.entity.Mob) e.setCanceled(true);
     }
 
     private static void onRightClickBlock(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock e) {

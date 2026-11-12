@@ -26,7 +26,7 @@
     "pvpciv:fire_axe",
     "pvpciv:street_blade"
    ],
-   "chance": 0.35,
+   "chance": 0.45,
    "min_rarity": "UNCOMMON"
   },
   {

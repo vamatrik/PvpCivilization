@@ -82,6 +82,7 @@ public final class ClientPayloads {
                 if (mc.screen instanceof com.pvpciv.client.screen.PhoneScreen ps) ps.data(p.kind(), j);
                 else mc.setScreen(new com.pvpciv.client.screen.PhoneScreen(p.kind(), j));
             }
+            case 6 -> ClientState.pvpShield = j.has("pvpShield") && j.get("pvpShield").getAsBoolean();
             case 3 -> ClientState.callUntil = System.currentTimeMillis() + (j.has("sec") ? j.get("sec").getAsInt() : 10) * 1000L;
             case 4 -> ClientState.callUntil = 0;
             case 5 -> {

@@ -26,17 +26,27 @@ public final class Progress {
 
     /** Опыт за моба уровня mobLevel с учётом разницы уровней. */
     public static long xpFor(int playerLevel, int mobLevel, double mult) {
-        double base = 6 * Math.pow(1.08, mobLevel - 1) * mult;
+        double base = 5.1 * Math.pow(1.08, mobLevel - 1) * mult;   // бета 12.11: −15%
         int below = playerLevel - mobLevel;
         double k = below <= 3 ? 1.0 : below <= 5 ? 0.5 : below <= 8 ? 0.2 : 0.05;
         return Math.max(1, Math.round(base * k));
     }
 
+    /** Потолок уровня, пока не открыт следующий этаж: «уровень этажа» (сильнейший босс) + 3. Этаж 1 → 11, этаж 2 → 16. */
+    public static int levelCap(StoryData d) { return d.liftOk ? 13 + 3 : 8 + 3; }
+
     public static void addXp(ServerPlayer p, long amount) {
         StoryData d = d(p);
+        int cap = levelCap(d);
+        if (d.level >= cap) {
+            if (d.xp < xpToNext(d.level) - 1) d.xp = Math.min(d.xp + amount, xpToNext(d.level) - 1);
+            else if (p.tickCount % 200 < 5) p.displayClientMessage(Component.literal("Потолок уровня " + cap + " для этого этажа — открой следующий этаж, чтобы расти дальше.").withStyle(ChatFormatting.GRAY), true);
+            save(p, d); Story.sync(p);
+            return;
+        }
         d.xp += amount;
         boolean up = false;
-        while (d.xp >= xpToNext(d.level)) {
+        while (d.xp >= xpToNext(d.level) && d.level < cap) {
             d.xp -= xpToNext(d.level);
             d.level++;
             up = true;
@@ -45,7 +55,7 @@ public final class Progress {
         if (up) {
             applyStats(p);
             p.setHealth(p.getMaxHealth());
-            Story.title(p, "УРОВЕНЬ " + d.level, "+½ ❤ к здоровью, +0.6% к урону", 0xFFD166);
+            Story.title(p, "УРОВЕНЬ " + d.level, "+" + (int) (levelHp(d.level) - levelHp(d.level - 1)) + " здоровья, +1.5% к урону", 0xFFD166);
             p.level().playSound(null, p.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1f, 1.1f);
             p.serverLevel().sendParticles(ParticleTypes.TOTEM_OF_UNDYING, p.getX(), p.getY() + 1, p.getZ(), 40, 0.5, 1, 0.5, 0.2);
         }
@@ -63,13 +73,20 @@ public final class Progress {
         Story.sync(p);
     }
 
-    /** +1 сердце за каждый уровень после первого. */
+    /** Бонус HP за уровни: ур. 2 даёт +3, каждый следующий — на 0.2 больше (ур. 8 → +25, ур. 16 → +66). */
+    public static double levelHp(int lvl) {
+        double s = 0;
+        for (int i = 2; i <= lvl; i++) s += 3 + 0.2 * (i - 2);
+        return Math.round(s);
+    }
+
+    /** HP и урон от уровня. */
     public static void applyStats(ServerPlayer p) {
         AttributeInstance hp = p.getAttribute(Attributes.MAX_HEALTH);
         if (hp == null) return;
         hp.removeModifier(HP_ID);
         int lvl = d(p).level;
-        if (lvl > 1) hp.addPermanentModifier(new AttributeModifier(HP_ID, 1.0 * (lvl - 1), AttributeModifier.Operation.ADD_VALUE));
+        if (lvl > 1) hp.addPermanentModifier(new AttributeModifier(HP_ID, levelHp(lvl), AttributeModifier.Operation.ADD_VALUE));
         Titles.apply(p);
         if (p.getHealth() > p.getMaxHealth()) p.setHealth(p.getMaxHealth());
     }

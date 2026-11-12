@@ -45,7 +45,7 @@ public final class Mobs {
     public static String lootKind(LivingEntity e) { return e.getData(ModRegistry.MOB_KIND.get()); }
 
     public static double hp(int lvl) { return 20 * Math.pow(1.065, lvl - 1); }
-    public static double dmg(int lvl) { return 3 * Math.pow(1.05, lvl - 1); }
+    public static double dmg(int lvl) { return 3 * Math.pow(1.07, lvl - 1); }   // бета 12.11: 1.05 → 1.07 (игрок теперь растёт сильнее)
 
     public static int levelColor(int lvl) {
         if (lvl <= 3) return 0xCFCFCF;
@@ -87,7 +87,7 @@ public final class Mobs {
         double hp = hp(level) * (elite ? 3 : 1);
         set(m, Attributes.MAX_HEALTH, hp);
         set(m, Attributes.ATTACK_DAMAGE, dmg(level) * (elite ? 1.3 : 1));
-        set(m, Attributes.FOLLOW_RANGE, 32);
+        set(m, Attributes.FOLLOW_RANGE, m instanceof net.minecraft.world.entity.monster.AbstractSkeleton ? 20 : 28);   // бета 12.11: лучники не тянутся за тобой через пол-карты
         m.setHealth((float) hp);
         m.setPersistenceRequired();
         if (elite) {

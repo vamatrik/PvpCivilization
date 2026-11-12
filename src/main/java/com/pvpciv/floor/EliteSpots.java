@@ -38,10 +38,21 @@ public final class EliteSpots {
             new Spot("e_crypt1", FloorNorth.CRYPT.offset(-5, 0, -3), Mobs.Kind.FROST_ZOMBIE, 7, "Страж склепа", "floor1b_mob"),
             new Spot("e_crypt2", FloorNorth.CRYPT.offset(5, 0, -3), Mobs.Kind.FROST_ARCHER, 7, "Лучница склепа", "floor1b_mob")));
 
-    /** Бета 11.11: по две элиты на точку (вторая — в 6 блоках, «_b»). */
+    /**
+     * По две элиты на точку, но вторая — ДРУГОГО вида из той же части этажа (бета 12.11: одинаковые элиты не стоят парой).
+     * Уровни не меняются: дальше от старта — сильнее.
+     */
     public static List<Spot> twins(List<Spot> base) {
         List<Spot> out = new java.util.ArrayList<>(base);
-        for (Spot s : base) out.add(new Spot(s.id() + "_b", s.pos().offset(s.id().contains("crypt") ? 0 : 6, 0, s.id().contains("crypt") ? 5 : 3), s.kind(), s.level(), s.name(), s.loot(), s.f2()));
+        for (String grp : base.stream().map(Spot::loot).distinct().toList()) {
+            List<Spot> g = base.stream().filter(s -> s.loot().equals(grp)).toList();
+            for (int i = 0; i < g.size(); i++) {
+                Spot s = g.get(i), o = g.get((i + 1) % g.size());
+                for (int j = 1; j < g.size() && o.kind() == s.kind(); j++) o = g.get((i + 1 + j) % g.size());
+                // имя — по виду (у исходной элиты имя привязано к её месту: «Хозяйка рощи» у столпов звучала бы странно)
+                out.add(new Spot(s.id() + "_b", s.pos().offset(s.id().contains("crypt") ? 0 : 6, 0, s.id().contains("crypt") ? 5 : 3), o.kind(), s.level(), "Элитный " + Character.toLowerCase(o.kind().title.charAt(0)) + o.kind().title.substring(1), s.loot(), s.f2()));
+            }
+        }
         return out;
     }
 
@@ -107,6 +118,8 @@ public final class EliteSpots {
     private static void hologram(ServerLevel lvl, String id, Vec3 at, Component text) {
         List<Display.TextDisplay> found = lvl.getEntitiesOfClass(Display.TextDisplay.class, new AABB(at, at).inflate(2), e -> e.getTags().contains(id));
         if (text == null) { found.forEach(Entity::discard); return; }
+        // голограмма сохраняется с чанком; если её создали, пока чанк догружался, их становилось две (бета 12.11: «два таймера друг на друге»)
+        for (int i = 1; i < found.size(); i++) found.get(i).discard();
         Display.TextDisplay d;
         if (found.isEmpty()) {
             d = EntityType.TEXT_DISPLAY.create(lvl);

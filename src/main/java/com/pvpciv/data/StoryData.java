@@ -23,6 +23,8 @@ public class StoryData implements INBTSerializable<CompoundTag> {
     public int eleStage = 0;
     public net.minecraft.nbt.CompoundTag phoneCd = new net.minecraft.nbt.CompoundTag();
     /** Метки Элеоноры: жетоны (вне инфляции), активная метка "boss:TYPE" и день её выдачи, сданные метки (boss → день), покупки в её лавке. */
+    /** Настройки героя: не драться с игроками на 7+ уровней выше (в обе стороны). */
+    public boolean pvpShield = false;
     public int eleTokens = 0;
     public String eleMark = "";
     public long eleMarkDay = 0;
@@ -69,7 +71,7 @@ public class StoryData implements INBTSerializable<CompoundTag> {
         t.putInt("showcase", showcase);
         t.putBoolean("liftOk", liftOk);
         t.putInt("eleStage", eleStage); t.put("phoneCd", phoneCd);
-        t.putInt("eleTokens", eleTokens); t.putString("eleMark", eleMark); t.putLong("eleMarkDay", eleMarkDay); t.put("eleDone", eleDone); t.put("eleShop", eleShop);
+        t.putBoolean("pvpShield", pvpShield); t.putInt("eleTokens", eleTokens); t.putString("eleMark", eleMark); t.putLong("eleMarkDay", eleMarkDay); t.put("eleDone", eleDone); t.put("eleShop", eleShop);
         t.put("food", food); t.put("foodStock", foodStock);
         t.putLong("hits", hits); t.putLong("distM", distM); t.putLong("stashesOpened", stashesOpened);
         t.put("milestones", milestones);
@@ -105,7 +107,7 @@ public class StoryData implements INBTSerializable<CompoundTag> {
         showcase = t.getInt("showcase");
         liftOk = t.getBoolean("liftOk");
         eleStage = t.getInt("eleStage"); phoneCd = t.getCompound("phoneCd");
-        eleTokens = t.getInt("eleTokens"); eleMark = t.getString("eleMark"); eleMarkDay = t.getLong("eleMarkDay"); eleDone = t.getCompound("eleDone"); eleShop = t.getCompound("eleShop");
+        pvpShield = t.getBoolean("pvpShield"); eleTokens = t.getInt("eleTokens"); eleMark = t.getString("eleMark"); eleMarkDay = t.getLong("eleMarkDay"); eleDone = t.getCompound("eleDone"); eleShop = t.getCompound("eleShop");
         food = t.getCompound("food"); foodStock = t.getCompound("foodStock");
         hits = t.getLong("hits"); distM = t.getLong("distM"); stashesOpened = t.getLong("stashesOpened");
         milestones = t.getCompound("milestones");

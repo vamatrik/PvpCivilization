@@ -107,6 +107,42 @@ public final class StubScreens {
     }
 
     /** Гараж лодок: все открытые лодки, при себе — выбранная. */
+    /** Настройки героя: всё, что не влезает в отдельные вкладки. Пока — PvP. */
+    public static class Settings extends PlainScreen {
+        private static final String[] TITLE = {"Защита от сильных"};
+        private static final String[] DESC = {"Не драться с игроками на " + com.pvpciv.combat.CombatEvents.PVP_GAP + "+ уровней выше: ни они тебя, ни ты их."};
+        public Settings() {
+            super("Настройки", 340, 200, true);
+            net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd("opt:get"));
+        }
+        private boolean val(int i) { return ClientState.pvpShield; }
+        @Override protected void drawContent(GuiGraphics g, int mx, int my, float pt) {
+            g.drawString(font, "PvP", left + 14, top + 20, Skin.GOLD_L, false);
+            for (int i = 0; i < TITLE.length; i++) {
+                int y = top + 32 + i * 42;
+                boolean hv = in(mx, my, 12, 32 + i * 42, 316, 40);
+                Skin.inset(g, left + 12, y, 316, 40);
+                if (hv) g.fill(left + 13, y + 1, left + 327, y + 39, 0x18FFFFFF);
+                g.drawString(font, TITLE[i], left + 18, y + 5, Skin.TEXT, false);
+                Skin.para(g, font, DESC[i], left + 18, y + 17, 260, 10, 2, Skin.FAINT, false);
+                boolean on = val(i);
+                int sx = left + 292, sy = y + 14;
+                g.fill(sx, sy, sx + 28, sy + 12, on ? 0xFF2E9E5A : 0xFF3A3A48);
+                g.fill(on ? sx + 16 : sx + 2, sy + 2, on ? sx + 26 : sx + 12, sy + 10, 0xFFE8ECF4);
+            }
+            Skin.para(g, font, "Обычные PvP-зоны остаются PvP-зонами — защита действует только по уровню.", left + 14, top + 80, 312, 10, 2, Skin.DIM, false);
+        }
+        @Override public boolean mouseClicked(double mx, double my, int b) {
+            if (in(mx, my, 12, 32, 316, 40)) {
+                ClientState.pvpShield = !ClientState.pvpShield;
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd("opt:pvpShield:" + (ClientState.pvpShield ? 1 : 0)));
+                minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1f));
+                return true;
+            }
+            return super.mouseClicked(mx, my, b);
+        }
+    }
+
     public static class Boats extends PlainScreen {
         private final java.util.List<com.pvpciv.item.BoatSummonItem> all = new java.util.ArrayList<>();
         public Boats() {

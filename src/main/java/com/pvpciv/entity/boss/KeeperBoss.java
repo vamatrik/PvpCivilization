@@ -138,7 +138,8 @@ public class KeeperBoss extends CivBoss {
         lvl.playSound(null, blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.HOSTILE, 1.5f, 1.4f);
         lvl.sendParticles(ParticleTypes.SNOWFLAKE, old.x, old.y + 1.2, old.z, 60, 0.5, 1.0, 0.5, 0.08);
         double a = random.nextDouble() * Math.PI * 2;
-        teleportTo(c.x + Math.cos(a) * 8, c.y, c.z + Math.sin(a) * 8);
+        Vec3 to = safeSpot(lvl, new Vec3(c.x + Math.cos(a) * 8, c.y, c.z + Math.sin(a) * 8), c);
+        teleportTo(to.x, to.y, to.z);
         lvl.sendParticles(ParticleTypes.SNOWFLAKE, getX(), getY() + 1.2, getZ(), 60, 0.5, 1.0, 0.5, 0.08);
         zone(lvl, old, 3.0, 15, CYAN).onHit(p -> {
             p.hurt(damageSources().mobAttack(this), dmg());

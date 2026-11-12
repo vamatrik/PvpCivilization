@@ -41,10 +41,6 @@
    "min_rarity": "RARE"
   },
   {
-   "item": "pvpciv:bag_buckle",
-   "chance": 0.08
-  },
-  {
    "item": "pvpciv:blood_star_w1",
    "chance": 0.01
   },

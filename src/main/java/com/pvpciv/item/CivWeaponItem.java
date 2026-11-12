@@ -55,7 +55,7 @@ public class CivWeaponItem extends SwordItem {
 
     public static double damage(double tier, WClass cls, Rarity r, int stars) {
         double starMul = stars >= 11 ? 2.6 : 1 + 0.1 * stars;   // +11 — ×1.3 от +10
-        return 4 * Math.pow(1.35, tier - 1) * cls.dmg * r.mult * starMul;
+        return 4 * Math.pow(1.45, tier - 1) * cls.dmg * r.mult * starMul;   // бета 12.11: шаг тира ×1.45 (был ×1.35)
     }
 
     public double damage(ItemStack st) {

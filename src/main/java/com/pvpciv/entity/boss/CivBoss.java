@@ -248,6 +248,12 @@ public abstract class CivBoss extends Monster implements GeoEntity {
         return w.r >= w.max;
     }
 
+    /** Куда можно прыгнуть/телепортироваться: твёрдый пол рядом с want, не ниже/выше центра логова больше чем на 3 блока; иначе — центр. */
+    protected Vec3 safeSpot(ServerLevel lvl, Vec3 want, Vec3 center) {
+        Vec3 s = com.pvpciv.game.Taxi.safe(lvl, BlockPos.containing(want.x, center.y, want.z));
+        return Math.abs(s.y - center.y) <= 3 ? s : center;
+    }
+
     protected static void knock(ServerPlayer p, Vec3 from, double h, double up) {
         Vec3 push = p.position().subtract(from).multiply(1, 0, 1);
         push = push.lengthSqr() < 1e-4 ? new Vec3(0, 0, 0) : push.normalize().scale(h);

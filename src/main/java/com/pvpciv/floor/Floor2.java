@@ -63,7 +63,7 @@ public class Floor2 extends Builder {
             ZONES.add(SpawnZones.Zone.f2("f2_out" + i, polar(deg + 15, 118, Y), 18, 4, 7, 8, street[(i + 1) % 3]));
         }
         for (int i = 0; i < 8; i++) {
-            ZONES.add(SpawnZones.Zone.f2("f2s_ring" + i, polar(i * 45 + 22.5, MID, YS), 12, 3, 9, 10, Mobs.Kind.RAT, Mobs.Kind.RAT, Mobs.Kind.GHOUL));
+            ZONES.add(SpawnZones.Zone.f2("f2s_ring" + i, polar(i * 45 + 22.5, MID, YS), 12, 3, 8, 9, Mobs.Kind.RAT, Mobs.Kind.RAT, Mobs.Kind.GHOUL));
             ZONES.add(SpawnZones.Zone.f2("f2s_rad" + i, polar(i * 45, 125, YS), 10, 2, 9, 10, i % 3 == 0 ? new Mobs.Kind[]{Mobs.Kind.GUNNER, Mobs.Kind.GHOUL} : new Mobs.Kind[]{Mobs.Kind.RAT, Mobs.Kind.GHOUL}));
         }
         ELITES.add(new EliteSpots.Spot("e2_neon", NEON.offset(6, 0, 4), Mobs.Kind.POLICE, 8, "Сержант Кобальт", "floor2_mob", true));
@@ -167,8 +167,11 @@ public class Floor2 extends Builder {
     private static boolean tunnel(double x, double z, double w) {
         double r = Math.hypot(x, z), e = edge(Math.atan2(z, x));
         if (Math.abs(r - MID) < w) return true;
-        if (r > 34 && r < e - 10 + (w > 4 ? 1.3 : 0)) {
-            double deg = Math.toDegrees(Math.atan2(z, x)), near = Math.round(deg / 45.0) * 45.0;
+        double deg = Math.toDegrees(Math.atan2(z, x)), near = Math.round(deg / 45.0) * 45.0;
+        // конец радиального туннеля — по краю города в оси туннеля (а не в текущей точке: край «волнистый»,
+        // и торцевая стена местами получалась тоньше блока — бета 12.11: «бездна на конце»)
+        double eAxis = edge(Math.toRadians(near));
+        if (r > 34 && r < eAxis - 10 + (w > 4 ? 3.0 : 0)) {
             if (r * Math.sin(Math.toRadians(angDiff(deg, near))) < w && Math.cos(Math.toRadians(angDiff(deg, near))) > 0) return true;
         }
         return dist(x, z, RAT_THRONE.getX(), RAT_THRONE.getZ()) < RAT_R + w - 3.5 || dist(x, z, PLUMBER.getX(), PLUMBER.getZ()) < 4 + w - 3.5;
@@ -177,7 +180,7 @@ public class Floor2 extends Builder {
     private void sewer() {
         int f = YS - 1, top = YS + 5;
         for (int x = -R_EDGE; x <= R_EDGE; x++) for (int z = -R_EDGE; z <= R_EDGE; z++) {
-            boolean in = tunnel(x, z, 3.5), wall = !in && tunnel(x, z, 4.6);
+            boolean in = tunnel(x, z, 3.5), wall = !in && tunnel(x, z, 5.4);
             if (!in && !wall) continue;
             if (wall) {
                 for (int y = f; y <= top; y++) set(x, y, z, (y + x + z) % 5 == 0 ? Blocks.MOSSY_STONE_BRICKS : y % 4 == 0 ? Blocks.CRACKED_STONE_BRICKS : Blocks.STONE_BRICKS);
@@ -199,7 +202,7 @@ public class Floor2 extends Builder {
         // люки: на пересечениях радиальных туннелей и кольцевого стока
         for (int i = 0; i < 8; i++) {
             BlockPos m = polar(i * 45 + 4.5, MID + 2.5, Y);
-            for (int y = top; y < Y; y++) {
+            for (int y = YS; y < Y; y++) {   // опора лестницы до самого пола канализации (иначе нижние лестницы висели в воздухе и ломались)
                 set(m.getX() + 1, y, m.getZ(), Blocks.STONE_BRICKS);
                 setLit(m.getX(), y, m.getZ(), Blocks.LADDER.defaultBlockState().setValue(LadderBlock.FACING, Direction.WEST));
             }
@@ -239,7 +242,7 @@ public class Floor2 extends Builder {
         // лава: от end-19 до end-6 по всей ширине туннеля
         for (double t = end - 19; t <= end - 6; t += 0.5) for (double w = -3; w <= 3; w += 0.5) {
             int x = (int) Math.round(ux * t + vx * w), z = (int) Math.round(uz * t + vz * w);
-            set(x, YS - 2, z, Blocks.LAVA); set(x, YS - 1, z, Blocks.LAVA);
+            set(x, YS - 3, z, Blocks.BLACKSTONE); set(x, YS - 2, z, Blocks.BLACKSTONE); set(x, YS - 1, z, Blocks.LAVA);   // лава на каменном дне — не утекает в бездну
         }
         // ступеньки-островки (прыжки по 2–3 блока, змейкой)
         double[][] steps = {{-17, 0}, {-14.5, 1.5}, {-12, -1}, {-9.5, 1}, {-7.5, -1.5}};
@@ -298,7 +301,7 @@ public class Floor2 extends Builder {
         }
         for (int y = Y; y <= Y + TOWER_H; y++) set(tx - 6, y, tz, Blocks.WHITE_CONCRETE);
         for (int dx = -6; dx <= 6; dx++) for (int dz = -6; dz <= 6; dz++) set(tx + dx, Y + TOWER_H, tz + dz, (dx + dz) % 3 == 0 ? Blocks.SEA_LANTERN : Blocks.SMOOTH_QUARTZ);
-        set(tx - 6, Y + TOWER_H, tz, Blocks.AIR);
+        set(tx - 6, Y + TOWER_H + 1, tz, Blocks.AIR); set(tx - 6, Y + TOWER_H + 2, tz, Blocks.AIR);   // выход с лестницы на крышу (парапет не мешает)
         for (int dx = -6; dx <= 6; dx++) for (int dz = -6; dz <= 6; dz++) if (Math.abs(dx) == 6 || Math.abs(dz) == 6) if (!(dx == -6 && dz == 0)) set(tx + dx, Y + TOWER_H + 1, tz + dz, Blocks.WHITE_STAINED_GLASS_PANE);
         sign(new BlockPos(tx - 8, Y + 1, tz + 1), Direction.WEST, DyeColor.CYAN, "НЕБОСКРЁБ", "«АЛЬТАИР»", "лестница наверх", "→ парашютист");
     }

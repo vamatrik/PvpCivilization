@@ -17,4 +17,13 @@ public class BeastRenderer<T extends CivBeast> extends GeoEntityRenderer<T> {
         });
         this.shadowRadius = shadow;
     }
+
+    /** Боевая крыса крупнее (под увеличенный хитбокс), ручная — как была. */
+    @Override
+    public void preRender(com.mojang.blaze3d.vertex.PoseStack ps, T e, software.bernie.geckolib.cache.object.BakedGeoModel m, net.minecraft.client.renderer.MultiBufferSource buf,
+                          com.mojang.blaze3d.vertex.VertexConsumer vc, boolean reRender, float pt, int light, int overlay, int color) {
+        if (e instanceof com.pvpciv.entity.beast.CivRat && !reRender) ps.scale(1.4f, 1.4f, 1.4f);
+        if (e instanceof com.pvpciv.entity.beast.CivDog && !reRender) ps.scale(1.15f, 1.15f, 1.15f);
+        super.preRender(ps, e, m, buf, vc, reRender, pt, light, overlay, color);
+    }
 }

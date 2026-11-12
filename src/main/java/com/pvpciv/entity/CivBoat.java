@@ -18,6 +18,19 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 /** Лодка с 3D-моделью: тир 2 — Инеевая лодка, тир 3 — Неоновое такси. Физика — ванильной лодки. */
 public class CivBoat extends Boat implements GeoEntity {
+    @Override
+    public void tick() {
+        super.tick();
+        var v = getDeltaMovement();
+        if (v.y > 0.6 || v.horizontalDistanceSqr() > 16) setDeltaMovement(Math.max(-4, Math.min(4, v.x)), Math.min(v.y, 0.6), Math.max(-4, Math.min(4, v.z)));
+    }
+
+    /** В лодку садятся только игроки (иначе мобов «запирали» в лодках). */
+    @Override
+    protected boolean canAddPassenger(net.minecraft.world.entity.Entity e) {
+        return e instanceof net.minecraft.world.entity.player.Player && super.canAddPassenger(e);
+    }
+
     private static final EntityDataAccessor<Integer> TIER = SynchedEntityData.defineId(CivBoat.class, EntityDataSerializers.INT);
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("idle"), MOVE = RawAnimation.begin().thenLoop("walk");
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);

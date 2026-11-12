@@ -39,9 +39,9 @@ public final class ModMobs {
     // этаж 2, улица — Неоновый город (ур. 6–8)
     public static final DeferredHolder<EntityType<?>, EntityType<CivPolice>> POLICE = mob("police", CivPolice::new, 0.6f, 1.95f, 0x2a3a6a, 0xe8d24a);
     public static final DeferredHolder<EntityType<?>, EntityType<CivZombie>> THUG = mob("thug", CivZombie::new, 0.6f, 1.95f, 0x3a3a3a, 0xd04060);
-    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.beast.CivDog>> STREET_DOG = mob("street_dog", com.pvpciv.entity.beast.CivDog::new, 0.7f, 0.8f, 0x8a6a4a, 0x3a2a1a);
+    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.beast.CivDog>> STREET_DOG = mob("street_dog", com.pvpciv.entity.beast.CivDog::new, 0.95f, 0.95f, 0x8a6a4a, 0x3a2a1a);
     // этаж 2, канализация (ур. 9–10)
-    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.beast.CivRat>> RAT = mob("rat", com.pvpciv.entity.beast.CivRat::new, 0.5f, 0.45f, 0x6a6058, 0xd09090);
+    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.beast.CivRat>> RAT = mob("rat", com.pvpciv.entity.beast.CivRat::new, 0.85f, 0.6f, 0x6a6058, 0xd09090);
     public static final DeferredHolder<EntityType<?>, EntityType<CivZombie>> GHOUL = mob("sewer_ghoul", CivZombie::new, 0.6f, 1.95f, 0x4a5a3a, 0x8ad040);
     public static final DeferredHolder<EntityType<?>, EntityType<CivGunner>> GUNNER = mob("gunner", CivGunner::new, 0.6f, 1.99f, 0x2a2a2a, 0xe0a040);
     public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.beast.PetRat>> PET_RAT = ENTITIES.register("pet_rat",

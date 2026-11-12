@@ -47,6 +47,7 @@ public final class ClientState {
 
     /** Лавка Элеоноры: ≥0 — цены в жетонах (баланс). */
     public static int shopTokens = -1;
+    public static boolean pvpShield = false;
     /** Входящий звонок (до какого момента звонит, мс) и ожидающее такси. */
     public static long callUntil = 0;
     public static String taxiFrom = "", taxiTo = "";

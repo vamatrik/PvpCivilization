@@ -40,6 +40,26 @@ public final class CombatEvents {
         bus.addListener(CombatEvents::onJoin);
     }
 
+    /** Урон моба по игроку от разницы уровней: выше — +15% за уровень; ниже — 20/30/40/50/60% защиты (бета 12.11). */
+    public static double levelTaken(int dl) {
+        if (dl > 0) return 1 + 0.15 * dl;
+        return switch (-dl) { case 0 -> 1.0; case 1 -> 0.8; case 2 -> 0.7; case 3 -> 0.6; case 4 -> 0.5; default -> 0.4; };
+    }
+
+    /** Толпа: каждый следующий моб, бивший тебя за последние 3 с, бьёт слабее (2 — ×0.91, 3 — ×0.83, 5 — ×0.71). */
+    private static final java.util.Map<java.util.UUID, java.util.Map<Integer, Long>> HITTERS = new java.util.HashMap<>();
+    private static double crowd(ServerPlayer p, Mob mob) {
+        long now = p.serverLevel().getGameTime();
+        var m = HITTERS.computeIfAbsent(p.getUUID(), k -> new java.util.HashMap<>());
+        m.values().removeIf(t -> now - t > 60);
+        m.put(mob.getId(), now);
+        return 1.0 / (1 + 0.10 * (m.size() - 1));
+    }
+
+    public static final int PVP_GAP = 7;
+
+    public static void forget(ServerPlayer p) { HITTERS.remove(p.getUUID()); }
+
     public static double resist(int deltaLevel) {
         return Math.min(1.0, Math.max(0.0, 0.25 * (deltaLevel - 1)));   // +2 ур. — 25%, +3 — 50%, +4 — 75%, +5 и выше — иммунитет
     }
@@ -60,7 +80,6 @@ public final class CombatEvents {
         if (target instanceof ServerPlayer tp && tp.getPersistentData().getLong("abductSafeUntil") > tp.serverLevel().getGameTime()) { e.setCanceled(true); return; }
         // оглушённый не атакует
         if (src instanceof LivingEntity le && le.hasEffect(com.pvpciv.registry.ModRegistry.STUN) && e.getSource().getDirectEntity() == src) { e.setCanceled(true); return; }
-        if (src instanceof ServerPlayer hp && e.getSource().getDirectEntity() == hp) com.pvpciv.game.WeaponSkills.onHit(hp, target);
         // PvP
         if (target instanceof ServerPlayer victim && src instanceof ServerPlayer attacker && attacker != victim) {
             Zones.Zone za = Zones.at(attacker), zv = Zones.at(victim);
@@ -69,7 +88,17 @@ public final class CombatEvents {
                 attacker.displayClientMessage(Component.literal("Здесь PvP выключено").withStyle(ChatFormatting.GRAY), true);
                 return;
             }
-            e.setAmount(e.getAmount() * (float) (1 + 0.006 * (Progress.d(attacker).level - 1)));
+            int la = Progress.d(attacker).level, lv = Progress.d(victim).level;
+            if ((Progress.d(victim).pvpShield && la - lv >= PVP_GAP) || (Progress.d(attacker).pvpShield && lv - la >= PVP_GAP)) {
+                e.setCanceled(true);
+                attacker.displayClientMessage(Component.literal(Progress.d(attacker).pvpShield
+                        ? "У тебя выключено PvP с игроками на " + PVP_GAP + "+ уровней выше (Герой → Настройки)"
+                        : "Этот игрок выключил PvP с теми, кто на " + PVP_GAP + "+ уровней выше").withStyle(ChatFormatting.GRAY), true);
+                return;
+            }
+            e.setAmount(e.getAmount() * (float) (1 + 0.015 * (la - 1)));
+            // «Оглушающий удар» — только если удар прошёл (раньше оглушал и в безопасной зоне, где урон отменён)
+            if (e.getSource().getDirectEntity() == attacker) com.pvpciv.game.WeaponSkills.onHit(attacker, victim);
             return;
         }
         // игрок бьёт моба с уровнем
@@ -82,13 +111,18 @@ public final class CombatEvents {
                 p.displayClientMessage(Component.literal("Враг слишком силён для тебя (+" + dl + " ур.)").withStyle(ChatFormatting.DARK_RED), true);
                 return;
             }
-            e.setAmount((float) (e.getAmount() * (1 - r) * (1 + 0.006 * (Progress.d(p).level - 1))));
+            e.setAmount((float) (e.getAmount() * (1 - r) * (1 + 0.015 * (Progress.d(p).level - 1))));
+            if (e.getSource().getDirectEntity() == p) com.pvpciv.game.WeaponSkills.onHit(p, mob);
             return;
         }
         // моб с уровнем бьёт игрока
         if (target instanceof ServerPlayer p && src instanceof Mob mob && Mobs.level(mob) > 0) {
+            // стрелы лучников — от уровня моба (раньше ванильные ≈4 на любом уровне)
+            if (e.getSource().getDirectEntity() instanceof net.minecraft.world.entity.projectile.AbstractArrow
+                    && mob instanceof com.pvpciv.entity.mob.CivSkeleton && !(mob instanceof com.pvpciv.entity.mob.CivGunner))
+                e.setAmount((float) (mob.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) * 0.9));
             int dl = Mobs.level(mob) - Progress.d(p).level;
-            if (dl > 0) e.setAmount((float) (e.getAmount() * (1 + 0.15 * dl)));   // +15% урона за каждый уровень разницы
+            e.setAmount((float) (e.getAmount() * levelTaken(dl) * crowd(p, mob)));
             Mobs.Kind k = Mobs.Kind.of(mob.getType());
             if (k == Mobs.Kind.FROST_ZOMBIE || k == Mobs.Kind.FROST_ARCHER || k == Mobs.Kind.FROST_SPIDER) frost(p, lvlOf(p));
         }

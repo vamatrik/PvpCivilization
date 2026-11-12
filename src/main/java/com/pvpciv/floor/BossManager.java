@@ -130,14 +130,17 @@ public final class BossManager {
             if (left <= 0 && lairLoaded) spawn(lvl, d);
             return;
         }
-        if (++s.alive > 20 * 60 * 30) {
+        Vec3 c = center(d);
+        boolean anyone = false;
+        for (ServerPlayer p : lvl.players()) if (p.position().distanceTo(c) < d.lairR() + 34) { anyone = true; break; }
+        // засыпает только после 30 минут боя без победы; если рядом никого — ждёт сколько угодно (с беты: боссы «пропадали»)
+        if (anyone && ++s.alive > 20 * 60 * 30) {
             broadcast(server, d.name() + " теряет интерес и засыпает. Вернётся позже.", ChatFormatting.GRAY);
             boss.discard();
             cleanup(server, d);
             return;
         }
-        Vec3 c = center(d);
-        if (boss.position().distanceTo(c) > d.lairR() + 6) {
+        if (boss.position().distanceTo(c) > d.lairR() + 6 || boss.getY() < c.y - 5) {
             lvl.sendParticles(ParticleTypes.LARGE_SMOKE, boss.getX(), boss.getY() + 1, boss.getZ(), 30, 0.6, 1, 0.6, 0.02);
             Vec3 sp = c.add(d.spawnOffset());
             boss.teleportTo(sp.x, sp.y, sp.z);

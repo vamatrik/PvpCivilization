@@ -23,7 +23,7 @@ public class CivGunner extends CivSkeleton {
             double dx = target.getX() - getX(), dy = target.getY(0.5) - a.getY(), dz = target.getZ() - getZ();
             a.shoot(dx, dy, dz, 3.4f, 4f + i * 2f);
             a.setNoGravity(true);
-            a.setBaseDamage(getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) * 0.35);
+            a.setBaseDamage(getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) * 0.45 / 3.4);   // пуля ≈ 0.45 удара, очередь ≈ 1.35
             a.pickup = AbstractArrow.Pickup.DISALLOWED;
             lvl.addFreshEntity(a);
         }

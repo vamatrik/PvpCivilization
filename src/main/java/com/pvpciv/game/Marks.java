@@ -185,8 +185,8 @@ public final class Marks {
     public static void onBossKill(ServerPlayer p, String boss) {
         StoryData d = Progress.d(p);
         Type t = active(d, boss);
-        Fight f = FIGHTS.remove(p.getUUID());
-        if (t == null) return;
+        if (t == null) return;   // убит не тот босс, что в метке — бой по метке (если идёт) не трогаем
+        Fight f = FIGHTS.get(p.getUUID()) != null && FIGHTS.get(p.getUUID()).boss.equals(boss) ? FIGHTS.remove(p.getUUID()) : null;
         if (f == null) { msg(p, "✠ Метка не засчитана: бой начался без тебя.", ChatFormatting.GRAY); return; }
         if (f.failed != null) return;
         if (t == Type.FAST && (p.server.getTickCount() - f.start) > FAST_S.getOrDefault(boss, 120) * 20L) {
@@ -218,7 +218,9 @@ public final class Marks {
             dl.node("m", W, C, "Твоя метка: " + bd.name() + " — «" + cur.title + "»: " + rule(curBoss, cur) + ". Награда: " + reward(curBoss, cur) + " жет.",
                     opt("Сбросить метку", "drop"), opt("Иду на охоту", null));
             dl.node("drop", W, C, "Сдаёшься? Ладно. Сегодня эту тварь я больше не помечу.", pp -> {
-                StoryData dd = Progress.d(pp); dd.eleDone.putLong(dd.eleMark.substring(0, dd.eleMark.indexOf(':')), day()); dd.eleMark = "";
+                StoryData dd = Progress.d(pp);
+                if (dd.eleMark.indexOf(':') < 0) return;
+                dd.eleDone.putLong(dd.eleMark.substring(0, dd.eleMark.indexOf(':')), day()); dd.eleMark = "";
                 pp.setData(ModRegistry.STORY.get(), dd);
             }, opt("[Уйти]", null));
             return dl;

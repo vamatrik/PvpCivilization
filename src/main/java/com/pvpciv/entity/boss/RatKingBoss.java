@@ -94,7 +94,7 @@ public class RatKingBoss extends CivBoss {
         castYaw = getYRot();
         lvl.playSound(null, blockPosition(), SoundEvents.ROOTED_DIRT_BREAK, SoundSource.HOSTILE, 2f, 0.6f);
         Vec3 c = home != null ? home : position();
-        Vec3 dest = target.position().distanceTo(c) < 13 ? target.position() : c.add((random.nextDouble() - 0.5) * 16, 0, (random.nextDouble() - 0.5) * 16);
+        Vec3 dest = safeSpot(lvl, target.position().distanceTo(c) < 13 ? target.position() : c.add((random.nextDouble() - 0.5) * 16, 0, (random.nextDouble() - 0.5) * 16), c);
         later(20, () -> {
             hidden = 40;
             setInvisible(true);

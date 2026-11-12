@@ -19,9 +19,9 @@ public final class Falling {
     public static void tick(ServerPlayer p) {
         if (p.isCreative() || p.isSpectator() || p.getVehicle() instanceof com.pvpciv.entity.LiftCabin) return;
         if (CivWorld.isF2(p.level()) && p.getY() < Floor2.YS - 16) {
-            double a = p.getRandom().nextDouble() * Math.PI * 2, r = 8 + p.getRandom().nextDouble() * 18;
-            double x = Floor1.CAMP.getX() + 0.5 + Math.cos(a) * r, z = Floor1.CAMP.getZ() + 40 + Math.sin(a) * r;
-            p.teleportTo(CivWorld.level(p.server), x, Floor1.Y + 150, z, p.getYRot(), 30);
+            var to = CivWorld.level(p.server);
+            net.minecraft.world.phys.Vec3 at = landing(to, p.getRandom());
+            p.teleportTo(to, at.x, at.y, at.z, p.getYRot(), 30);
             p.resetFallDistance();
             p.sendSystemMessage(Component.literal("Ты сорвался с края Неонового города и летишь вниз, на этаж 1!").withStyle(ChatFormatting.RED));
             return;
@@ -40,6 +40,22 @@ public final class Falling {
             p.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 30, 0, false, false));
             p.resetFallDistance();
         }
+    }
+
+    /**
+     * Куда падаешь: случайная точка этажа 1, под которой есть земля (не бездна, не вода и не лава), на 150 блоков выше неё.
+     * Раньше — всегда у лагеря Пустоши (бета 12.11).
+     */
+    private static net.minecraft.world.phys.Vec3 landing(net.minecraft.server.level.ServerLevel l, net.minecraft.util.RandomSource r) {
+        for (int i = 0; i < 40; i++) {
+            int x = -90 + r.nextInt(191), z = -595 + r.nextInt(1280);
+            int y = l.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+            if (y < Floor1.Y - 6 || y > Floor1.Y + 30) continue;   // пустота или крыша/башня
+            var ground = l.getBlockState(new net.minecraft.core.BlockPos(x, y - 1, z));
+            if (!ground.getFluidState().isEmpty() || ground.is(net.minecraft.world.level.block.Blocks.MAGMA_BLOCK)) continue;
+            return new net.minecraft.world.phys.Vec3(x + 0.5, y + 150, z + 0.5);
+        }
+        return new net.minecraft.world.phys.Vec3(Floor1.CAMP.getX() + 0.5, Floor1.Y + 150, Floor1.CAMP.getZ() + 40.5);
     }
 
     private static boolean hasChute(ServerPlayer p) {

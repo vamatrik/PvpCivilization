@@ -46,11 +46,13 @@ public final class Phone {
 
     /** Команды от экрана телефона: "bail", "food", "food_order:<корзина>:<тариф>", "taxi", "taxi_order:<от>:<до>", "taxi_cancel", "answer". */
     public static void cmd(ServerPlayer p, String c) {
-        if (!has(p)) return;
         String[] a = c.split(":");
+        if (a[0].equals("opt")) { option(p, a.length > 1 ? a[1] : "", a.length > 2 && a[2].equals("1")); return; }
+        if (!has(p)) return;
         try {
             switch (a[0]) {
                 case "answer" -> Marks.answer(p);
+                case "opt" -> option(p, a.length > 1 ? a[1] : "", a.length > 2 && a[2].equals("1"));
                 case "bail" -> bail(p);
                 case "food" -> FoodApp.open(p);
                 case "food_order" -> FoodApp.order(p, a[1], Integer.parseInt(a[2]));
@@ -60,6 +62,13 @@ public final class Phone {
                 default -> {}
             }
         } catch (RuntimeException ignored) {}
+    }
+
+    /** Настройки героя (экран «Герой → Настройки»). "opt:get" — прислать текущие. */
+    public static void option(ServerPlayer p, String key, boolean on) {
+        StoryData d = Progress.d(p);
+        if (key.equals("pvpShield")) { d.pvpShield = on; p.setData(ModRegistry.STORY.get(), d); }
+        PacketDistributor.sendToPlayer(p, new Network.PhoneData(6, "{\"pvpShield\":" + d.pvpShield + "}"));
     }
 
     private static void bail(ServerPlayer p) {

@@ -31,7 +31,7 @@
     "pvpciv:icicle_dagger",
     "pvpciv:glacier_axe"
    ],
-   "chance": 0.14,
+   "chance": 0.182,
    "min_rarity": "UNCOMMON"
   },
   {
@@ -41,7 +41,7 @@
     "pvpciv:rime_leggings",
     "pvpciv:rime_boots"
    ],
-   "chance": 0.091,
+   "chance": 0.1183,
    "min_rarity": "UNCOMMON"
   },
   {

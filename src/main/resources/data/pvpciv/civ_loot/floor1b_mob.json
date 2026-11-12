@@ -39,7 +39,7 @@
     "pvpciv:icicle_dagger",
     "pvpciv:glacier_axe"
    ],
-   "chance": 0.035
+   "chance": 0.056
   },
   {
    "weapons": [
@@ -48,7 +48,7 @@
     "pvpciv:rime_leggings",
     "pvpciv:rime_boots"
    ],
-   "chance": 0.0228
+   "chance": 0.0365
   },
   {
    "item": "pvpciv:rime_boat_t2",

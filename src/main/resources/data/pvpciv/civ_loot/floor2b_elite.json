@@ -31,7 +31,7 @@
     "pvpciv:rebar_sword",
     "pvpciv:toxic_hatchet"
    ],
-   "chance": 0.35,
+   "chance": 0.45,
    "min_rarity": "UNCOMMON"
   },
   {

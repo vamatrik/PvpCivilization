@@ -112,11 +112,23 @@ public final class ClientInit {
         double bonus = b instanceof com.pvpciv.entity.CivBoat cb ? com.pvpciv.item.BoatSummonItem.speedBonus(cb.tier())
                 : b.getVariant() == net.minecraft.world.entity.vehicle.Boat.Type.BIRCH ? com.pvpciv.item.BoatSummonItem.speedBonus(2) : 0;
         if ("ice_racer".equals(ClientState.activeTitle)) bonus += 0.06;
+        // маневренность: улучшенные лодки доворачивают быстрее (T2 +0.8°/тик, T3 +1.6°/тик к ванильному 1°)
+        int tier = b instanceof com.pvpciv.entity.CivBoat cb2 ? cb2.tier() : b.getVariant() == net.minecraft.world.entity.vehicle.Boat.Type.BIRCH ? 2 : 1;
+        float turn = tier >= 3 ? 1.6f : tier == 2 ? 0.8f : 0f;
+        var in = mc.player.input;
+        if (turn > 0 && in.left != in.right) {
+            float d = in.left ? -turn : turn;
+            b.setYRot(b.getYRot() + d);
+            mc.player.setYRot(mc.player.getYRot() + d);
+        }
         if (bonus <= 0 || !b.onGround()) return;
         var v = b.getDeltaMovement();
         if (v.x * v.x + v.z * v.z < 0.0025) return;
+        // потолок скорости: на льду трение почти 1, и без него буст разгонял лодку бесконечно — её подбрасывало в небо
+        double max = 1.5 + bonus * 3, sp2 = v.x * v.x + v.z * v.z;
+        if (sp2 > max * max) return;
         double k = 1 + 0.012 * bonus / 0.1;
-        b.setDeltaMovement(v.x * k, v.y, v.z * k);
+        b.setDeltaMovement(v.x * k, Math.min(v.y, 0.5), v.z * k);
     }
 
     private static boolean calibrated = false;

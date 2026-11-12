@@ -37,8 +37,8 @@ public class CivArmorItem extends ArmorItem {
     }
 
     /** Броня (очки) и бонус к здоровью за предмет. Полный комплект тира 1+ обычной редкости ≈ 8 брони и +5 HP. */
-    public double armor(ItemStack st) { return 8 * Math.pow(1.25, tier - 1.5) * part() * Gear.rarity(st).mult * com.pvpciv.game.ArmorUp.mult(Gear.stars(st)); }
-    public double health(ItemStack st) { return 5 * Math.pow(1.3, tier - 1.5) * part() * Gear.rarity(st).mult * com.pvpciv.game.ArmorUp.mult(Gear.stars(st)); }
+    public double armor(ItemStack st) { return 10 * Math.pow(1.25, tier - 1.5) * part() * Gear.rarity(st).mult * com.pvpciv.game.ArmorUp.mult(Gear.stars(st)); }
+    public double health(ItemStack st) { return 6.25 * Math.pow(1.3, tier - 1.5) * part() * Gear.rarity(st).mult * com.pvpciv.game.ArmorUp.mult(Gear.stars(st)); }
 
     @Override
     public ItemAttributeModifiers getDefaultAttributeModifiers(ItemStack st) {

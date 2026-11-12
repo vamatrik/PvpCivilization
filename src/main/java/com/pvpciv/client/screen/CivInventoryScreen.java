@@ -75,15 +75,18 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
         statBlock(g, x + 18, y + 44, 110);
         Skin.inset(g, x + 138, y + 38, 130, 126);
         g.drawString(font, "Навыки", x + 144, y + 43, Skin.GOLD_L, false);
-        skill(g, x + 144, y + 55, "R", "Рывок", 1);
-        skill(g, x + 144, y + 76, "F", "Второй навык", 8);
-        skill(g, x + 144, y + 97, "V", "Третий навык", 18);
+        skill(g, x + 144, y + 55, key(0), "Рывок", 1);
+        skill(g, x + 144, y + 76, key(1), "Второй навык", 8);
+        skill(g, x + 144, y + 97, key(2), "Третий навык", 18);
         Skin.button(g, font, x + 142, y + 122, 41, "Титулы", mx, my, true, false);
         Skin.button(g, font, x + 184, y + 122, 41, "Трофеи", mx, my, true, false);
         Skin.button(g, font, x + 226, y + 122, 41, "Лодки", mx, my, true, false);
         Skin.button(g, font, x + 142, y + 142, 41, "Боссы", mx, my, true, false);
         Skin.button(g, font, x + 184, y + 142, 41, "Броня+", mx, my, true, false);
+        Skin.button(g, font, x + 226, y + 142, 41, "Опции", mx, my, true, false);
     }
+
+    private static String key(int i) { return com.pvpciv.client.ClientInit.SKILL_KEYS[i].getTranslatedKeyMessage().getString().toUpperCase(); }
 
     private void skill(GuiGraphics g, int x, int y, String key, String name, int lvl) {
         boolean open = ClientState.level >= lvl;
@@ -105,7 +108,7 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
         ly = stat(g, x, ly, w, "shield", "Броня", String.valueOf((int) p.getAttributeValue(Attributes.ARMOR)));
         ly = stat(g, x, ly, w, "food", "Сытость", p.getFoodData().getFoodLevel() + "/20");
         ly = stat(g, x, ly, w, "spark", "Искры", String.valueOf(ClientState.money));
-        g.drawString(font, "Бонус: +" + (ClientState.level - 1) + "% урона", x, ly + 2, Skin.FAINT, false);
+        g.drawString(font, String.format("Бонус: +%.1f%% урона", 1.5 * (ClientState.level - 1)), x, ly + 2, Skin.FAINT, false);
     }
 
     private int stat(GuiGraphics g, int x, int y, int w, String icon, String name, String val) {
@@ -149,6 +152,7 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
             if (in(mx, my, 226, 122, 41, 16)) { minecraft.setScreen(new StubScreens.Boats()); return true; }
             if (in(mx, my, 142, 142, 41, 16)) { minecraft.setScreen(new StubScreens.Bosses()); return true; }
             if (in(mx, my, 184, 142, 41, 16)) { minecraft.setScreen(new StubScreens.ArmorBench()); return true; }
+            if (in(mx, my, 226, 142, 41, 16)) { minecraft.setScreen(new StubScreens.Settings()); return true; }
         }
         return super.mouseClicked(mx, my, b);
     }

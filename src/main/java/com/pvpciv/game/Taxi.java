@@ -170,7 +170,7 @@ public final class Taxi {
         p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.MINECART_RIDING, SoundSource.PLAYERS, 0.6f, 1.3f);
         PacketDistributor.sendToPlayer(p, new Network.Cinematic(6, 90, "Такси\n" + b.name));
         GameEvents.later(p.server, 4, () -> {
-            if (!p.isAlive()) return;
+            if (!p.isAlive() || p.hasDisconnected()) return;
             float yaw = (float) Math.toDegrees(Math.atan2(-(0 - at.x), (0 - at.z)));
             p.teleportTo(lvl, at.x, at.y, at.z, b.floor == 1 && b.z > 300 ? 180 : yaw, 0);
             p.resetFallDistance();

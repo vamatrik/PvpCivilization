@@ -39,10 +39,6 @@
    ],
    "chance": 0.1,
    "min_rarity": "RARE"
-  },
-  {
-   "item": "pvpciv:bag_buckle",
-   "chance": 0.03
   }
  ]
 }
