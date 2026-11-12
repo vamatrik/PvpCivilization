@@ -47,7 +47,7 @@ public class GateEntity extends Entity implements GeoEntity {
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar c) {
         c.add(new AnimationController<>(this, "main", 10, st -> st.setAndContinue(
-                level().isClientSide && (gateId().startsWith("home:") || com.pvpciv.client.ClientState.gatesFixed.contains(gateId())) ? ACTIVE : BROKEN)));
+                level().isClientSide && (gateId().equals("hub") || com.pvpciv.client.ClientState.gatesFixed.contains(gateId())) ? ACTIVE : BROKEN)));
     }
 
     @Override public AnimatableInstanceCache getAnimatableInstanceCache() { return cache; }

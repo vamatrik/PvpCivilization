@@ -302,12 +302,12 @@ public final class Vampire {
         if (r.nextFloat() < (elite ? 0.4f : 0.04f)) {   // звезда крови: элитный контракт ~40%, обычный 4%
             ItemStack bs = new ItemStack(ModRegistry.BLOOD_STAR_W1.get());
             com.pvpciv.inv.Bag.give(p, bs);
-            Story.announceRareDrop(p.level(), bs);
+            Story.announceRareDrop(p.level(), bs, p.getGameProfile().getName());
         }
         if (blessed > 0) {
             ItemStack b = new ItemStack(ModRegistry.BLESSED_STAR_W1.get(), blessed);
             com.pvpciv.inv.Bag.give(p, b);
-            Story.announceRareDrop(p.level(), b);
+            Story.announceRareDrop(p.level(), b, p.getGameProfile().getName());
         }
         p.sendSystemMessage(Component.literal("Плата Кармиллы: " + money + " ✦" + (stars > 0 ? ", звёзды ×" + stars : "") + (blessed > 0 ? ", благословенные ×" + blessed : ""))
                 .withStyle(s -> s.withColor(C)));

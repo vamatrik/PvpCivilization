@@ -96,7 +96,7 @@ public final class ArmorUp {
                 Gear.setStars(armor, 11);
                 lvlW.playSound(null, p.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 1f, 1f);
                 lvlW.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, p.getX(), p.getY() + 1, p.getZ(), 60, 0.6, 0.8, 0.6, 0.05);
-                Story.announceRareDrop(lvlW, armor);
+                Story.announceRareDrop(lvlW, armor, p.getGameProfile().getName());
                 msg(p, "БРОНЯ +11! Звёзды крови приняли твою жертву.", ChatFormatting.DARK_RED);
             } else {
                 Gear.setStars(armor, 5);

@@ -97,12 +97,16 @@ public final class Story {
     }
 
     /** Объявление на весь сервер о редком дропе. */
-    public static void announceRareDrop(Level level, ItemStack st) {
+    public static void announceRareDrop(Level level, ItemStack st) { announceRareDrop(level, st, null); }
+
+    /** В чат всем: кто именно получил ценный лут (who — ник; null — без имени). */
+    public static void announceRareDrop(Level level, ItemStack st, @org.jetbrains.annotations.Nullable String who) {
         if (!(level instanceof ServerLevel sl)) return;
         boolean rare = (st.getItem() instanceof CivWeaponItem || st.getItem() instanceof com.pvpciv.item.CivArmorItem) && Gear.rarity(st).ordinal() >= Rarity.EPIC.ordinal();
         boolean blessed = st.is(ModRegistry.BLESSED_STAR_W1.get()) || st.is(ModRegistry.RIME_BOAT_T2.get()) || st.is(ModRegistry.BLOOD_STAR_W1.get());
         if (!rare && !blessed) return;
-        Component msg = Component.literal("✦ Выпал редкий предмет: ").withStyle(ChatFormatting.GOLD).append(st.getHoverName());
+        Component msg = (who == null ? Component.literal("✦ Выпал редкий предмет: ").withStyle(ChatFormatting.GOLD)
+                : Component.literal("✦ " + who).withStyle(ChatFormatting.YELLOW).append(Component.literal(" получает редкий предмет: ").withStyle(ChatFormatting.GOLD))).append(st.getHoverName());
         for (ServerPlayer p : sl.getServer().getPlayerList().getPlayers()) p.sendSystemMessage(msg);
     }
 

@@ -82,7 +82,7 @@ public final class ArenaManager {
         }
         mobs.removeIf(id -> { Entity e = lvl.getEntity(id); return e == null || !e.isAlive(); });
         // пауки лезут на стены арены — вернуть на песок
-        for (UUID id : mobs) if (lvl.getEntity(id) instanceof Mob m && (m.getY() > Floor1.Y + 2.5 || m.position().distanceTo(center()) > 18.5)) {
+        for (UUID id : mobs) if (lvl.getEntity(id) instanceof Mob m && (m.getY() > Floor1.Y + 2.5 || m.position().distanceTo(center()) > 21.5)) {   // бета 12.11: шире — не дёргать мобов у самого края
             Vec3 c = center();
             m.teleportTo(c.x + (m.getRandom().nextDouble() - 0.5) * 10, Floor1.Y, c.z + (m.getRandom().nextDouble() - 0.5) * 10);
             lvl.sendParticles(ParticleTypes.POOF, m.getX(), m.getY() + 0.5, m.getZ(), 8, 0.3, 0.3, 0.3, 0.02);
@@ -149,7 +149,7 @@ public final class ArenaManager {
             ItemEntity ie = new ItemEntity(lvl, c.x, c.y + 1.2, c.z, st);
             ie.setDeltaMovement((lvl.random.nextDouble() - 0.5) * 0.6, 0.45, (lvl.random.nextDouble() - 0.5) * 0.6);
             lvl.addFreshEntity(ie);
-            Story.announceRareDrop(lvl, st);
+            Story.announceRareDrop(lvl, st, "Арена (победители)");
         }
         for (ServerPlayer p : winners) {
             Progress.addXp(p, Progress.xpFor(Progress.d(p).level, 4, 8));

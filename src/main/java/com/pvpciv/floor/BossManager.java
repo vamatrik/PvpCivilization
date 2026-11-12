@@ -220,7 +220,7 @@ public final class BossManager {
                 loot.add(new ItemStack(d.trophy().get()));
             }
             for (ItemStack st : loot) {
-                Story.announceRareDrop(lvl, st);
+                Story.announceRareDrop(lvl, st, p.getGameProfile().getName());
                 com.pvpciv.inv.Bag.give(p, st);
             }
             p.sendSystemMessage(Component.literal("Личная награда («" + d.name() + "»): " + loot.size() + " предметов (ты нанёс " + Math.round(share * 100) + "% урона)").withStyle(ChatFormatting.GOLD));

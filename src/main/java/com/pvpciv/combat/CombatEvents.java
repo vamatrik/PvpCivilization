@@ -191,7 +191,7 @@ public final class CombatEvents {
             }
             p.sendSystemMessage(Component.literal(pvp
                     ? "Ты выронил " + lost + " ✦ — их можно подобрать. Половина опыта до уровня сгорела."
-                    : "Сгорело " + lost + " ✦ и половина опыта до следующего уровня.").withStyle(ChatFormatting.RED));
+                    : "Сгорело " + lost + " ✦ и 15% опыта до следующего уровня.").withStyle(ChatFormatting.RED));
             return;
         }
         if (dead instanceof Mob mob && Mobs.level(mob) > 0 && e.getSource().getEntity() instanceof ServerPlayer p && !BossManager.isBoss(mob)) {
@@ -214,7 +214,7 @@ public final class CombatEvents {
             ItemEntity ie = new ItemEntity(mob.level(), mob.getX(), mob.getY() + 0.5, mob.getZ(), st);
             ie.setDefaultPickUpDelay();
             e.getDrops().add(ie);
-            Story.announceRareDrop(mob.level(), st);
+            Story.announceRareDrop(mob.level(), st, e.getSource().getEntity() instanceof ServerPlayer kp ? kp.getGameProfile().getName() : null);
         }
     }
 

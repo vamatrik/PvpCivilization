@@ -19,7 +19,7 @@ public class GateScreen extends PlainScreen {
     private final Scroll ls = new Scroll();
 
     public GateScreen(JsonObject d) {
-        super(d.get("from").getAsString().equals("home") ? "Домашние врата" : "Врата телепортации", 360, 220, false);
+        super(d.get("from").getAsString().equals("home") ? "Врата общежития" : "Врата телепортации", 360, 220, false);
         this.d = d;
         this.from = d.get("from").getAsString();
         Gates.Gate g = Gates.byId(from);
@@ -65,7 +65,7 @@ public class GateScreen extends PlainScreen {
         Skin.inset(g, cx, ly, cw, lh);
         if (sel < 0 || sel >= l.size()) {
             if (home()) {
-                g.drawString(font, "Домашние врата • ур. " + homeLvl(), cx + 6, ly + 6, Skin.GOLD_L, false);
+                g.drawString(font, "Врата общежития • ур. " + homeLvl(), cx + 6, ly + 6, Skin.GOLD_L, false);
                 Skin.para(g, font, "Ведут на любые починенные врата этажей до " + homeLvl() + "-го. С врат по миру — только по своему этажу и домой. Перенос бесплатный.", cx + 6, ly + 20, cw - 12, 10, 5, Skin.TEXT, false);
                 int next = homeLvl() + 1;
                 if (next < Gates.HOME_UP.length) {
@@ -89,7 +89,7 @@ public class GateScreen extends PlainScreen {
             String b = gt.id().equals(from) ? "Ты здесь" : s != 2 ? "Не работают" : !floorOpen(gt.floor()) ? "Не достают" : cd > 0 ? "Остывают " + cd + " с" : "Перенестись";
             Skin.button(g, font, cx + 6, ly + lh - 22, cw - 12, b, mx, my, can && cd <= 0, true);
         }
-        if (!home()) Skin.button(g, font, left + 186, top + 17, 162, "Домой (в квартиру)", mx, my, d.get("cd").getAsInt() <= 0, false);
+        if (!home()) Skin.button(g, font, left + 186, top + 17, 162, "В общежитие", mx, my, d.get("cd").getAsInt() <= 0, false);
     }
 
     @Override

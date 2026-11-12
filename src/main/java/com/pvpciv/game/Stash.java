@@ -82,7 +82,7 @@ public final class Stash {
             if (!first) msg.append(Component.literal(", ").withStyle(ChatFormatting.GRAY));
             first = false;
             msg.append(st.getHoverName().copy()).append(Component.literal(st.getCount() > 1 ? " ×" + st.getCount() : "").withStyle(ChatFormatting.GRAY));
-            Story.announceRareDrop(lvl, st);
+            Story.announceRareDrop(lvl, st, p.getGameProfile().getName());
             ItemStack give = st.copy();
             com.pvpciv.inv.Bag.give(p, give);
         }

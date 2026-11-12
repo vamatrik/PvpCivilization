@@ -133,10 +133,32 @@ public final class Gates {
             place(l, g.id, at);
         }
         ServerLevel w1 = CivWorld.level(server);
-        for (CivData.Apartment a : CivData.get(server).apartments) {
-            if (!a.npc.isEmpty() || !w1.areEntitiesLoaded(ChunkPos.asLong(a.door))) continue;
-            place(w1, "home:" + a.id, homeSpot(a));
+        if (w1 == null || !w1.areEntitiesLoaded(ChunkPos.asLong(HUB_C))) return;
+        place(w1, "hub", hubSpot(server));
+        if (!oldCleared) {   // старые врата в квартирах (до 0.8.7) убираем
+            oldCleared = true;
+            for (CivData.Apartment a : CivData.get(server).apartments) {
+                Vec3 h = homeSpot(a);
+                w1.getEntitiesOfClass(GateEntity.class, new AABB(h, h).inflate(4), e -> e.gateId().startsWith("home:")).forEach(GateEntity::discard);
+            }
         }
+    }
+
+    /** Большие общие врата в центре атриума общежития: прогресс у каждого свой. */
+    private static final BlockPos HUB_C = new BlockPos(0, DormBuilder.Y0, -8);
+    private static Vec3 hub;
+    private static boolean oldCleared;
+    public static Vec3 hubSpot(MinecraftServer s) {
+        if (hub != null) return hub;
+        ServerLevel l = CivWorld.level(s);
+        for (int r = 0; r <= 6 && hub == null; r++)
+            for (int dz = -r; dz <= r && hub == null; dz++) for (int dx = -r; dx <= r && hub == null; dx++) {
+                if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
+                BlockPos b = HUB_C.offset(dx, 0, dz);
+                if (pad(l, b)) hub = new Vec3(b.getX() + 0.5, b.getY(), b.getZ() + 0.5);
+            }
+        if (hub == null) hub = new Vec3(0.5, DormBuilder.Y0, -7.5);
+        return hub;
     }
 
     public static Vec3 homeSpot(CivData.Apartment a) {
@@ -193,10 +215,8 @@ public final class Gates {
     // ------------------------------------------------------------------ взаимодействие
     public static void use(ServerPlayer p, String id) {
         StoryData d = Progress.d(p);
-        if (id.startsWith("home:")) {
-            int apt;
-            try { apt = Integer.parseInt(id.substring(5)); } catch (NumberFormatException e) { return; }
-            if (apt != d.apartment) { Story.say(p, "Врата", 0x8FE3FF, "Чужие домашние врата не откликаются."); return; }
+        if (id.equals("hub") || id.startsWith("home:")) {
+            if (d.apartment < 0) { Story.say(p, "Врата", 0x8FE3FF, "Врата общежития откликаются только жильцам — сначала заселись."); return; }
             open(p, "home");
             return;
         }
@@ -269,13 +289,13 @@ public final class Gates {
             Gate g = byId(to);
             if (g == null || !fixed(d, to)) { msg(p, "Эти врата ещё не починены.", ChatFormatting.RED); return; }
             if (from.equals("home") ? g.floor > home(d) || (g.floor == 2 && !d.liftOk) : byId(from) == null || byId(from).floor != g.floor) {
-                msg(p, from.equals("home") ? "Домашние врата пока не достают до этого этажа — улучши их." : "С этих врат — только по своему этажу и домой.", ChatFormatting.RED);
+                msg(p, from.equals("home") ? "Врата общежития пока не достают до этого этажа — улучши их." : "С этих врат — только по своему этажу и домой.", ChatFormatting.RED);
                 return;
             }
         }
         if (from.equals("home")) {
             CivData.Apartment a = CivData.get(p.server).byId(d.apartment);
-            if (a == null || p.level().dimension() != CivWorld.WORLD1 || p.position().distanceToSqr(homeSpot(a)) > 36) { msg(p, "Подойди к домашним вратам.", ChatFormatting.RED); return; }
+            if (a == null || p.level().dimension() != CivWorld.WORLD1 || p.position().distanceToSqr(hubSpot(p.server)) > 49) { msg(p, "Подойди к вратам в атриуме общежития.", ChatFormatting.RED); return; }
         } else {
             Gate fg = byId(from);
             Vec3 at = fg == null ? null : SPOTS.get(fg.id);
@@ -291,7 +311,8 @@ public final class Gates {
         if (to.equals("home")) {
             CivData.Apartment a = CivData.get(p.server).byId(d.apartment);
             if (a == null) return;
-            l = CivWorld.level(p.server); at = new Vec3(a.spawn.getX() + 0.5, a.spawn.getY(), a.spawn.getZ() + 0.5);
+            l = CivWorld.level(p.server); Vec3 h = hubSpot(p.server);
+            at = Taxi.safe(l, BlockPos.containing(h.x, h.y, h.z + 3));
         } else {
             Gate g = byId(to);
             l = lvl(p.server, g.floor);
@@ -320,7 +341,7 @@ public final class Gates {
         d.homeGate = next;
         p.setData(ModRegistry.STORY.get(), d);
         Story.sync(p);
-        Story.title(p, "Домашние врата: уровень " + next, "Теперь достают до этажа " + next, 0x8FE3FF);
+        Story.title(p, "Врата общежития: уровень " + next, "Теперь достают до этажа " + next, 0x8FE3FF);
         open(p, "home");
     }
 

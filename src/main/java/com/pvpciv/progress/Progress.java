@@ -26,7 +26,7 @@ public final class Progress {
 
     /** Опыт за моба уровня mobLevel с учётом разницы уровней. */
     public static long xpFor(int playerLevel, int mobLevel, double mult) {
-        double base = 5.1 * Math.pow(1.08, mobLevel - 1) * mult;   // бета 12.11: −15%
+        double base = 6 * Math.pow(1.08, mobLevel - 1) * mult;
         int below = playerLevel - mobLevel;
         double k = below <= 3 ? 1.0 : below <= 5 ? 0.5 : below <= 8 ? 0.2 : 0.05;
         return Math.max(1, Math.round(base * k));
@@ -91,12 +91,12 @@ public final class Progress {
         if (p.getHealth() > p.getMaxHealth()) p.setHealth(p.getMaxHealth());
     }
 
-    /** Штраф смерти: деньги и половина опыта до следующего уровня. Возвращает потерянные Искры. */
+    /** Штраф смерти: деньги и 15% опыта до следующего уровня. Возвращает потерянные Искры. */
     public static long deathPenalty(ServerPlayer p, double moneyFraction) {
         StoryData d = d(p);
         long lost = (long) Math.floor(d.money * moneyFraction);
         d.money -= lost;
-        d.xp = d.xp / 2;
+        d.xp = Math.round(d.xp * 0.85);   // бета 12.11: при смерти теряется 15% опыта (было 50%)
         save(p, d);
         return lost;
     }
