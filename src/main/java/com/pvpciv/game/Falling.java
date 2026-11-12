@@ -27,7 +27,7 @@ public final class Falling {
             return;
         }
         var tag = p.getPersistentData();
-        if (p.onGround() || p.isInWater() || p.isPassenger() || p.getAbilities().flying) { tag.remove("chute"); return; }
+        if (p.onGround() || p.isInWater() || p.isPassenger() || p.getAbilities().flying) { tag.remove("chute"); canopy(p, false); return; }
         boolean open = tag.getBoolean("chute");
         if (!open && p.fallDistance > 10 && hasChute(p)) {
             tag.putBoolean("chute", true);
@@ -37,6 +37,7 @@ public final class Falling {
             p.displayClientMessage(Component.literal("⛱ Парашют раскрылся!").withStyle(ChatFormatting.GOLD), true);
         }
         if (open) {
+            canopy(p, true);
             p.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 30, 0, false, false));
             p.resetFallDistance();
         }
@@ -51,11 +52,44 @@ public final class Falling {
             int x = -90 + r.nextInt(191), z = -595 + r.nextInt(1280);
             int y = l.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
             if (y < Floor1.Y - 6 || y > Floor1.Y + 30) continue;   // пустота или крыша/башня
+            if (Math.abs(x) < 34 && Math.abs(z) < 34) continue;      // не на крышу общежития
             var ground = l.getBlockState(new net.minecraft.core.BlockPos(x, y - 1, z));
             if (!ground.getFluidState().isEmpty() || ground.is(net.minecraft.world.level.block.Blocks.MAGMA_BLOCK)) continue;
             return new net.minecraft.world.phys.Vec3(x + 0.5, y + 150, z + 0.5);
         }
         return new net.minecraft.world.phys.Vec3(Floor1.CAMP.getX() + 0.5, Floor1.Y + 150, Floor1.CAMP.getZ() + 40.5);
+    }
+
+    /** Купол над головой — ItemDisplay с 3D-моделью, едет на игроке (видят все). */
+    public static void canopy(ServerPlayer p, boolean on) {
+        var l = p.serverLevel();
+        var list = l.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class, p.getBoundingBox().inflate(6), e -> e.getTags().contains("chute_" + p.getUUID()));
+        if (!on) { list.forEach(net.minecraft.world.entity.Entity::discard); return; }
+        if (!list.isEmpty()) return;
+        var d = net.minecraft.world.entity.EntityType.ITEM_DISPLAY.create(l);
+        if (d == null) return;
+        d.moveTo(p.getX(), p.getY() + 2, p.getZ());
+        d.addTag("chute_" + p.getUUID());
+        net.minecraft.nbt.CompoundTag t = new net.minecraft.nbt.CompoundTag();
+        d.saveWithoutId(t);
+        net.minecraft.nbt.CompoundTag item = new net.minecraft.nbt.CompoundTag();
+        item.putString("id", "pvpciv:parachute_canopy"); item.putInt("count", 1);
+        t.put("item", item);
+        t.putString("item_display", "fixed");
+        net.minecraft.nbt.CompoundTag tr = new net.minecraft.nbt.CompoundTag();
+        tr.put("translation", floats(0, 2.4f, 0)); tr.put("scale", floats(3.2f, 2.4f, 3.2f));
+        tr.put("left_rotation", floats(0, 0, 0, 1)); tr.put("right_rotation", floats(0, 0, 0, 1));
+        t.put("transformation", tr);
+        t.putInt("teleport_duration", 1);
+        d.load(t);
+        l.addFreshEntity(d);
+        d.startRiding(p, true);
+    }
+
+    private static net.minecraft.nbt.ListTag floats(float... v) {
+        net.minecraft.nbt.ListTag l = new net.minecraft.nbt.ListTag();
+        for (float f : v) l.add(net.minecraft.nbt.FloatTag.valueOf(f));
+        return l;
     }
 
     private static boolean hasChute(ServerPlayer p) {

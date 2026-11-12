@@ -158,6 +158,11 @@ public final class Hud {
                 g.drawCenteredString(font, ClientState.cineText, 0, 0, Skin.alpha(0xFFFF6A7A, ta));
                 g.pose().popPose();
             }
+        } else if (ClientState.cineKind == 7) {   // мини-катсцена: только полосы кино
+            int bar = (int) (h * 0.09f * Math.min(1, k * 8));
+            g.fill(0, 0, w, bar, 0xFF000000);
+            g.fill(0, h - bar, w, h, 0xFF000000);
+            return true;
         } else if (ClientState.cineKind == 5 || ClientState.cineKind == 6) {   // поездка на лифте: полосы кино, затемнение/проявление, титр
             int bar = (int) (h * 0.09f);
             g.fill(0, 0, w, bar, 0xFF000000);

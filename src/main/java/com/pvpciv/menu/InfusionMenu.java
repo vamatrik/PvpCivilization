@@ -32,7 +32,7 @@ import java.util.List;
 /**
  * Алтарь инфузии: предметы кладутся руками на алтарь (центр) и 8 пьедесталов вокруг; окно только показывает круг и запускает ритуал. Рецепты:
  *  • Благословенная звезда — в центре оружие +5 и выше (сгорает), по краям 8 обычных звёзд. Шанс 50% на +5, +15% за каждый плюс (с +9 — 100%).
- *  • Ядро брони — в центре Медальон инея, по краям 8 звёзд: сколько из них благословенных (0–3), такова сила ядра.
+ *  • Ядро брони +N — в центре Медальон инея (или фильтр), по краям N звёзд (1–8); +9 — 7 обычных + 1 благословенная, +10 — 6 + 2.
  * Ритуал длится 2.5 с: предметы всплывают над пьедесталами и стягиваются к алтарю.
  */
 public class InfusionMenu extends CivMenu {
@@ -67,10 +67,20 @@ public class InfusionMenu extends CivMenu {
         return n;
     }
 
+    /** Уровень ядра по краям круга: N обычных звёзд (1–8) → +N; 7+1 благословенная → +9; 6+2 → +10. Иначе 0. */
+    public static int coreLevel(List<ItemStack> e) {
+        int normal = edges(e, ModRegistry.STAR_W1.get()), blessed = edges(e, ModRegistry.BLESSED_STAR_W1.get()), other = 0;
+        for (ItemStack s : e) if (!s.isEmpty() && !s.is(ModRegistry.STAR_W1.get()) && !s.is(ModRegistry.BLESSED_STAR_W1.get())) other++;
+        if (other > 0) return 0;
+        if (blessed == 0 && normal >= 1 && normal <= 8) return normal;
+        if (normal + blessed == 8 && (blessed == 1 || blessed == 2)) return 8 + blessed;
+        return 0;
+    }
+
     public static Kind kind(ItemStack c, List<ItemStack> e) {
         int normal = edges(e, ModRegistry.STAR_W1.get()), blessed = edges(e, ModRegistry.BLESSED_STAR_W1.get());
         if (c.getItem() instanceof CivWeaponItem && Gear.stars(c) >= 5 && normal == 8) return Kind.BLESSED;
-        if ((c.is(ModRegistry.FROZEN_LOCKET.get()) || c.is(ModRegistry.GAS_MASK_FILTER.get())) && normal + blessed == 8 && blessed <= 3) return Kind.CORE;
+        if ((c.is(ModRegistry.FROZEN_LOCKET.get()) || c.is(ModRegistry.GAS_MASK_FILTER.get())) && coreLevel(e) > 0) return Kind.CORE;
         return Kind.NONE;
     }
 
@@ -103,7 +113,7 @@ public class InfusionMenu extends CivMenu {
             }
         List<ItemStack> copies = new ArrayList<>();
         for (ItemStack st : edgeItems) copies.add(st.copy());
-        int blessed = edges(edgeItems, ModRegistry.BLESSED_STAR_W1.get());
+        int coreLvl = coreLevel(edgeItems);
         for (PedestalBlockEntity be : all) be.set(ItemStack.EMPTY, null, "");
         ItemStack result;
         boolean ok;
@@ -112,7 +122,7 @@ public class InfusionMenu extends CivMenu {
             result = ok ? new ItemStack(ModRegistry.BLESSED_STAR_W1.get()) : ItemStack.EMPTY;
         } else {
             ok = true;
-            result = ArmorCoreItem.of(blessed);
+            result = ArmorCoreItem.of(coreLvl);
         }
         sp.closeContainer();
         ritual(sp, center, copies, result, ok, k);

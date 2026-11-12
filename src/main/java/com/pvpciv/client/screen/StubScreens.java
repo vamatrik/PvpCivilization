@@ -17,11 +17,13 @@ public final class StubScreens {
         public Titles() { super("Титулы", 300, 196, true); }
         @Override protected void drawContent(GuiGraphics g, int mx, int my, float pt) {
             g.drawString(font, "Активен один титул: он виден над ником и даёт бонус", left + 14, top + 20, Skin.DIM, false);
-            for (int i = 0; i < Math.min(6, list.size()); i++) {
+            scroll.view(132).content(list.size() * 22);
+            com.pvpciv.client.ui.Scroll.begin(g, left + 10, top + 34, 282, 132);
+            for (int i = 0; i < list.size(); i++) {
                 var d = list.get(i);
-                int y = top + 34 + i * 22;
+                int y = top + 34 + i * 22 - scroll.off;
                 boolean open = ClientState.titles.contains(d.id()), act = d.id().equals(ClientState.activeTitle);
-                boolean hover = open && in(mx, my, 12, 34 + i * 22, 276, 20);
+                boolean hover = open && in(mx, my, 12, 34 + i * 22 - scroll.off, 276, 20) && my >= top + 34 && my < top + 166;
                 Skin.inset(g, left + 12, y, 276, 20);
                 if (act) g.fill(left + 13, y + 1, left + 287, y + 19, 0x30FFD166);
                 else if (hover) g.fill(left + 13, y + 1, left + 287, y + 19, 0x18FFFFFF);
@@ -31,13 +33,16 @@ public final class StubScreens {
                 String b = act ? "активен • " + d.bonusText() : d.bonusText();
                 g.drawString(font, Skin.fit(font, b, 110), left + 284 - Math.min(110, font.width(b)), y + 6, act ? Skin.GOOD : Skin.DIM, false);
             }
+            com.pvpciv.client.ui.Scroll.end(g);
+            scroll.bar(g, left + 292, top + 34, 132);
             Skin.divider(g, left + w / 2, top + 170);
             g.drawCenteredString(font, "Щёлкни по открытому титулу, чтобы надеть или снять", left + w / 2, top + 180, Skin.FAINT);
         }
         @Override public boolean mouseClicked(double mx, double my, int b) {
-            for (int i = 0; i < Math.min(6, list.size()); i++) {
+            for (int i = 0; i < list.size(); i++) {
                 var d = list.get(i);
-                if (ClientState.titles.contains(d.id()) && in(mx, my, 12, 34 + i * 22, 276, 20)) {
+                if (my < top + 34 || my >= top + 166) break;
+                if (ClientState.titles.contains(d.id()) && in(mx, my, 12, 34 + i * 22 - scroll.off, 276, 20)) {
                     String id = d.id().equals(ClientState.activeTitle) ? "" : d.id();
                     ClientState.activeTitle = id;
                     net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.pvpciv.net.Network.SelectTitle(id));
@@ -60,9 +65,11 @@ public final class StubScreens {
         public Bosses() { super("Боссы", 300, 192, true); }
         @Override protected void drawContent(GuiGraphics g, int mx, int my, float pt) {
             g.drawString(font, "Закреплённые боссы видны на экране", left + 14, top + 20, Skin.DIM, false);
+            scroll.view(150).content(LIST.length * 30);
+            com.pvpciv.client.ui.Scroll.begin(g, left + 10, top + 34, 282, 150);
             for (int i = 0; i < LIST.length; i++) {
                 B b = LIST[i];
-                int y = top + 34 + i * 30;
+                int y = top + 34 + i * 30 - scroll.off;
                 Skin.inset(g, left + 12, y, 276, 28);
                 Skin.icon(g, "skull", left + 17, y + 6);
                 g.drawString(font, b.name() + "  " + b.lvl(), left + 33, y + 4, b.ready() ? 0xFFFF7060 : Skin.GOLD_D, false);
@@ -79,10 +86,12 @@ public final class StubScreens {
                     Skin.button(g, font, left + 236, y + 6, 48, pin ? "Убрать" : "На экран", mx, my, true, pin);
                 }
             }
+            com.pvpciv.client.ui.Scroll.end(g);
+            scroll.bar(g, left + 292, top + 34, 150);
         }
         @Override public boolean mouseClicked(double mx, double my, int btn) {
             for (int i = 0; i < LIST.length; i++)
-                if (LIST[i].ready() && in(mx, my, 236, 40 + i * 30, 48, 16)) { ClientState.togglePin(LIST[i].id()); return true; }
+                if (LIST[i].ready() && my >= top + 34 && my < top + 184 && in(mx, my, 236, 40 + i * 30 - scroll.off, 48, 16)) { ClientState.togglePin(LIST[i].id()); return true; }
             return super.mouseClicked(mx, my, btn);
         }
     }
@@ -153,26 +162,30 @@ public final class StubScreens {
         private static String id(net.minecraft.world.item.Item it) { return net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(it).toString(); }
         @Override protected void drawContent(GuiGraphics g, int mx, int my, float pt) {
             g.drawString(font, "Новая лучшая лодка выбирается сама", left + 14, top + 20, Skin.DIM, false);
+            scroll.view(130).content(all.size() * 26);
+            com.pvpciv.client.ui.Scroll.begin(g, left + 10, top + 34, 262, 130);
             for (int i = 0; i < all.size(); i++) {
                 var b = all.get(i);
-                int y = top + 34 + i * 26;
+                int y = top + 34 + i * 26 - scroll.off;
                 String id = id(b);
                 boolean open = ClientState.boats.contains(id), act = id.equals(ClientState.activeBoat);
                 Skin.inset(g, left + 12, y, 256, 24);
                 if (act) g.fill(left + 13, y + 1, left + 267, y + 23, 0x308FE3FF);
-                else if (open && in(mx, my, 12, 34 + i * 26, 256, 24)) g.fill(left + 13, y + 1, left + 267, y + 23, 0x18FFFFFF);
+                else if (open && in(mx, my, 12, 34 + i * 26 - scroll.off, 256, 24)) g.fill(left + 13, y + 1, left + 267, y + 23, 0x18FFFFFF);
                 if (open) g.renderItem(new net.minecraft.world.item.ItemStack(b), left + 17, y + 4); else Skin.icon(g, "lock", left + 20, y + 7);
                 g.drawString(font, open ? b.title + " лодка" : "???", left + 38, y + 3, open ? Skin.TEXT : Skin.GOLD_D, false);
-                String sp = b.tier > 1 ? "Тир " + b.tier + " • +" + Math.round(com.pvpciv.item.BoatSummonItem.speedBonus(b.tier) * 100) + "% на льду" : "Тир 1 • обычная";
+                String sp = b.tier > 1 ? "Тир " + b.tier + " • +" + Math.round(com.pvpciv.item.BoatSummonItem.iceBonus(b.tier) * 100) + "% скорость, руль острее" : "Тир 1 • обычная";
                 g.drawString(font, sp, left + 38, y + 13, Skin.FAINT, false);
                 String st = act ? "выбрана" : open ? "выбрать" : "не найдена";
                 g.drawString(font, st, left + 262 - font.width(st), y + 8, act ? Skin.GOOD : open ? Skin.GOLD_L : Skin.FAINT, false);
             }
+            com.pvpciv.client.ui.Scroll.end(g);
+            scroll.bar(g, left + 272, top + 34, 130);
         }
         @Override public boolean mouseClicked(double mx, double my, int b) {
             for (int i = 0; i < all.size(); i++) {
                 String id = id(all.get(i));
-                if (ClientState.boats.contains(id) && !id.equals(ClientState.activeBoat) && in(mx, my, 12, 34 + i * 26, 256, 24)) {
+                if (ClientState.boats.contains(id) && !id.equals(ClientState.activeBoat) && my >= top + 34 && my < top + 164 && in(mx, my, 12, 34 + i * 26 - scroll.off, 256, 24)) {
                     ClientState.activeBoat = id;
                     net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.pvpciv.net.Network.SelectBoat(id));
                     minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1f));

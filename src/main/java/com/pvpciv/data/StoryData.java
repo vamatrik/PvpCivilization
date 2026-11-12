@@ -25,6 +25,9 @@ public class StoryData implements INBTSerializable<CompoundTag> {
     /** Метки Элеоноры: жетоны (вне инфляции), активная метка "boss:TYPE" и день её выдачи, сданные метки (boss → день), покупки в её лавке. */
     /** Настройки героя: не драться с игроками на 7+ уровней выше (в обе стороны). */
     public boolean pvpShield = false;
+    /** Врата: id → 1 найдены, 2 починены; уровень домашних врат (1 — этаж 1). */
+    public net.minecraft.nbt.CompoundTag gates = new net.minecraft.nbt.CompoundTag();
+    public int homeGate = 1;
     public int eleTokens = 0;
     public String eleMark = "";
     public long eleMarkDay = 0;
@@ -50,6 +53,8 @@ public class StoryData implements INBTSerializable<CompoundTag> {
     public boolean cdFail = false;
     public boolean boughtBuckle = false, boughtPack = false;
     public long eliteCd = 0;
+    /** Сколько тиков оставалось на контракт при выходе (срок контракта идёт только в игре). */
+    public long questLeft = 0;
     public CompoundTag kills = new CompoundTag();
     // Луна
     public boolean lunaBox = false;
@@ -71,7 +76,7 @@ public class StoryData implements INBTSerializable<CompoundTag> {
         t.putInt("showcase", showcase);
         t.putBoolean("liftOk", liftOk);
         t.putInt("eleStage", eleStage); t.put("phoneCd", phoneCd);
-        t.putBoolean("pvpShield", pvpShield); t.putInt("eleTokens", eleTokens); t.putString("eleMark", eleMark); t.putLong("eleMarkDay", eleMarkDay); t.put("eleDone", eleDone); t.put("eleShop", eleShop);
+        t.putBoolean("pvpShield", pvpShield); t.put("gates", gates); t.putInt("homeGate", homeGate); t.putInt("eleTokens", eleTokens); t.putString("eleMark", eleMark); t.putLong("eleMarkDay", eleMarkDay); t.put("eleDone", eleDone); t.put("eleShop", eleShop);
         t.put("food", food); t.put("foodStock", foodStock);
         t.putLong("hits", hits); t.putLong("distM", distM); t.putLong("stashesOpened", stashesOpened);
         t.put("milestones", milestones);
@@ -88,7 +93,7 @@ public class StoryData implements INBTSerializable<CompoundTag> {
         t.putInt("questNeed", questNeed); t.putInt("questHave", questHave); t.putInt("questTier", questTier);
         t.putInt("questsDone", questsDone); t.putInt("jailed", jailed);
         t.putLong("questDeadline", questDeadline); t.putLong("questCooldown", questCooldown); t.putLong("jailUntil", jailUntil);
-        t.putBoolean("lunaBox", lunaBox); t.putBoolean("cdFail", cdFail); t.putBoolean("boughtBuckle", boughtBuckle); t.putBoolean("boughtPack", boughtPack); t.putLong("eliteCd", eliteCd); t.put("kills", kills); t.putInt("lunaCaught", lunaCaught);
+        t.putBoolean("lunaBox", lunaBox); t.putBoolean("cdFail", cdFail); t.putBoolean("boughtBuckle", boughtBuckle); t.putBoolean("boughtPack", boughtPack); t.putLong("eliteCd", eliteCd); t.putLong("questLeft", questLeft); t.put("kills", kills); t.putInt("lunaCaught", lunaCaught);
         return t;
     }
 
@@ -107,7 +112,7 @@ public class StoryData implements INBTSerializable<CompoundTag> {
         showcase = t.getInt("showcase");
         liftOk = t.getBoolean("liftOk");
         eleStage = t.getInt("eleStage"); phoneCd = t.getCompound("phoneCd");
-        pvpShield = t.getBoolean("pvpShield"); eleTokens = t.getInt("eleTokens"); eleMark = t.getString("eleMark"); eleMarkDay = t.getLong("eleMarkDay"); eleDone = t.getCompound("eleDone"); eleShop = t.getCompound("eleShop");
+        pvpShield = t.getBoolean("pvpShield"); gates = t.getCompound("gates"); homeGate = Math.max(1, t.getInt("homeGate")); eleTokens = t.getInt("eleTokens"); eleMark = t.getString("eleMark"); eleMarkDay = t.getLong("eleMarkDay"); eleDone = t.getCompound("eleDone"); eleShop = t.getCompound("eleShop");
         food = t.getCompound("food"); foodStock = t.getCompound("foodStock");
         hits = t.getLong("hits"); distM = t.getLong("distM"); stashesOpened = t.getLong("stashesOpened");
         milestones = t.getCompound("milestones");
@@ -126,6 +131,6 @@ public class StoryData implements INBTSerializable<CompoundTag> {
         questNeed = t.getInt("questNeed"); questHave = t.getInt("questHave"); questTier = t.getInt("questTier");
         questsDone = t.getInt("questsDone"); jailed = t.getInt("jailed");
         questDeadline = t.getLong("questDeadline"); questCooldown = t.getLong("questCooldown"); jailUntil = t.getLong("jailUntil");
-        lunaBox = t.getBoolean("lunaBox"); cdFail = t.getBoolean("cdFail"); boughtBuckle = t.getBoolean("boughtBuckle"); boughtPack = t.getBoolean("boughtPack"); eliteCd = t.getLong("eliteCd"); kills = t.getCompound("kills"); lunaCaught = t.getInt("lunaCaught");
+        lunaBox = t.getBoolean("lunaBox"); cdFail = t.getBoolean("cdFail"); boughtBuckle = t.getBoolean("boughtBuckle"); boughtPack = t.getBoolean("boughtPack"); questLeft = t.getLong("questLeft"); eliteCd = t.getLong("eliteCd"); kills = t.getCompound("kills"); lunaCaught = t.getInt("lunaCaught");
     }
 }

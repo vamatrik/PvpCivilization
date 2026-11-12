@@ -138,5 +138,6 @@
  "entity.pvpciv.courier": "Курьер «Шпиль.Еды»",
  "subtitles.pvpciv.phone_ring": "Звонит телефон",
  "item.pvpciv.monorail_segment": "Сегмент монорельса",
- "entity.pvpciv.lift_cabin": "Кабина лифта"
+ "entity.pvpciv.lift_cabin": "Кабина лифта",
+ "item.pvpciv.parachute_canopy": "Купол парашюта"
 }

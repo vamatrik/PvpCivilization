@@ -42,6 +42,7 @@ public final class ClientInit {
             e.registerEntityRenderer(ModRegistry.PARACHUTIST.get(), ctx -> new NpcRenderer<>(ctx, true, PvpCiv.id("textures/entity/parachutist.png")));
             e.registerEntityRenderer(ModRegistry.PLUMBER.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/plumber.png")));
             e.registerEntityRenderer(ModRegistry.COURIER.get(), CourierRenderer::new);
+            e.registerEntityRenderer(ModRegistry.GATE.get(), GateRenderer::new);
             e.registerEntityRenderer(ModRegistry.SMUGGLER.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/smuggler.png")));
             e.registerEntityRenderer(ModRegistry.CARMILLA.get(), GeoNpcRenderer::new);
             e.registerEntityRenderer(ModRegistry.ELEONORA.get(), GeoNpcRenderer::new);
@@ -78,6 +79,16 @@ public final class ClientInit {
             e.setIncrement(Hud.bossBar(e.getGuiGraphics(), e.getBossEvent(), e.getX(), e.getY() + 6));
         });
         NeoForge.EVENT_BUS.addListener((CustomizeGuiOverlayEvent.Chat e) -> e.setPosY(e.getPosY() - 12));
+        // поездка на лифте: камера отъезжает — смотрим на кабину издалека, от 3-го лица, с медленным облётом (бета 12.11)
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.CalculateDetachedCameraDistanceEvent e) -> {
+            if (liftCam()) e.setDistance(14f);
+        });
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.ViewportEvent.ComputeCameraAngles e) -> {
+            if (!liftCam()) return;
+            float t = (System.currentTimeMillis() - ClientState.cineStart) / 1000f;
+            e.setYaw(camYaw + 40 + t * 9f);
+            e.setPitch(12f);
+        });
         NeoForge.EVENT_BUS.addListener((RenderTooltipEvent.Color e) -> {
             var st = e.getItemStack();
             e.setBackground(0xF2100D18);
@@ -106,36 +117,58 @@ public final class ClientInit {
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> ClientState.reset());
     }
 
-    /** Лодки выше тира 1 и титул «Ледяной гонщик» — меньше трения на льду (лодкой управляет клиент). */
+    /**
+     * Лодки выше тира 1 (лодкой управляет клиент): быстрее по льду и по земле (отдельные параметры), доворачивают быстрее
+     * и меньше «скользят» — скорость поворачивается за носом лодки. Титул «Ледяной гонщик» — ещё +6% на льду.
+     */
     private static void boatBoost(Minecraft mc) {
         if (mc.player == null || !(mc.player.getVehicle() instanceof net.minecraft.world.entity.vehicle.Boat b) || b.getControllingPassenger() != mc.player) return;
-        double bonus = b instanceof com.pvpciv.entity.CivBoat cb ? com.pvpciv.item.BoatSummonItem.speedBonus(cb.tier())
-                : b.getVariant() == net.minecraft.world.entity.vehicle.Boat.Type.BIRCH ? com.pvpciv.item.BoatSummonItem.speedBonus(2) : 0;
-        if ("ice_racer".equals(ClientState.activeTitle)) bonus += 0.06;
-        // маневренность: улучшенные лодки доворачивают быстрее (T2 +0.8°/тик, T3 +1.6°/тик к ванильному 1°)
-        int tier = b instanceof com.pvpciv.entity.CivBoat cb2 ? cb2.tier() : b.getVariant() == net.minecraft.world.entity.vehicle.Boat.Type.BIRCH ? 2 : 1;
-        float turn = tier >= 3 ? 1.6f : tier == 2 ? 0.8f : 0f;
+        int tier = b instanceof com.pvpciv.entity.CivBoat cb ? cb.tier() : b.getVariant() == net.minecraft.world.entity.vehicle.Boat.Type.BIRCH ? 2 : 1;
         var in = mc.player.input;
+        float turn = com.pvpciv.item.BoatSummonItem.turnBonus(tier);
         if (turn > 0 && in.left != in.right) {
             float d = in.left ? -turn : turn;
             b.setYRot(b.getYRot() + d);
             mc.player.setYRot(mc.player.getYRot() + d);
         }
-        if (bonus <= 0 || !b.onGround()) return;
+        if (!b.onGround()) return;
+        var below = mc.level.getBlockState(b.blockPosition().below());
+        boolean ice = below.getBlock().getFriction() > 0.9f || mc.level.getBlockState(b.blockPosition()).getBlock().getFriction() > 0.9f;
+        double bonus = ice ? com.pvpciv.item.BoatSummonItem.iceBonus(tier) : com.pvpciv.item.BoatSummonItem.landBonus(tier);
+        if (ice && "ice_racer".equals(ClientState.activeTitle)) bonus += 0.06;
         var v = b.getDeltaMovement();
-        if (v.x * v.x + v.z * v.z < 0.0025) return;
+        double sp2 = v.x * v.x + v.z * v.z;
+        if (sp2 < 0.0025) return;
+        // сцепление: часть скорости разворачивается по направлению носа
+        double grip = com.pvpciv.item.BoatSummonItem.grip(tier), sp = Math.sqrt(sp2);
+        if (grip > 0) {
+            double yaw = Math.toRadians(b.getYRot()), fx = -Math.sin(yaw), fz = Math.cos(yaw);
+            double dir = fx * v.x + fz * v.z >= 0 ? 1 : -1;   // задний ход — разворачиваем назад
+            v = new net.minecraft.world.phys.Vec3(v.x + (fx * sp * dir - v.x) * grip, v.y, v.z + (fz * sp * dir - v.z) * grip);
+        }
         // потолок скорости: на льду трение почти 1, и без него буст разгонял лодку бесконечно — её подбрасывало в небо
-        double max = 1.5 + bonus * 3, sp2 = v.x * v.x + v.z * v.z;
-        if (sp2 > max * max) return;
-        double k = 1 + 0.012 * bonus / 0.1;
+        double max = 1.5 + bonus * 3;
+        double k = bonus > 0 && sp < max ? 1 + 0.012 * bonus / 0.1 : 1;
         b.setDeltaMovement(v.x * k, Math.min(v.y, 0.5), v.z * k);
     }
 
     private static boolean calibrated = false;
+    private static net.minecraft.client.CameraType savedCam = null;
+    private static float camYaw;
+
+    private static boolean liftCam() { return ClientState.cineKind == 5 && System.currentTimeMillis() - ClientState.cineStart < ClientState.cineLen; }
 
     private static void onTick() {
         Minecraft mc = Minecraft.getInstance();
         boatBoost(mc);
+        if (liftCam() && savedCam == null && mc.player != null) {
+            savedCam = mc.options.getCameraType();
+            camYaw = mc.player.getYRot();
+            mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+        } else if (!liftCam() && savedCam != null) {
+            mc.options.setCameraType(savedCam);
+            savedCam = null;
+        }
         if (!calibrated && mc.font != null && mc.player != null) {
             calibrated = true;
             com.mojang.logging.LogUtils.getLogger().info("[UI-FIT] калибровка шрифта: Поко X3 Про={} Золотая морковь={} Жетоны: 200={} ★✦={}",

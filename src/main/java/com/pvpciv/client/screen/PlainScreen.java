@@ -12,6 +12,11 @@ public abstract class PlainScreen extends Screen {
     protected int left, top;
     protected final Fx fx = new Fx();
     protected final boolean backToInventory;
+    /** Прокрутка списка экрана (если список длиннее окна). */
+    protected final com.pvpciv.client.ui.Scroll scroll = new com.pvpciv.client.ui.Scroll();
+    @Override public boolean mouseScrolled(double mx, double my, double sx, double sy) { return scroll.wheel(sy) || super.mouseScrolled(mx, my, sx, sy); }
+    /** Строка списка видна (для кликов)? y — экранная координата строки, rh — её высота, [vy, vy+vh) — окно списка. */
+    protected static boolean visible(int y, int rh, int vy, int vh) { return y + rh > vy && y < vy + vh; }
 
     protected PlainScreen(String title, int w, int h, boolean backToInventory) {
         super(Component.literal(title));

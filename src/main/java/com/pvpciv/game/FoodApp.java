@@ -19,6 +19,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.function.Supplier;
@@ -43,6 +44,8 @@ public final class FoodApp {
     };
     /** Тарифы: обычная / экспресс. */
     public static final int[] FEE = {40, 120};
+    /** Надбавка за место: к двери / к вратам / «ко мне». */
+    public static final int[] DEST_FEE = {0, 30, 80};
     public static final int[] ETA_S = {90, 40};
     public static final float[] LATE = {0.35f, 0.10f};
     public static final long RESTOCK_MS = 30 * 60_000L, WAIT_MS = 3 * 60_000L;
@@ -70,6 +73,7 @@ public final class FoodApp {
         int state = d.food.getInt("state");
         j.addProperty("state", state);
         if (state == 1) j.addProperty("eta", Math.max(0, (d.food.getLong("eta") - now()) / 1000));
+        if (state != 0) j.addProperty("where", apt(p) == null ? "" : where(d.food.getString("dest").isEmpty() ? "door" : d.food.getString("dest"), apt(p)));
         if (state == 2) j.addProperty("wait", Math.max(0, (d.food.getLong("door") + WAIT_MS - now()) / 1000));
         PacketDistributor.sendToPlayer(p, new Network.PhoneData(1, j.toString()));
     }
@@ -77,7 +81,10 @@ public final class FoodApp {
     private static CivData.Apartment apt(ServerPlayer p) { return CivData.get(p.server).byId(Progress.d(p).apartment); }
 
     /** cart: "индекс*кол-во,..." ; tariff 0/1. */
-    public static void order(ServerPlayer p, String cart, int tariff) {
+    public static void order(ServerPlayer p, String cart, int tariff, String dest) {
+        if (dest.equals("me") && Vampire.jailed(p)) { msg(p, "«Шпиль.Еда»: в темницу Кармиллы доставляем только по пропуску. Пропуска у нас нет.", ChatFormatting.RED); return; }
+        int di = dest.equals("door") ? 0 : dest.equals("me") ? 2 : 1;
+        if (di == 1 && (Gates.byId(dest) == null || !Gates.fixed(Progress.d(p), dest))) { msg(p, "Эти врата не починены.", ChatFormatting.RED); return; }
         StoryData d = Progress.d(p);
         if (tariff < 0 || tariff > 1) return;
         if (d.food.getInt("state") != 0) { msg(p, "Один заказ уже в пути.", ChatFormatting.RED); return; }
@@ -95,7 +102,7 @@ public final class FoodApp {
             q[i] = c; total += c * MENU[i].price; n += c;
         }
         if (n == 0) return;
-        total += FEE[tariff];
+        total += FEE[tariff] + DEST_FEE[di];
         if (d.money < total) { msg(p, "Не хватает Искр: заказ стоит " + total + " ✦.", ChatFormatting.RED); return; }
         d.money -= total;
         CompoundTag s = stock(d);
@@ -105,12 +112,13 @@ public final class FoodApp {
         long eta = now() + ETA_S[tariff] * 1000L + (late ? (tariff == 0 ? 45 + p.getRandom().nextInt(105) : 20 + p.getRandom().nextInt(40)) * 1000L : 0);
         CompoundTag f = new CompoundTag();
         f.putInt("state", 1); f.putString("cart", sb.toString()); f.putInt("fee", FEE[tariff]); f.putInt("sum", total - FEE[tariff]);
+        f.putString("dest", dest); f.putInt("destFee", DEST_FEE[di]);
         f.putLong("eta", eta); f.putLong("promised", now() + ETA_S[tariff] * 1000L); f.putBoolean("late", late); f.putInt("apt", a.id);
         d.food = f;
         p.setData(ModRegistry.STORY.get(), d);
         Story.sync(p);
         Phone.chime(p);
-        msg(p, "🛵 «Шпиль.Еда»: заказ принят, " + total + " ✦. Курьер привезёт к двери кв. " + a.number + " через ~" + ETA_S[tariff] + " с.", ChatFormatting.GREEN);
+        msg(p, "🛵 «Шпиль.Еда»: заказ принят, " + total + " ✦. Курьер привезёт " + where(dest, a) + " через ~" + ETA_S[tariff] + " с.", ChatFormatting.GREEN);
     }
 
     /** Раз в секунду. */
@@ -129,15 +137,47 @@ public final class FoodApp {
                 }
                 return;
             }
+            String dest = d.food.getString("dest");
+            if (dest.equals("me")) {
+                String why = blocked(p);
+                if (why != null && t > d.food.getLong("eta") + 300_000) {   // ждал 5 минут — уехал
+                    int back = d.food.getInt("sum");
+                    d.food = new CompoundTag(); p.setData(ModRegistry.STORY.get(), d);
+                    Progress.addMoney(p, back, false);
+                    msg(p, "🛵 Курьер так и не смог к тебе подойти и уехал. За еду вернули " + back + " ✦.", ChatFormatting.GRAY);
+                    return;
+                }
+                if (why != null) {
+                    if (!d.food.getBoolean("waitMsg")) { d.food.putBoolean("waitMsg", true); msg(p, "🛵 Курьер рядом, но " + why + ". Ждёт, пока выйдешь.", ChatFormatting.GRAY); }
+                    return;
+                }
+                Vec3 at = Taxi.safe(p.serverLevel(), BlockPos.containing(p.position().add(p.getLookAngle().multiply(1, 0, 1).normalize().scale(3))));
+                d.food.putString("dim", p.level().dimension().location().toString());
+                d.food.putDouble("x", at.x); d.food.putDouble("y", at.y); d.food.putDouble("z", at.z);
+            }
             d.food.putInt("state", 2);
             d.food.putLong("door", t);
             p.setData(ModRegistry.STORY.get(), d);
             Phone.chime(p);
-            msg(p, "🛵 Курьер у двери кв. " + a.number + "! Ждёт 3 минуты — выйди и забери заказ.", ChatFormatting.GREEN);
+            msg(p, "🛵 Курьер " + (dest.equals("me") ? "прибежал к тебе" : "ждёт " + where(dest, a)) + "! 3 минуты — забери заказ.", ChatFormatting.GREEN);
             return;
         }
-        ServerLevel lvl = CivWorld.level(p.server);
-        BlockPos spot = spot(a);
+        String dest = d.food.getString("dest");
+        ServerLevel lvl;
+        BlockPos spot;
+        if (dest.equals("me")) {
+            lvl = p.server.getLevel(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, net.minecraft.resources.ResourceLocation.parse(d.food.getString("dim"))));
+            if (lvl == null) lvl = p.serverLevel();
+            spot = BlockPos.containing(d.food.getDouble("x"), d.food.getDouble("y"), d.food.getDouble("z"));
+        } else if (Gates.byId(dest) != null) {
+            Gates.Gate g = Gates.byId(dest);
+            lvl = g.floor() == 2 ? CivWorld.f2(p.server) : CivWorld.level(p.server);
+            Vec3 at = Taxi.safe(lvl, g.pos().get().offset(2, 0, 2));
+            spot = BlockPos.containing(at);
+        } else {
+            lvl = CivWorld.level(p.server);
+            spot = spot(a);
+        }
         CityNpcEntity c = courier(lvl, spot, p);
         if (t > d.food.getLong("door") + WAIT_MS && !DialogueManager.inDialogue(p)) {
             int back = d.food.getInt("sum");
@@ -165,6 +205,24 @@ public final class FoodApp {
         return null;
     }
 
+    private static String where(String dest, CivData.Apartment a) {
+        if (dest.equals("me")) return "прямо к тебе";
+        Gates.Gate g = Gates.byId(dest);
+        return g != null ? "к вратам «" + g.name() + "»" : "к двери кв. " + a.number;
+    }
+
+    /** Почему курьер не идёт «ко мне»: бой, PvP-зона, логово босса, темница. null — можно. */
+    private static String blocked(ServerPlayer p) {
+        if (Vampire.jailed(p)) return "в темницу Кармиллы без пропуска не пускают";
+        if (p.getLastHurtByMobTimestamp() > p.tickCount - 100) return "ты в бою — «я тут постою»";
+        if (com.pvpciv.floor.Zones.at(p).type() == com.pvpciv.floor.Zones.Type.PVP) return "в PvP-зону курьеры не ходят";
+        for (com.pvpciv.floor.BossManager.Def d : com.pvpciv.floor.BossManager.DEFS) {
+            if (d.f2() != CivWorld.isF2(p.level())) continue;
+            if (p.position().distanceTo(Vec3.atBottomCenterOf(d.lair().get())) < d.lairR() + 8) return "к логову босса он не полезет";
+        }
+        return null;
+    }
+
     /** Место курьера: галерея перед дверью квартиры. */
     public static BlockPos spot(CivData.Apartment a) {
         int ix = Integer.signum(a.sign.getX() - a.door.getX()), iz = Integer.signum(a.sign.getZ() - a.door.getZ());
@@ -178,7 +236,7 @@ public final class FoodApp {
         if (d.food.getInt("state") != 2) return;
         boolean late = d.food.getBoolean("late");
         int num = apt(p) == null ? 0 : apt(p).number;
-        int fee = d.food.getInt("fee");
+        int fee = d.food.getInt("fee") + d.food.getInt("destFee");
         String R = c.role.name; int C = c.role.color;
         DialogueManager.Dialogue dl = new DialogueManager.Dialogue("a")
                 .node("a", R, C, late ? "«Шпиль.Еда»! Квартира " + num + "? Простите-простите, опоздал: лифт стоял, на Тракте пробка из лодок, а у Пустоши кто-то кричал «Громила!»…"
@@ -204,7 +262,7 @@ public final class FoodApp {
             if (i < 0 || i >= MENU.length) continue;
             Bag.give(p, new ItemStack(MENU[i].item.get(), q * MENU[i].count));
         }
-        int fee = d.food.getInt("fee");
+        int fee = d.food.getInt("fee") + d.food.getInt("destFee");
         d.food = new CompoundTag();
         p.setData(ModRegistry.STORY.get(), d);
         if (late) Progress.addMoney(p, fee, false);

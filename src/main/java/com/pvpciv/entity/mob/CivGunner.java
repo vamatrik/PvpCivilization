@@ -15,6 +15,11 @@ import net.minecraft.world.level.Level;
 public class CivGunner extends CivSkeleton {
     public CivGunner(EntityType<? extends net.minecraft.world.entity.monster.Skeleton> type, Level level) { super(type, level); }
 
+    @Override protected net.minecraft.sounds.SoundEvent getAmbientSound() { return SoundEvents.PILLAGER_AMBIENT; }
+    @Override protected net.minecraft.sounds.SoundEvent getHurtSound(net.minecraft.world.damagesource.DamageSource s) { return SoundEvents.PILLAGER_HURT; }
+    @Override protected net.minecraft.sounds.SoundEvent getDeathSound() { return SoundEvents.PILLAGER_DEATH; }
+    @Override protected net.minecraft.sounds.SoundEvent getStepSound() { return SoundEvents.ARMOR_EQUIP_IRON.value(); }
+
     @Override
     public void performRangedAttack(LivingEntity target, float power) {
         if (!(level() instanceof ServerLevel lvl)) return;

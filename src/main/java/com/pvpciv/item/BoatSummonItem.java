@@ -37,7 +37,13 @@ public class BoatSummonItem extends Item {
     }
 
     /** Множитель скорости на льду (тир 1 — ваниль). */
-    public static double speedBonus(int tier) { return tier <= 1 ? 0 : 0.10 * (tier - 1); }
+    /** Скорость по льду и по земле — отдельные параметры (пока одинаковые, бета 12.11). */
+    public static double iceBonus(int tier) { return tier <= 1 ? 0 : 0.10 * (tier - 1); }
+    public static double landBonus(int tier) { return tier <= 1 ? 0 : 0.10 * (tier - 1); }
+    /** Маневренность: доворот (°/тик) и «сцепление» — какая доля скорости поворачивается за носом лодки за тик. */
+    public static float turnBonus(int tier) { return tier <= 1 ? 0 : tier == 2 ? 2.5f : 4.5f; }
+    public static double grip(int tier) { return tier <= 1 ? 0 : tier == 2 ? 0.12 : 0.22; }
+    public static double speedBonus(int tier) { return iceBonus(tier); }
 
     @Override
     public InteractionResult useOn(UseOnContext ctx) {
@@ -87,7 +93,7 @@ public class BoatSummonItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack st, TooltipContext ctx, List<Component> tip, TooltipFlag flag) {
-        tip.add(Component.literal("Тир " + tier + " • " + title + (tier > 1 ? " • +" + Math.round(speedBonus(tier) * 100) + "% скорости на льду" : " • Обычная")).withStyle(tier > 1 ? ChatFormatting.AQUA : ChatFormatting.GRAY));
+        tip.add(Component.literal("Тир " + tier + " • " + title + (tier > 1 ? " • +" + Math.round(speedBonus(tier) * 100) + "% скорости (лёд и земля), руль острее" : " • Обычная")).withStyle(tier > 1 ? ChatFormatting.AQUA : ChatFormatting.GRAY));
         tip.add(Component.literal("ПКМ по льду — поставить лодку").withStyle(ChatFormatting.DARK_AQUA));
         tip.add(Component.literal("ПКМ рядом с лодкой — убрать обратно").withStyle(ChatFormatting.DARK_AQUA));
         tip.add(Component.literal("Далеко? ПКМ — лодка вернётся к тебе").withStyle(ChatFormatting.DARK_AQUA));

@@ -47,6 +47,8 @@ public final class Phone {
     /** Команды от экрана телефона: "bail", "food", "food_order:<корзина>:<тариф>", "taxi", "taxi_order:<от>:<до>", "taxi_cancel", "answer". */
     public static void cmd(ServerPlayer p, String c) {
         String[] a = c.split(":");
+        if (a[0].equals("gate") && a.length == 3) { Gates.request(p, a[1], a[2]); return; }
+        if (a[0].equals("gate_up")) { Gates.upgradeHome(p); return; }
         if (a[0].equals("opt")) { option(p, a.length > 1 ? a[1] : "", a.length > 2 && a[2].equals("1")); return; }
         if (!has(p)) return;
         try {
@@ -55,10 +57,11 @@ public final class Phone {
                 case "opt" -> option(p, a.length > 1 ? a[1] : "", a.length > 2 && a[2].equals("1"));
                 case "bail" -> bail(p);
                 case "food" -> FoodApp.open(p);
-                case "food_order" -> FoodApp.order(p, a[1], Integer.parseInt(a[2]));
+                case "food_order" -> FoodApp.order(p, a[1], Integer.parseInt(a[2]), a.length > 3 ? a[3] : "door");
                 case "taxi" -> Taxi.open(p);
                 case "taxi_order" -> Taxi.order(p, Integer.parseInt(a[1]), Integer.parseInt(a[2]));
                 case "taxi_cancel" -> Taxi.cancel(p);
+                case "taxi_home" -> Taxi.home(p);
                 default -> {}
             }
         } catch (RuntimeException ignored) {}

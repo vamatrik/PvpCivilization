@@ -120,7 +120,7 @@ public final class CombatEvents {
             // стрелы лучников — от уровня моба (раньше ванильные ≈4 на любом уровне)
             if (e.getSource().getDirectEntity() instanceof net.minecraft.world.entity.projectile.AbstractArrow
                     && mob instanceof com.pvpciv.entity.mob.CivSkeleton && !(mob instanceof com.pvpciv.entity.mob.CivGunner))
-                e.setAmount((float) (mob.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) * 0.9));
+                e.setAmount((float) (mob.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) * 1.4));   // бета 12.11: лучники бьют сильнее (стреляют реже, чем бьют в ближнем бою)
             int dl = Mobs.level(mob) - Progress.d(p).level;
             e.setAmount((float) (e.getAmount() * levelTaken(dl) * crowd(p, mob)));
             Mobs.Kind k = Mobs.Kind.of(mob.getType());

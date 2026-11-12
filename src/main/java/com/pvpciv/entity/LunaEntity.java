@@ -69,7 +69,7 @@ public class LunaEntity extends GeoNpc {
     }
 
     public static boolean inRoom(Vec3 p) {
-        return p.x >= -6 && p.x < -1 && p.z >= -30.9 && p.z < -25.9 && p.y >= 99.5 && p.y < 104;
+        return p.x >= -6 && p.x < -1 && p.z >= -30.9 && p.z < -25.0 && p.y >= 99.5 && p.y < 104;   // с беты: и ряд у двери
     }
 
     @Override
@@ -86,7 +86,7 @@ public class LunaEntity extends GeoNpc {
                 Titles.grant(p, "uninvited");
                 Story.say(p, "Луна", COLOR, lunaInside ? "…" : "(Ты в комнате Луны. Тут пахнет вишней и опасностью. Дневник на кафедре, шкатулка у окна.)");
             }
-            if (lunaInside && caught == null && catchTimer < 0) startCatch(p);
+            if (lunaInside && caught == null && catchTimer < 0 && !hidden(sl, p)) startCatch(p);
         }
         if (catchTimer >= 0) { tickCatch(sl); return; }
 
@@ -167,17 +167,43 @@ public class LunaEntity extends GeoNpc {
         sl.sendParticles(ParticleTypes.CHERRY_LEAVES, getX(), getY() + 1, getZ(), 25, 0.4, 0.6, 0.4, 0.05);
     }
 
-    // ------------------------------------------------------------------ поймала!
+    /** Пригнулся за низкой стенкой (пуф у двери) — Луна не видит: между её ногами и твоими есть твёрдый блок на уровне пола. */
+    private boolean hidden(ServerLevel sl, ServerPlayer p) {
+        if (!p.isCrouching()) return false;
+        Vec3 a = position().add(0, 0.5, 0), b = p.position().add(0, 0.5, 0);
+        for (int i = 1; i < 12; i++) {
+            Vec3 q = a.lerp(b, i / 12.0);
+            BlockPos bp = BlockPos.containing(q);
+            if (!sl.getBlockState(bp).getCollisionShape(sl, bp).isEmpty()) return true;
+        }
+        return false;
+    }
+
+    // ------------------------------------------------------------------ поймала! (мини-катсцена-диалог ~10 с)
     private void startCatch(ServerPlayer p) {
         caught = p.getUUID();
-        catchTimer = 40;
+        catchTimer = 20 * 40;   // страховка: если диалог «завис» — всё равно выставит
         getNavigation().stop();
         lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, p.getEyePosition());
         setAnim("cross");
-        String[] lines = {"…ЧТО. ТЫ. ДЕЛАЕШЬ. В МОЕЙ КОМНАТЕ?!", "Ты… ты рылся в моих вещах?! Бака! Бака-бака-бака!", "Опять ты?! Я же сменила замок! …Как ты вообще сюда попал?!"};
-        StoryData d = Progress.d(p);
-        Story.say(p, "Луна", COLOR, lines[Math.min(lines.length - 1, d.lunaCaught)]);
         level().playSound(null, blockPosition(), SoundEvents.ALLAY_HURT, SoundSource.NEUTRAL, 1f, 1.4f);
+        p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 20 * 30, 9, false, false));
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.pvpciv.net.Network.Cinematic(7, 20 * 30, ""));
+        StoryData d = Progress.d(p);
+        String W = "Луна";
+        String[] open = {"…ЧТО. ТЫ. ДЕЛАЕШЬ. В МОЕЙ КОМНАТЕ?!", "Ты… опять?! Ты рылся в моих вещах?! Бака! Бака-бака-бака!", "Я же сменила замок! …Как ты вообще сюда попал?!"};
+        var dl = new com.pvpciv.game.DialogueManager.Dialogue("a")
+                .node("a", W, COLOR, open[Math.min(open.length - 1, d.lunaCaught)],
+                        com.pvpciv.game.DialogueManager.opt("Я… заблудился", "b1"), com.pvpciv.game.DialogueManager.opt("Искал туалет", "b2"),
+                        com.pvpciv.game.DialogueManager.opt("Пришёл в гости", "b3"))
+                .node("b1", W, COLOR, "Заблудился. В общаге. Где на каждой двери — номер. Ну-ну.", com.pvpciv.game.DialogueManager.opt("…", "c"))
+                .node("b2", W, COLOR, "Туалет. В комнате девушки. Рядом с дневником. Гениально.", com.pvpciv.game.DialogueManager.opt("…", "c"))
+                .node("b3", W, COLOR, "В гости приходят, когда ЗОВУТ. Тебя — не звали.", com.pvpciv.game.DialogueManager.opt("…", "c"))
+                .node("c", W, COLOR, "Ты трогал мой дневник? Только честно.", com.pvpciv.game.DialogueManager.opt("Нет!", "d"), com.pvpciv.game.DialogueManager.opt("Чуть-чуть…", "e"))
+                .node("d", W, COLOR, "Врёшь. Страницы помяты. БАКА!", com.pvpciv.game.DialogueManager.opt("[Вылететь за дверь]", null))
+                .node("e", W, COLOR, "…Хотя бы честный. Всё равно — ВОН!", com.pvpciv.game.DialogueManager.opt("[Вылететь за дверь]", null))
+                .onEnd(pp -> catchTimer = 1).onAbort(pp -> catchTimer = 1);
+        com.pvpciv.game.DialogueManager.open(p, this, dl);
     }
 
     private void tickCatch(ServerLevel sl) {
@@ -185,6 +211,8 @@ public class LunaEntity extends GeoNpc {
         if (p == null) { catchTimer = -1; caught = null; return; }
         lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, p.getEyePosition());
         if (--catchTimer > 0) return;
+        p.removeEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN);
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.pvpciv.net.Network.Cinematic(0, 1, ""));
         // выставить за дверь с «Рывком»
         StoryData d = Progress.d(p);
         d.lunaCaught++;

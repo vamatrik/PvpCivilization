@@ -48,6 +48,9 @@ public final class ModRegistry {
             COMPONENTS.registerComponentType("stars", b -> b.persistent(com.mojang.serialization.Codec.INT).networkSynchronized(net.minecraft.network.codec.ByteBufCodecs.VAR_INT));
     public static final DeferredHolder<net.minecraft.core.component.DataComponentType<?>, net.minecraft.core.component.DataComponentType<Integer>> ARMOR_XP =
             COMPONENTS.registerComponentType("armor_xp", b -> b.persistent(com.mojang.serialization.Codec.INT).networkSynchronized(net.minecraft.network.codec.ByteBufCodecs.VAR_INT));
+    /** 0.8.6: уровень ядра брони (+1…+10) — до какого улучшения подходит. */
+    public static final DeferredHolder<net.minecraft.core.component.DataComponentType<?>, net.minecraft.core.component.DataComponentType<Integer>> CORE_LEVEL =
+            COMPONENTS.registerComponentType("core_level", b -> b.persistent(com.mojang.serialization.Codec.INT).networkSynchronized(net.minecraft.network.codec.ByteBufCodecs.VAR_INT));
     public static final DeferredHolder<net.minecraft.core.component.DataComponentType<?>, net.minecraft.core.component.DataComponentType<Integer>> CORE_POWER =
             COMPONENTS.registerComponentType("core_power", b -> b.persistent(com.mojang.serialization.Codec.INT).networkSynchronized(net.minecraft.network.codec.ByteBufCodecs.VAR_INT));
 
@@ -195,6 +198,8 @@ public final class ModRegistry {
             () -> EntityType.Builder.<com.pvpciv.entity.CityNpcEntity>of((t, l) -> new com.pvpciv.entity.CityNpcEntity(t, l, com.pvpciv.entity.CityNpcEntity.Role.SMUGGLER), MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("smuggler"));
     public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.LiftCabin>> LIFT_CABIN = ENTITIES.register("lift_cabin",
             () -> EntityType.Builder.<com.pvpciv.entity.LiftCabin>of(com.pvpciv.entity.LiftCabin::new, MobCategory.MISC).sized(2.6F, 3.0F).clientTrackingRange(16).updateInterval(1).build("lift_cabin"));
+    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.GateEntity>> GATE = ENTITIES.register("gate",
+            () -> EntityType.Builder.<com.pvpciv.entity.GateEntity>of(com.pvpciv.entity.GateEntity::new, MobCategory.MISC).sized(1.4F, 2.2F).clientTrackingRange(10).build("gate"));
     public static final DeferredItem<Item> MONORAIL_SEGMENT = ITEMS.register("monorail_segment", () -> new Item(new Item.Properties()));
     public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.CivBoat>> CIV_BOAT = ENTITIES.register("civ_boat",
             () -> EntityType.Builder.<com.pvpciv.entity.CivBoat>of(com.pvpciv.entity.CivBoat::new, MobCategory.MISC).sized(1.375F, 0.5625F).clientTrackingRange(10).build("civ_boat"));
@@ -271,6 +276,8 @@ public final class ModRegistry {
             tip.add(net.minecraft.network.chat.Component.literal("ПКМ — выкуп из темницы, доставка еды, такси.").withStyle(net.minecraft.ChatFormatting.DARK_AQUA));
         }
     });
+    /** 3D-купол парашюта (только для отображения над игроком). */
+    public static final DeferredItem<Item> PARACHUTE_CANOPY = ITEMS.register("parachute_canopy", () -> new Item(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> PARACHUTE = ITEMS.register("parachute", () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)) {
         @Override public void appendHoverText(ItemStack st, TooltipContext c, java.util.List<net.minecraft.network.chat.Component> tip, net.minecraft.world.item.TooltipFlag f) {
             tip.add(net.minecraft.network.chat.Component.literal("Раскрывается сам, если долго падаешь.").withStyle(net.minecraft.ChatFormatting.GRAY));

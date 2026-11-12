@@ -61,4 +61,14 @@ public class CivBeast extends Monster implements GeoEntity {
     }
 
     @Override public AnimatableInstanceCache getAnimatableInstanceCache() { return cache; }
+
+    // ---- голоса зверей: крысы пищат, дворняги рычат
+    private boolean dog() { return "street_dog".equals(model()); }
+    @Override protected net.minecraft.sounds.SoundEvent getAmbientSound() { return dog() ? net.minecraft.sounds.SoundEvents.WOLF_GROWL : net.minecraft.sounds.SoundEvents.SILVERFISH_AMBIENT; }
+    @Override protected net.minecraft.sounds.SoundEvent getHurtSound(net.minecraft.world.damagesource.DamageSource s) { return dog() ? net.minecraft.sounds.SoundEvents.WOLF_HURT : net.minecraft.sounds.SoundEvents.SILVERFISH_HURT; }
+    @Override protected net.minecraft.sounds.SoundEvent getDeathSound() { return dog() ? net.minecraft.sounds.SoundEvents.WOLF_DEATH : net.minecraft.sounds.SoundEvents.SILVERFISH_DEATH; }
+    @Override protected void playStepSound(net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState st) {
+        playSound(dog() ? net.minecraft.sounds.SoundEvents.WOLF_STEP : net.minecraft.sounds.SoundEvents.SILVERFISH_STEP, 0.15f, 1f);
+    }
+    @Override public float getVoicePitch() { return dog() ? 0.9f + random.nextFloat() * 0.15f : 1.2f + random.nextFloat() * 0.2f; }
 }

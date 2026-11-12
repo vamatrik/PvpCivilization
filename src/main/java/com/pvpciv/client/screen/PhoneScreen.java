@@ -29,7 +29,12 @@ public class PhoneScreen extends Screen {
     private float k = 1;
     // еда
     private final int[] cart = new int[FoodApp.MENU.length];
-    private int tariff = 0;
+    private int tariff = 0, dest = 0, gateIdx = 0;
+    /** Выбранные врата для доставки (только починенные). */
+    private String gate() {
+        java.util.List<String> l = com.pvpciv.game.Gates.ALL.stream().map(com.pvpciv.game.Gates.Gate::id).filter(ClientState.gatesFixed::contains).toList();
+        return l.isEmpty() ? null : l.get(Math.floorMod(gateIdx, l.size()));
+    }
     // такси
     private int tFloor = 1, tFrom = -1, tTo = -1, hover = -1;
 
@@ -139,7 +144,7 @@ public class PhoneScreen extends Screen {
 
     private void food(GuiGraphics g, int mx, int my) {
         g.fill(sx, sy + 14, sx + sw, sy + 30, 0xFFE8B820);
-        g.drawString(font, "Шпиль.Еда", sx + 6, sy + 18, 0xFF2A1A00, false);
+        g.drawString(font, "← Шпиль.Еда", sx + 6, sy + 18, Skin.hover(mx, my, sx, sy + 14, 70, 16) ? 0xFF000000 : 0xFF2A1A00, false);
         String rs = "завоз " + mmss(secLeft("restock"));
         g.drawString(font, rs, sx + sw - 6 - font.width(rs), sy + 18, 0xFF5A4000, false);
         int state = data.get("state").getAsInt();
@@ -148,7 +153,7 @@ public class PhoneScreen extends Screen {
             g.pose().pushPose(); g.pose().translate(sx + sw / 2f - 16, cy, 0); g.pose().scale(2, 2, 1);
             g.renderItem(new ItemStack(ModRegistry.DORM_STEW.get()), 0, 0); g.pose().popPose();
             String a = state == 1 ? "Курьер в пути. Примерно " + secLeft("eta") + " с до двери."
-                    : "Курьер у двери кв. " + data.get("apt").getAsInt() + "! Ждёт ещё " + mmss(secLeft("wait")) + ".";
+                    : "Курьер ждёт " + (data.has("where") ? data.get("where").getAsString() : "у двери") + "! Ещё " + mmss(secLeft("wait")) + ".";
             Skin.paraCentered(g, font, a, sx + sw / 2, cy + 42, sw - 16, 10, 3, 0xFFFFFFFF);
             Skin.paraCentered(g, font, "Забирать заказ нужно самому — у двери квартиры. Опоздание бывает: пробки на лифте.", sx + sw / 2, cy + 80, sw - 16, 10, 4, 0xFF9AA4C0);
             back(g, mx, my);
@@ -162,18 +167,30 @@ public class PhoneScreen extends Screen {
         var stock = data.getAsJsonArray("stock");
         for (int i = 0; i < FoodApp.MENU.length; i++) {
             FoodApp.Dish d = FoodApp.MENU[i];
-            int ry = sy + 33 + i * 20, left = stock.get(i).getAsInt() - cart[i];
-            if (i % 2 == 0) g.fill(sx + 2, ry, sx + sw - 2, ry + 19, 0x14FFFFFF);
-            g.renderItem(new ItemStack(d.item().get(), d.count()), sx + 4, ry + 2);
+            int ry = sy + 33 + i * 18, left = stock.get(i).getAsInt() - cart[i];
+            if (i % 2 == 0) g.fill(sx + 2, ry, sx + sw - 2, ry + 17, 0x14FFFFFF);
+            g.renderItem(new ItemStack(d.item().get(), d.count()), sx + 4, ry + 1);
             boolean out = stock.get(i).getAsInt() <= 0;
-            g.drawString(font, Skin.fit(font, d.name(), 80), sx + 22, ry + 2, out ? 0xFF6A6A7A : 0xFFFFFFFF, false);
-            g.drawString(font, d.price() + " ✦ · " + (out ? "нет" : "ост. " + left), sx + 22, ry + 11, out ? 0xFF6A6A7A : 0xFF9AA4C0, false);
+            g.drawString(font, Skin.fit(font, d.name(), 80), sx + 22, ry + 1, out ? 0xFF6A6A7A : 0xFFFFFFFF, false);
+            g.drawString(font, d.price() + " ✦ · " + (out ? "нет" : "ост. " + left), sx + 22, ry + 9, out ? 0xFF6A6A7A : 0xFF9AA4C0, false);
             int bx = sx + sw - 44;
-            qbtn(g, bx, ry + 3, "−", cart[i] > 0, mx, my);
-            g.drawCenteredString(font, String.valueOf(cart[i]), bx + 21, ry + 5, cart[i] > 0 ? Skin.GOLD_L : 0xFF6A6A7A);
-            qbtn(g, bx + 28, ry + 3, "+", left > 0, mx, my);
+            qbtn(g, bx, ry + 2, "−", cart[i] > 0, mx, my);
+            g.drawCenteredString(font, String.valueOf(cart[i]), bx + 21, ry + 4, cart[i] > 0 ? Skin.GOLD_L : 0xFF6A6A7A);
+            qbtn(g, bx + 28, ry + 2, "+", left > 0, mx, my);
         }
-        int fy = sy + 33 + FoodApp.MENU.length * 20 + 3;
+        int dy = sy + 33 + FoodApp.MENU.length * 18 + 2;
+        for (int k = 0; k < 3; k++) {
+            int tx = sx + 4 + k * (sw - 8) / 3, tw = (sw - 8) / 3 - 2;
+            boolean on = dest == k, hv = Skin.hover(mx, my, tx, dy, tw, 13);
+            g.fill(tx, dy, tx + tw, dy + 13, on ? 0xC0E8B820 : hv ? 0x40FFFFFF : 0x20FFFFFF);
+            String lab = k == 0 ? "Дверь" : k == 1 ? "Врата" : "Ко мне";
+            g.drawCenteredString(font, lab, tx + tw / 2, dy + 3, on ? 0xFF2A1A00 : 0xFFFFFFFF);
+        }
+        if (dest == 1) {
+            String gn = gate() == null ? "нет починенных врат" : com.pvpciv.game.Gates.byId(gate()).name();
+            g.drawString(font, Skin.fit(font, "→ " + gn + " (клик — сменить)", sw - 8), sx + 4, dy + 15, 0xFF9AA4C0, false);
+        } else g.drawString(font, dest == 0 ? "к двери квартиры, +0 ✦" : "найдёт тебя, +" + FoodApp.DEST_FEE[2] + " ✦ (не в бою и не в PvP)", sx + 4, dy + 15, 0xFF9AA4C0, false);
+        int fy = dy + 26;
         for (int t = 0; t < 2; t++) {
             int tx = sx + 4 + t * (sw - 8) / 2, tw = (sw - 8) / 2 - 2;
             boolean on = tariff == t, hv = Skin.hover(mx, my, tx, fy, tw, 22);
@@ -181,15 +198,13 @@ public class PhoneScreen extends Screen {
             g.drawCenteredString(font, t == 0 ? "Обычная" : "Экспресс", tx + tw / 2, fy + 2, on ? 0xFF2A1A00 : 0xFFFFFFFF);
             g.drawCenteredString(font, FoodApp.FEE[t] + " ✦ · ~" + FoodApp.ETA_S[t] + " с", tx + tw / 2, fy + 12, on ? 0xFF3A2A00 : 0xFF9AA4C0);
         }
-        int n = cartCount(), total = cartSum() + (n > 0 ? FoodApp.FEE[tariff] : 0);
-        boolean ok = n > 0 && ClientState.money >= total;
-        int by = fy + 26;
+        int n = cartCount(), total = cartSum() + (n > 0 ? FoodApp.FEE[tariff] + FoodApp.DEST_FEE[dest] : 0);
+        boolean ok = n > 0 && ClientState.money >= total && (dest != 1 || gate() != null);
+        int by = fy + 25;
         g.drawString(font, n == 0 ? "Корзина пуста" : "Итого: " + total + " ✦", sx + 6, by + 4, n == 0 ? 0xFF6A6A7A : ok ? Skin.GOLD_L : 0xFFFF8080, false);
         boolean hv = ok && Skin.hover(mx, my, sx + sw - 64, by, 60, 16);
         g.fill(sx + sw - 64, by, sx + sw - 4, by + 16, ok ? (hv ? 0xFFFFD040 : 0xFFE8B820) : 0xFF3A3A48);
         g.drawCenteredString(font, "Заказать", sx + sw - 34, by + 4, ok ? 0xFF2A1A00 : 0xFF6A6A7A);
-        g.drawString(font, "← назад", sx + 6, sy + sh - 11, Skin.hover(mx, my, sx + 4, sy + sh - 13, 50, 12) ? 0xFFFFFFFF : 0xFF7A84A0, false);
-        g.drawString(font, "может опоздать", sx + sw - 6 - font.width("может опоздать"), sy + sh - 11, 0xFF5A6480, false);
     }
 
     private void qbtn(GuiGraphics g, int x, int y, String s, boolean on, int mx, int my) {
@@ -221,6 +236,8 @@ public class PhoneScreen extends Screen {
             g.fill(tx, sy + 16, tx + 62, sy + 29, on ? 0xC02E9E5A : hv ? 0x40FFFFFF : 0x20FFFFFF);
             g.drawCenteredString(font, "Этаж " + f, tx + 31, sy + 19, ok ? 0xFFFFFFFF : 0xFF5A5A6A);
         }
+        int hp = data.has("homePrice") ? data.get("homePrice").getAsInt() : -1;
+        if (hp >= 0) btn2(g, sx + 136, sy + 16, 64, "Домой " + hp + " ✦", ClientState.money >= hp && ClientState.taxiUntil <= System.currentTimeMillis(), mx, my);
         // схема
         int x0 = mapX(), y0 = mapY();
         g.fill(x0, y0, x0 + MW, y0 + MH, 0xFF0C1222);
@@ -271,6 +288,12 @@ public class PhoneScreen extends Screen {
             if (tFrom != here) Skin.para(g, font, "Таксист подождёт на точке 3 мин.", rx, ry + 20, rw, 9, 3, 0xFF5A6480, false);
         }
         g.drawString(font, "← назад", rx, sy + sh - 11, Skin.hover(mx, my, rx - 2, sy + sh - 13, 50, 12) ? 0xFFFFFFFF : 0xFF7A84A0, false);
+    }
+
+    private void btn2(GuiGraphics g, int x, int y, int w, String s, boolean on, int mx, int my) {
+        boolean hv = on && Skin.hover(mx, my, x, y, w, 13);
+        g.fill(x, y, x + w, y + 13, !on ? 0xFF3A3A48 : hv ? 0xFF40C070 : 0xFF2E9E5A);
+        g.drawCenteredString(font, s, x + w / 2, y + 3, on ? 0xFFFFFFFF : 0xFF6A6A7A);
     }
 
     private int lastBtnY = -100;
@@ -330,21 +353,24 @@ public class PhoneScreen extends Screen {
                 }
             }
             case FOOD -> {
-                if (Skin.hover(mx, my, sx + 4, sy + sh - 13, 50, 12)) { click(); cmd("open"); return true; }
+                if (Skin.hover(mx, my, sx + 4, sy + sh - 13, 50, 12) || Skin.hover(mx, my, sx, sy + 14, 70, 16)) { click(); cmd("open"); return true; }
                 if (data.get("state").getAsInt() != 0 || data.get("apt").getAsInt() < 0) return true;
                 var stock = data.getAsJsonArray("stock");
                 for (int i = 0; i < FoodApp.MENU.length; i++) {
-                    int ry = sy + 33 + i * 20, bx = sx + sw - 44;
-                    if (Skin.hover(mx, my, bx, ry + 3, 13, 13) && cart[i] > 0) { cart[i]--; click(); return true; }
-                    if (Skin.hover(mx, my, bx + 28, ry + 3, 13, 13) && cart[i] < stock.get(i).getAsInt()) { cart[i]++; click(); return true; }
+                    int ry = sy + 33 + i * 18, bx = sx + sw - 44;
+                    if (Skin.hover(mx, my, bx, ry + 2, 13, 13) && cart[i] > 0) { cart[i]--; click(); return true; }
+                    if (Skin.hover(mx, my, bx + 28, ry + 2, 13, 13) && cart[i] < stock.get(i).getAsInt()) { cart[i]++; click(); return true; }
                 }
-                int fy = sy + 33 + FoodApp.MENU.length * 20 + 3;
+                int dy = sy + 33 + FoodApp.MENU.length * 18 + 2;
+                for (int k = 0; k < 3; k++) if (Skin.hover(mx, my, sx + 4 + k * (sw - 8) / 3, dy, (sw - 8) / 3 - 2, 13)) { dest = k; click(); return true; }
+                if (dest == 1 && Skin.hover(mx, my, sx + 4, dy + 14, sw - 8, 10)) { gateIdx++; click(); return true; }
+                int fy = dy + 26;
                 for (int t = 0; t < 2; t++) if (Skin.hover(mx, my, sx + 4 + t * (sw - 8) / 2, fy, (sw - 8) / 2 - 2, 22)) { tariff = t; click(); return true; }
-                int n = cartCount(), total = cartSum() + FoodApp.FEE[tariff];
-                if (n > 0 && ClientState.money >= total && Skin.hover(mx, my, sx + sw - 64, fy + 26, 60, 16)) {
+                int n = cartCount(), total = cartSum() + FoodApp.FEE[tariff] + FoodApp.DEST_FEE[dest];
+                if (n > 0 && ClientState.money >= total && (dest != 1 || gate() != null) && Skin.hover(mx, my, sx + sw - 64, fy + 25, 60, 16)) {
                     StringBuilder c = new StringBuilder();
                     for (int i = 0; i < cart.length; i++) if (cart[i] > 0) c.append(i).append('*').append(cart[i]).append(',');
-                    cmd("food_order:" + c + ":" + tariff);
+                    cmd("food_order:" + c + ":" + tariff + ":" + (dest == 0 ? "door" : dest == 2 ? "me" : gate()));
                     click();
                     onClose();
                     return true;
@@ -353,6 +379,7 @@ public class PhoneScreen extends Screen {
             case TAXI -> {
                 int rx = mapX() + MW + 8, rw = sx + sw - 4 - rx;
                 if (Skin.hover(mx, my, rx - 2, sy + sh - 13, 50, 12)) { click(); cmd("open"); return true; }
+                if (Skin.hover(mx, my, sx + 136, sy + 16, 64, 13) && data.has("homePrice") && data.get("homePrice").getAsInt() >= 0) { cmd("taxi_home"); click(); onClose(); return true; }
                 for (int f = 1; f <= 2; f++) if (Skin.hover(mx, my, sx + 4 + (f - 1) * 66, sy + 16, 62, 13) && (f == 1 || data.get("f2").getAsBoolean())) { tFloor = f; click(); return true; }
                 boolean pending = ClientState.taxiUntil > System.currentTimeMillis();
                 if (Skin.hover(mx, my, rx, lastBtnY, rw, 16)) {

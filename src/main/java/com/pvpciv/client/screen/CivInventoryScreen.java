@@ -82,8 +82,7 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
         Skin.button(g, font, x + 184, y + 122, 41, "Трофеи", mx, my, true, false);
         Skin.button(g, font, x + 226, y + 122, 41, "Лодки", mx, my, true, false);
         Skin.button(g, font, x + 142, y + 142, 41, "Боссы", mx, my, true, false);
-        Skin.button(g, font, x + 184, y + 142, 41, "Броня+", mx, my, true, false);
-        Skin.button(g, font, x + 226, y + 142, 41, "Опции", mx, my, true, false);
+        Skin.button(g, font, x + 184, y + 142, 83, "Настройки", mx, my, true, false);
     }
 
     private static String key(int i) { return com.pvpciv.client.ClientInit.SKILL_KEYS[i].getTranslatedKeyMessage().getString().toUpperCase(); }
@@ -151,8 +150,7 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
             if (in(mx, my, 184, 122, 41, 16)) { minecraft.setScreen(new StubScreens.Trophies()); return true; }
             if (in(mx, my, 226, 122, 41, 16)) { minecraft.setScreen(new StubScreens.Boats()); return true; }
             if (in(mx, my, 142, 142, 41, 16)) { minecraft.setScreen(new StubScreens.Bosses()); return true; }
-            if (in(mx, my, 184, 142, 41, 16)) { minecraft.setScreen(new StubScreens.ArmorBench()); return true; }
-            if (in(mx, my, 226, 142, 41, 16)) { minecraft.setScreen(new StubScreens.Settings()); return true; }
+            if (in(mx, my, 184, 142, 83, 16)) { minecraft.setScreen(new StubScreens.Settings()); return true; }
         }
         return super.mouseClicked(mx, my, b);
     }

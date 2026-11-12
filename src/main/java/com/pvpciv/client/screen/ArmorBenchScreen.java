@@ -56,8 +56,8 @@ public class ArmorBenchScreen extends CivScreen<ArmorBenchMenu> {
                 boolean full = xp >= need;
                 if (lv < 10) {
                     int cn = ArmorUp.coreNeed(target);
-                    int have = count(st -> st.is(ModRegistry.ARMOR_CORE.get()) && ArmorCoreItem.power(st) >= cn);
-                    ly = req(g, x + 44, ly, ModRegistry.ARMOR_CORE.get(), "Ядро" + (cn > 0 ? " " + "✦".repeat(cn) + "+" : ""), have, 1);
+                    int have = count(st -> st.is(ModRegistry.ARMOR_CORE.get()) && ArmorCoreItem.level(st) >= cn);
+                    ly = req(g, x + 44, ly, ModRegistry.ARMOR_CORE.get(), "Ядро +" + cn + " или выше", have, 1);
                     boolean ok = have > 0;
                     if (ArmorUp.scrollNeed(target)) {
                         int sh = count(st -> st.is(ModRegistry.TEMPER_SCROLL.get()));
@@ -72,8 +72,8 @@ public class ArmorBenchScreen extends CivScreen<ArmorBenchMenu> {
                     g.drawString(font, "50%! Провал — откат до +5", x + 44, ly + 2, 0xFFFF7060, false);
                     can = full && bl >= ArmorUp.BLESSED_11 && bd >= ArmorUp.BLOOD_11;
                 }
-                int v = ArmorUp.junk(junk);
-                if (v > 0) g.drawString(font, "+" + v + " за шт.", x + 44, y + 138, Skin.GOOD, false);
+                int v = ArmorUp.junkFor(armor, junk);
+                if (v > 0) g.drawString(font, "+" + v + " за шт." + (ArmorUp.native_(armor, junk) ? " (родной ×1.5)" : ""), x + 44, y + 138, Skin.GOOD, false);
             }
         }
         boolean feed = armor.getItem() instanceof CivArmorItem && ArmorUp.junk(junk) > 0 && !ArmorUp.full(armor);

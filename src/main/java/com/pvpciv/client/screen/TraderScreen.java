@@ -17,6 +17,17 @@ import java.util.List;
 /** Лавка Сороки: витрина слева, сумка справа, ПКМ по предмету — продать. */
 public class TraderScreen extends CivScreen<TraderMenu> {
     private static final int ROW = 19, ROWS = 8;
+    /** Первый видимый товар (прокрутка колесом, если товаров больше 8). */
+    private int first;
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double sx, double sy) {
+        if (ClientState.offers.size() > ROWS && in(mx, my, 10, 24, 164, 157)) {
+            first = Math.max(0, Math.min(ClientState.offers.size() - ROWS, first - (int) Math.signum(sy)));
+            return true;
+        }
+        return super.mouseScrolled(mx, my, sx, sy);
+    }
 
     public TraderScreen(TraderMenu m, Inventory inv, Component t) { super(m, inv, t.getString().equals("Контрабандист") ? "Контрабандист Шнырь" : t.getString().equals("Элеонора") ? "Лавка охотницы Элеоноры" : "Лавка Сороки", 352, 206); }
 
@@ -28,11 +39,13 @@ public class TraderScreen extends CivScreen<TraderMenu> {
         int x = leftPos, y = topPos;
         Skin.inset(g, x + 10, y + 24, 164, 157);
         List<Network.OfferView> offers = ClientState.offers;
-        for (int i = 0; i < offers.size() && i < ROWS; i++) {
+        first = Math.max(0, Math.min(first, offers.size() - ROWS));
+        for (int k = 0; k < ROWS && first + k < offers.size(); k++) {
+            int i = first + k;
             Network.OfferView o = offers.get(i);
-            int oy = y + 27 + i * ROW;
+            int oy = y + 27 + k * ROW;
             boolean sold = o.left() <= 0, afford = balance() >= o.price();
-            boolean hv = in(mx, my, 12, 27 + i * ROW, 160, ROW - 1);
+            boolean hv = in(mx, my, 12, 27 + k * ROW, 160, ROW - 1);
             if (hv && !sold && afford) { g.fill(x + 12, oy, x + 172, oy + 18, 0x40D9A441); g.fill(x + 12, oy, x + 14, oy + 18, Skin.GOLD); }
             else if (i % 2 == 0) g.fill(x + 12, oy, x + 172, oy + 18, 0x18FFFFFF);
             g.renderItem(o.stack(), x + 16, oy + 1);
@@ -46,6 +59,11 @@ public class TraderScreen extends CivScreen<TraderMenu> {
                 String lim = o.left() >= 999 ? "без лимита" : "осталось " + o.left();
                 g.drawString(font, lim, x + 36, oy + 10, Skin.DIM, false);
             }
+        }
+        if (offers.size() > ROWS) {   // полоска прокрутки
+            int bh = 150, th = Math.max(12, bh * ROWS / offers.size()), ty = y + 27 + (bh - th) * first / Math.max(1, offers.size() - ROWS);
+            g.fill(x + 170, y + 27, x + 172, y + 27 + bh, 0x30FFFFFF);
+            g.fill(x + 170, ty, x + 172, ty + th, 0xC0D9A441);
         }
         if (offers.isEmpty()) g.drawCenteredString(font, "Товар раскладывают...", x + 92, y + 90, Skin.DIM);
         long ms = Math.max(0, ClientState.shopRotationAt - System.currentTimeMillis());
@@ -69,8 +87,9 @@ public class TraderScreen extends CivScreen<TraderMenu> {
     @Override
     protected void renderTooltip(GuiGraphics g, int mx, int my) {
         List<Network.OfferView> offers = ClientState.offers;
-        for (int i = 0; i < offers.size() && i < ROWS; i++) {
-            if (in(mx, my, 12, 27 + i * ROW, 160, ROW - 1)) {
+        for (int k = 0; k < ROWS && first + k < offers.size(); k++) {
+            int i = first + k;
+            if (in(mx, my, 12, 27 + k * ROW, 160, ROW - 1)) {
                 Network.OfferView o = offers.get(i);
                 List<Component> tip = new ArrayList<>(getTooltipFromContainerItem(o.stack()));
                 tip.add(o.left() <= 0 ? Component.literal(tokens() ? "Раскуплено до завоза (полночь)" : "Распродано до следующего завоза").withStyle(ChatFormatting.DARK_GRAY)
@@ -93,8 +112,8 @@ public class TraderScreen extends CivScreen<TraderMenu> {
 
     @Override
     public boolean mouseClicked(double mx, double my, int b) {
-        for (int i = 0; i < ClientState.offers.size() && i < ROWS; i++)
-            if (in(mx, my, 12, 27 + i * ROW, 160, ROW - 1)) { click(TraderMenu.BTN_BUY0 + i); return true; }
+        for (int k = 0; k < ROWS && first + k < ClientState.offers.size(); k++)
+            if (in(mx, my, 12, 27 + k * ROW, 160, ROW - 1)) { click(TraderMenu.BTN_BUY0 + first + k); return true; }
         if (!tokens() && in(mx, my, 10, 184, 84, 16)) { click(TraderMenu.BTN_SELL_JUNK); return true; }
         return super.mouseClicked(mx, my, b);
     }

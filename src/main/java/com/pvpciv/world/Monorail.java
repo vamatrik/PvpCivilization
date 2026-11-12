@@ -36,8 +36,10 @@ public final class Monorail {
         ServerLevel w1 = CivWorld.level(server), l2 = CivWorld.f2(server);
         if (loaded(w1, S1)) {
             station(w1, S1);
+            // рельс начинается над крышей зала: нижние сегменты проходили сквозь кабину (бета 12.11)
+            for (var e : w1.getEntitiesOfClass(Display.ItemDisplay.class, new AABB(-3, RoofBuilder.RY - 2, -38, 4, RoofBuilder.RY + 10.5, -24), e -> e.getTags().contains(TAG))) e.discard();
             if (w1.getEntitiesOfClass(Display.ItemDisplay.class, new AABB(S1.x - 8, S1.y - 8, S1.z - 12, S1.x + 8, S1.y + 16, S1.z + 4), e -> e.getTags().contains(TAG)).isEmpty())
-                for (double t = 0; t < 170; t += 6) segment(w1, roof(t).add(0, -0.45, 0), roof(t + 6).add(0, -0.45, 0));
+                for (double t = 12; t < 170; t += 6) segment(w1, roof(t).add(0, -0.45, 0), roof(t + 6).add(0, -0.45, 0));
         }
         if (CivWorld.isF2(l2) && loaded(l2, S2)) {
             station(l2, S2);

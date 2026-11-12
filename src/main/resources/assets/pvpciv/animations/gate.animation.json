@@ -1,0 +1,96 @@
+{
+ "format_version": "1.8.0",
+ "animations": {
+  "active": {
+   "loop": true,
+   "animation_length": 4,
+   "bones": {
+    "crystal": {
+     "rotation": {
+      "0": [
+       0,
+       0,
+       0
+      ],
+      "4": [
+       0,
+       360,
+       0
+      ]
+     },
+     "position": {
+      "0": [
+       0,
+       0,
+       0
+      ],
+      "1": [
+       0,
+       1.2,
+       0
+      ],
+      "2": [
+       0,
+       0,
+       0
+      ],
+      "3": [
+       0,
+       -1.2,
+       0
+      ],
+      "4": [
+       0,
+       0,
+       0
+      ]
+     }
+    },
+    "ring": {
+     "rotation": {
+      "0": [
+       0,
+       0,
+       0
+      ],
+      "4": [
+       0,
+       -720,
+       0
+      ]
+     }
+    }
+   }
+  },
+  "broken": {
+   "loop": true,
+   "animation_length": 1,
+   "bones": {
+    "crystal": {
+     "rotation": [
+      20,
+      30,
+      75
+     ],
+     "position": [
+      3,
+      -14,
+      2
+     ]
+    },
+    "ring": {
+     "rotation": [
+      0,
+      0,
+      -40
+     ],
+     "position": [
+      0,
+      -2,
+      0
+     ]
+    }
+   }
+  }
+ }
+}

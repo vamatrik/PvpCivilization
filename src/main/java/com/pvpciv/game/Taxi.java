@@ -85,7 +85,33 @@ public final class Taxi {
         return 25 + (int) Math.round(dist(a, b) * 0.3) + b.deep * 70 + (a.floor != b.floor ? LIFT_FEE : 0);
     }
 
-    private record Order(int from, int to, int price, long until) {}
+    /** from = -1 — забрать «отсюда» (at), to = -2 — домой в квартиру. */
+    private record Order(int from, int to, int price, long until, Vec3 at) {
+        Order(int from, int to, int price, long until) { this(from, to, price, until, null); }
+    }
+
+    /** Домой: подача + немного за расстояние, с этажа 2 — плюс лифт. */
+    public static int homePrice(ServerPlayer p) {
+        com.pvpciv.data.CivData.Apartment a = com.pvpciv.data.CivData.get(p.server).byId(Progress.d(p).apartment);
+        if (a == null) return -1;
+        if (CivWorld.isF2(p.level())) return 40 + LIFT_FEE / 2;
+        return 30 + (int) Math.min(60, Math.hypot(p.getX() - a.door.getX(), p.getZ() - a.door.getZ()) / 10);
+    }
+
+    public static void home(ServerPlayer p) {
+        int price = homePrice(p);
+        StoryData d = Progress.d(p);
+        if (price < 0) { msg(p, "У тебя нет квартиры.", ChatFormatting.RED); return; }
+        if (Vampire.jailed(p)) { msg(p, "Из темницы такси не вызвать. Попробуй «Выкуп».", ChatFormatting.RED); return; }
+        if (PENDING.containsKey(p.getUUID())) { msg(p, "Одно такси уже едет к тебе.", ChatFormatting.RED); return; }
+        if (d.money < price) { msg(p, "Не хватает Искр: " + price + " ✦.", ChatFormatting.RED); return; }
+        d.money -= price;
+        p.setData(ModRegistry.STORY.get(), d);
+        Story.sync(p);
+        PENDING.put(p.getUUID(), new Order(-1, -2, price, p.server.getTickCount() + WAIT_TICKS, p.position()));
+        Phone.chime(p);
+        msg(p, "🚕 Такси домой подъезжает: стой на месте, " + price + " ✦.", ChatFormatting.YELLOW);
+    }
     private static final Map<UUID, Order> PENDING = new HashMap<>();
 
     /** Ближайшая точка к игроку (в пределах PICKUP_R) или -1. */
@@ -108,6 +134,7 @@ public final class Taxi {
         j.addProperty("f2", d.liftOk);
         j.addProperty("here", nearest(p));
         j.addProperty("floor", CivWorld.isF2(p.level()) ? 2 : 1);
+        j.addProperty("homePrice", homePrice(p));
         if (o != null) { j.addProperty("pf", o.from); j.addProperty("pt", o.to); }
         PacketDistributor.sendToPlayer(p, new Network.PhoneData(2, j.toString()));
     }
@@ -151,16 +178,34 @@ public final class Taxi {
             PacketDistributor.sendToPlayer(p, new Network.PhoneData(5, "{}"));
             return;
         }
-        Pt a = PTS[o.from];
-        boolean here = a.floor == (CivWorld.isF2(p.level()) ? 2 : p.level().dimension() == CivWorld.WORLD1 ? 1 : 0)
-                && p.distanceToSqr(a.x + 0.5, a.y, a.z + 0.5) < PICKUP_R * PICKUP_R;
+        boolean here;
+        String fromName;
+        if (o.from < 0) { here = p.position().distanceToSqr(o.at) < 36; fromName = "здесь"; }
+        else {
+            Pt a = PTS[o.from];
+            here = a.floor == (CivWorld.isF2(p.level()) ? 2 : p.level().dimension() == CivWorld.WORLD1 ? 1 : 0)
+                    && p.distanceToSqr(a.x + 0.5, a.y, a.z + 0.5) < PICKUP_R * PICKUP_R;
+            fromName = a.name;
+        }
         com.google.gson.JsonObject j = new com.google.gson.JsonObject();
-        j.addProperty("name", a.name); j.addProperty("to", PTS[o.to].name); j.addProperty("sec", (o.until - now) / 20); j.addProperty("here", here);
+        j.addProperty("name", fromName); j.addProperty("to", o.to < 0 ? "домой" : PTS[o.to].name); j.addProperty("sec", (o.until - now) / 20); j.addProperty("here", here);
         PacketDistributor.sendToPlayer(p, new Network.PhoneData(5, j.toString()));
         if (!here || p.isPassenger() || Vampire.jailed(p) || p.getLastHurtByMobTimestamp() > p.tickCount - 100) return;
         PENDING.remove(p.getUUID());
         PacketDistributor.sendToPlayer(p, new Network.PhoneData(5, "{}"));
-        ride(p, o.to);
+        if (o.to == -2) rideHome(p); else ride(p, o.to);
+    }
+
+    private static void rideHome(ServerPlayer p) {
+        com.pvpciv.data.CivData.Apartment a = com.pvpciv.data.CivData.get(p.server).byId(Progress.d(p).apartment);
+        if (a == null) return;
+        PacketDistributor.sendToPlayer(p, new Network.Cinematic(6, 90, "Такси\nДомой"));
+        GameEvents.later(p.server, 4, () -> {
+            if (!p.isAlive() || p.hasDisconnected()) return;
+            p.teleportTo(CivWorld.level(p.server), a.spawn.getX() + 0.5, a.spawn.getY(), a.spawn.getZ() + 0.5, a.yaw, 0);
+            p.resetFallDistance();
+            msg(p, "🚕 Приехали домой. Поставьте пять звёзд водителю!", ChatFormatting.YELLOW);
+        });
     }
 
     private static void ride(ServerPlayer p, int to) {

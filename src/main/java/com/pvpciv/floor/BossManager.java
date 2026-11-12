@@ -83,7 +83,7 @@ public final class BossManager {
         Def d = def(id);
         if (d == null || st(d).id != null) return -1;
         long next = CivData.get(server).bossNext(id);
-        return (int) Math.max(0, (next - com.pvpciv.world.CivWorld.level(server).getGameTime()) / 20);
+        return (int) Math.max(0, (next - now()) / 20);
     }
 
     private static void broadcast(MinecraftServer s, String msg, ChatFormatting c) {
@@ -97,13 +97,18 @@ public final class BossManager {
         for (Def d : DEFS) tick(server, d);
     }
 
+    /** Реальное время в тиках: таймеры боссов идут, даже когда сервер выключен (бета 12.11). */
+    public static long now() { return System.currentTimeMillis() / 50; }
+
     private static ServerLevel lvl(MinecraftServer server, Def d) { return d.f2() ? com.pvpciv.world.CivWorld.f2(server) : com.pvpciv.world.CivWorld.level(server); }
 
     private static void tick(MinecraftServer server, Def d) {
         ServerLevel lvl = lvl(server, d);
         CivData data = CivData.get(server);
         St s = st(d);
-        long now = lvl.getGameTime();
+        long now = now();
+        long old = data.bossNext(d.id());
+        if (old > 0 && old < 10_000_000_000L) { data.bossNext.put(d.id(), old - lvl.getGameTime() + now); data.setDirty(); }   // со старых игровых тиков
         BlockPos lairPos = d.lair().get();
         if (data.bossNext(d.id()) < 0) { data.bossNext.put(d.id(), now + 20L * 180); data.setDirty(); }
         boolean lairLoaded = lvl.areEntitiesLoaded(net.minecraft.world.level.ChunkPos.asLong(lairPos));
@@ -239,7 +244,7 @@ public final class BossManager {
         s.dmg.clear();
         s.w5 = s.w1 = false;
         CivData data = CivData.get(server);
-        data.bossNext.put(d.id(), com.pvpciv.world.CivWorld.level(server).getGameTime() + d.period());
+        data.bossNext.put(d.id(), now() + d.period());
         data.setDirty();
     }
 
@@ -248,7 +253,7 @@ public final class BossManager {
         Def d = def(id);
         if (d == null || st(d).id != null) return false;
         CivData data = CivData.get(server);
-        data.bossNext.put(id, com.pvpciv.world.CivWorld.level(server).getGameTime());
+        data.bossNext.put(id, now());
         data.setDirty();
         return true;
     }

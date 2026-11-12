@@ -112,11 +112,11 @@ public final class GameEvents {
     }
 
     private static void onLogin(PlayerEvent.PlayerLoggedInEvent e) {
-        if (e.getEntity() instanceof ServerPlayer p) Story.onLogin(p);
+        if (e.getEntity() instanceof ServerPlayer p) { Story.onLogin(p); Gates.sync(p); }
     }
 
     private static void onLogout(PlayerEvent.PlayerLoggedOutEvent e) {
-        if (e.getEntity() instanceof ServerPlayer p) { DialogueManager.forget(p); Marks.forget(p); Taxi.cancel(p); CombatEvents.forget(p); }
+        if (e.getEntity() instanceof ServerPlayer p) { Gates.forget(p); Falling.canopy(p, false); Vampire.onLogout(p); DialogueManager.forget(p); Marks.forget(p); Taxi.cancel(p); CombatEvents.forget(p); }
     }
 
     private static void onRespawn(PlayerEvent.PlayerRespawnEvent e) {
@@ -133,13 +133,15 @@ public final class GameEvents {
         }
         ArenaManager.tick(server);
         BossManager.tick(server);
+        EliteSkills.tick(server);
         if (ticks % 60 == 0) SpawnZones.tick(server);
         if (ticks % 20 == 7) com.pvpciv.floor.EliteSpots.tick(server);
         if (ticks % 20 == 0) for (ServerPlayer p : server.getPlayerList().getPlayers()) Story.tickPlayer(p);
         if (ticks % 10 == 0) for (ServerPlayer p : server.getPlayerList().getPlayers()) com.pvpciv.inv.Bag.sweep(p);
         if (ticks % 5 == 0) for (ServerPlayer p : server.getPlayerList().getPlayers()) Falling.tick(p);
         if (ticks % 10 == 3) for (ServerPlayer p : server.getPlayerList().getPlayers()) { Marks.tick(p); Taxi.tick(p); }
-        if (ticks % 20 == 7) for (ServerPlayer p : server.getPlayerList().getPlayers()) FoodApp.tick(p);
+        if (ticks % 20 == 7) for (ServerPlayer p : server.getPlayerList().getPlayers()) { FoodApp.tick(p); Gates.tick(p); }
+        if (ticks % 100 == 41) Gates.ensure(server);
         if (ticks % 100 == 0) {
             LunaEntity.ensure(server); TraderEntity.ensure(server);
             com.pvpciv.entity.CarmillaEntity.ensure(server); com.pvpciv.entity.EleonoraEntity.ensure(server);

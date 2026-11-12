@@ -73,7 +73,8 @@ public final class Vampire {
     private static final int[] TIER_COLOR = {0xB8B8B8, 0x6FD3FF, 0xC77DFF, 0xFF5566, 0xFFD166};
     public static final long ELITE_CD = 20L * 60 * 60 * 8;
 
-    private static long now(MinecraftServer s) { return CivWorld.level(s).getGameTime(); }
+    /** Реальное время в тиках (50 мс): кулдауны и смена предложений идут, даже когда сервер выключен (бета 12.11). */
+    private static long now(MinecraftServer s) { return real(); }
 
     // ------------------------------------------------------------------ состояние
     /** Заточение считается по реальному времени: вышел из игры и зашёл — срок всё равно идёт. */
@@ -454,8 +455,24 @@ public final class Vampire {
         Story.sync(p);
     }
 
+    /** Выход: запомнить остаток срока контракта (пока игрока нет, срок не идёт). */
+    public static void onLogout(ServerPlayer p) {
+        StoryData d = Progress.d(p);
+        if (hasQuest(d) && d.questDeadline > 0) { d.questLeft = Math.max(20 * 60, d.questDeadline - real()); p.setData(ModRegistry.STORY.get(), d); }
+    }
+
     /** Вход в игру: должник возвращается в клетку; просроченный контракт — Кармилла придёт чуть позже. */
     public static void onLogin(ServerPlayer p) {
+        StoryData d = Progress.d(p);
+        // переход со старых игровых тиков (до 0.8.6) на реальное время
+        long shift = real() - CivWorld.level(p.server).getGameTime();
+        if (d.questCooldown > 0 && d.questCooldown < 10_000_000_000L) d.questCooldown += shift;
+        if (d.eliteCd > 0 && d.eliteCd < 10_000_000_000L) d.eliteCd += shift;
+        if (d.questDeadline > 0 && d.questDeadline < 10_000_000_000L) d.questDeadline += shift;
+        // срок контракта на паузе, пока игрока нет
+        if (d.questLeft > 0 && hasQuest(d)) d.questDeadline = real() + d.questLeft;
+        d.questLeft = 0;
+        p.setData(ModRegistry.STORY.get(), d);
         if (jailed(p)) { Basement.setDoor(CivWorld.level(p.server), false); toCell(p); }
         else if (Progress.d(p).jailUntil > 0) release(p);
     }

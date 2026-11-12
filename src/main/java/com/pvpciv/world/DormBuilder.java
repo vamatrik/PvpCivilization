@@ -421,6 +421,13 @@ public final class DormBuilder {
         set(-6, Y0, -27, Blocks.PINK_WOOL);
         set(-6, Y0 + 1, -27, Blocks.PLAYER_HEAD);
         set(-2, Y0, -28, Blocks.POTTED_ALLIUM);
+        lunaPouf(level);
+    }
+
+    /** Низкий пуф у двери Луны: пригнись за ним — она тебя не заметит (бета 12.11). */
+    public static void lunaPouf(ServerLevel level) {
+        level.setBlock(new BlockPos(-2, Y0, -27), Blocks.PINK_WOOL.defaultBlockState(), Block.UPDATE_ALL);
+        level.setBlock(new BlockPos(-2, Y0 + 1, -27), Blocks.PINK_CARPET.defaultBlockState(), Block.UPDATE_ALL);
     }
 
     private void flushPanes() {

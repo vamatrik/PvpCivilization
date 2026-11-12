@@ -28,7 +28,8 @@ public final class ArmorUp {
     public static int xp(ItemStack st) { return st.getOrDefault(ModRegistry.ARMOR_XP.get(), 0); }
     /** Опыт, нужный на переход L → L+1. */
     public static int need(int lvl) { return (int) Math.round(60 * Math.pow(1.28, lvl)); }
-    public static int coreNeed(int target) { return target <= 6 ? 0 : target <= 8 ? 1 : target == 9 ? 2 : 3; }
+    /** Ядро какого уровня нужно на переход к target: ровно target (подходит и ядро сильнее). */
+    public static int coreNeed(int target) { return target; }
     public static boolean scrollNeed(int target) { return target == 5 || target == 10; }
     /** Множитель брони и здоровья от уровня. */
     public static double mult(int lvl) { return lvl >= 11 ? 2.3 : 1 + 0.08 * lvl; }
@@ -45,8 +46,20 @@ public final class ArmorUp {
     }
 
     /** Вложить хлам из стопки: тратит ровно столько, сколько влезает в полоску. Возвращает число потраченных. */
+    /** «Родной» хлам брони — с той же локации, где она падает: ×1.5 опыта (бета 12.11). */
+    public static boolean native_(ItemStack armor, ItemStack junk) {
+        if (!(armor.getItem() instanceof CivArmorItem a)) return false;
+        return a.set.startsWith("Инеевый") ? junk.is(ModRegistry.RIME_SHARD.get())
+                : a.set.contains("ликвидатора") && junk.is(ModRegistry.RUBBER_SCRAP.get());
+    }
+
+    public static int junkFor(ItemStack armor, ItemStack junk) {
+        int v = junk(junk);
+        return native_(armor, junk) ? (int) Math.round(v * 1.5) : v;
+    }
+
     public static int feed(ItemStack armor, ItemStack junk) {
-        int v = junk(junk), lvl = level(armor);
+        int v = junkFor(armor, junk), lvl = level(armor);
         if (v <= 0 || lvl >= MAX) return 0;
         int cap = need(Math.min(lvl, 10)), have = xp(armor);
         int used = 0;
@@ -59,10 +72,9 @@ public final class ArmorUp {
 
     /** Подходящее ядро с наименьшей достаточной силой, или -1. */
     public static int coreFor(ServerPlayer p, int target) {
-        int min = coreNeed(target);
-        for (int pw = min; pw <= 3; pw++) {
-            final int fp = pw;
-            if (Bag.count(p, s -> s.is(ModRegistry.ARMOR_CORE.get()) && ArmorCoreItem.power(s) == fp) > 0) return pw;
+        for (int lv = coreNeed(target); lv <= 10; lv++) {
+            final int fl = lv;
+            if (Bag.count(p, s -> s.is(ModRegistry.ARMOR_CORE.get()) && ArmorCoreItem.level(s) == fl) > 0) return lv;
         }
         return -1;
     }
@@ -96,11 +108,11 @@ public final class ArmorUp {
         }
         int target = lvl + 1;
         int core = coreFor(p, target);
-        if (core < 0) { msg(p, "Нужно ядро брони" + (coreNeed(target) > 0 ? " " + "✦".repeat(coreNeed(target)) + " или сильнее" : "") + " (алтарь инфузии в подвале).", ChatFormatting.RED); return; }
+        if (core < 0) { msg(p, "Нужно ядро брони +" + target + " или сильнее (алтарь инфузии в подвале: медальон и " + (target <= 8 ? target + " зв." : (16 - target) + " обычных + " + (target - 8) + " благословенных зв.") + ").", ChatFormatting.RED); return; }
         boolean scroll = scrollNeed(target);
         if (scroll && Bag.count(p, s -> s.is(ModRegistry.TEMPER_SCROLL.get())) < 1) { msg(p, "На +" + target + " нужен Свиток закалки.", ChatFormatting.RED); return; }
         final int fc = core;
-        Bag.take(p, s -> s.is(ModRegistry.ARMOR_CORE.get()) && ArmorCoreItem.power(s) == fc, 1);
+        Bag.take(p, s -> s.is(ModRegistry.ARMOR_CORE.get()) && ArmorCoreItem.level(s) == fc, 1);
         if (scroll) Bag.take(p, s -> s.is(ModRegistry.TEMPER_SCROLL.get()), 1);
         Gear.setStars(armor, target);
         armor.set(ModRegistry.ARMOR_XP.get(), 0);
