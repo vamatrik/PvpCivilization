@@ -69,6 +69,8 @@ public final class CombatEvents {
         LivingEntity target = e.getEntity();
         if (target.level().isClientSide) return;
         Entity src = e.getSource().getEntity();
+        // бета 0.9.6: в кабине лифта путь идёт сквозь остров — не задыхаться
+        if (target instanceof ServerPlayer lp && e.getSource().is(net.minecraft.world.damagesource.DamageTypes.IN_WALL) && lp.getVehicle() instanceof com.pvpciv.entity.LiftCabin) { e.setCanceled(true); return; }
         // в клетке Кармиллы от голода не умирают
         if (target instanceof ServerPlayer jp && e.getSource().is(net.minecraft.world.damagesource.DamageTypes.STARVE) && com.pvpciv.game.Vampire.jailed(jp)) { e.setCanceled(true); return; }
         // мобы цивилизации друг друга не ранят (стрела лучника в зомби и т. п.)
@@ -201,7 +203,9 @@ public final class CombatEvents {
         if (dead instanceof Mob mob && Mobs.level(mob) > 0 && e.getSource().getEntity() instanceof ServerPlayer p && !BossManager.isBoss(mob)) {
             String kind = Mobs.lootKind(mob);
             double mult = kind.endsWith("_elite") ? 3.0 : 1.0;
-            Progress.addXp(p, Progress.xpFor(Progress.d(p).level, Mobs.level(mob), mult));
+            // бета 0.9.6: призванные боссом мобы опыта не дают
+            boolean minion = mob.getTags().stream().anyMatch(t -> t.equals("boss_minion") || t.equals("don_goon") || t.equals("king_rat") || t.equals("kumiho_court"));
+            if (!minion) Progress.addXp(p, Progress.xpFor(Progress.d(p).level, Mobs.level(mob), mult));
             com.pvpciv.game.Vampire.onKill(p, mob, kind.endsWith("_elite"));
             com.pvpciv.game.Library.onKill(p, mob, kind.endsWith("_elite"));
             com.pvpciv.game.Assassin.onKill(p, kind.endsWith("_elite") ? com.pvpciv.game.Assassin.ELITE : com.pvpciv.game.Assassin.MOB);

@@ -61,11 +61,15 @@ public final class StubScreens {
                 new B("brute", "Гнилой Громила", "Пепельная пустошь • Логово (PvP)", "ур. 5", true),
                 new B("keeper", "Хранительница Склепа", "Инеевый Кряж • Ледяной Склеп (PvP)", "ур. 8", true),
                 new B("don", "Дон Витторио", "Этаж 2 • Клуб «Серра» (PvP)", "ур. 10", true),
-                new B("rat_king", "Крысиный король", "Этаж 2 • Тронный сток (PvP)", "ур. 13", true)};
-        public Bosses() { super("Боссы", 300, 192, true); }
+                new B("rat_king", "Крысиный король", "Этаж 2 • Тронный сток (PvP)", "ур. 13", true),
+                new B("kappa", "Братья-каппы", "Этаж 3 • Пруд деревни самураев (PvP)", "ур. 13", true),
+                new B("kumiho", "Кумихо", "Этаж 3 • Святилище девяти хвостов (PvP)", "ур. 16", true)};
+        public Bosses() { super("Боссы и задания", 300, 192, true); }
+        private java.util.List<java.util.Map.Entry<String, String>> quests() { return new java.util.ArrayList<>(ClientState.quests().entrySet()); }
+        private int rows() { return LIST.length + quests().size() + 1; }
         @Override protected void drawContent(GuiGraphics g, int mx, int my, float pt) {
-            g.drawString(font, "Закреплённые боссы видны на экране", left + 14, top + 20, Skin.DIM, false);
-            scroll.view(150).content(LIST.length * 30);
+            g.drawString(font, "Закреплённые боссы и задания видны на экране", left + 14, top + 20, Skin.DIM, false);
+            scroll.view(150).content(rows() * 30);
             com.pvpciv.client.ui.Scroll.begin(g, left + 10, top + 34, 282, 150);
             for (int i = 0; i < LIST.length; i++) {
                 B b = LIST[i];
@@ -86,12 +90,27 @@ public final class StubScreens {
                     Skin.button(g, font, left + 236, y + 6, 48, pin ? "Убрать" : "На экран", mx, my, true, pin);
                 }
             }
+            // задания
+            var qs = quests();
+            int y0 = top + 34 + LIST.length * 30 - scroll.off;
+            g.drawString(font, qs.isEmpty() ? "Активных заданий нет" : "Задания", left + 16, y0 + 10, Skin.GOLD_D, false);
+            for (int i = 0; i < qs.size(); i++) {
+                int y = y0 + (i + 1) * 30;
+                Skin.inset(g, left + 12, y, 276, 28);
+                var lines = Skin.wrap(font, qs.get(i).getValue(), 214);
+                for (int k = 0; k < Math.min(2, lines.size()); k++) g.drawString(font, lines.get(k), left + 18, y + 4 + k * 11, Skin.TEXT, false);
+                boolean pin = ClientState.questShown(qs.get(i).getKey());
+                Skin.button(g, font, left + 236, y + 6, 48, pin ? "Убрать" : "На экран", mx, my, true, pin);
+            }
             com.pvpciv.client.ui.Scroll.end(g);
             scroll.bar(g, left + 292, top + 34, 150);
         }
         @Override public boolean mouseClicked(double mx, double my, int btn) {
             for (int i = 0; i < LIST.length; i++)
                 if (LIST[i].ready() && my >= top + 34 && my < top + 184 && in(mx, my, 236, 40 + i * 30 - scroll.off, 48, 16)) { ClientState.togglePin(LIST[i].id()); return true; }
+            var qs = quests();
+            for (int i = 0; i < qs.size(); i++)
+                if (my >= top + 34 && my < top + 184 && in(mx, my, 236, 40 + (LIST.length + 1 + i) * 30 - scroll.off, 48, 16)) { ClientState.toggleQuest(qs.get(i).getKey()); return true; }
             return super.mouseClicked(mx, my, btn);
         }
     }

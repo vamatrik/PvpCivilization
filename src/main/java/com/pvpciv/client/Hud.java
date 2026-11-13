@@ -79,14 +79,23 @@ public final class Hud {
             ny += 20;
         }
 
-        if (!ClientState.quest.isEmpty()) {
-            List<FormattedCharSequence> ql = font.split(Component.literal(ClientState.quest), pw - 26);
-            int qh = 8 + ql.size() * 10 + (ClientState.questSeconds >= 0 ? 10 : 0);
+        StringBuilder qsb = new StringBuilder();
+        boolean contract = false;
+        for (var en : ClientState.quests().entrySet()) if (ClientState.questShown(en.getKey())) {
+            if (qsb.length() > 0) qsb.append("\n");
+            qsb.append(en.getValue());
+            if (en.getKey().equals("q_contract")) contract = true;
+        }
+        if (qsb.length() > 0) {
+            List<FormattedCharSequence> ql = new java.util.ArrayList<>();
+            for (String part : qsb.toString().split("\n")) ql.addAll(font.split(Component.literal(part), pw - 26));
+            boolean secs = contract && ClientState.questSeconds >= 0;
+            int qh = 8 + ql.size() * 10 + (secs ? 10 : 0);
             Skin.plate(g, x, ny, pw, qh);
             g.fill(x + 2, ny + 2, x + 4, ny + qh - 2, 0xFFD23A54);
             int ly = ny + 5;
             for (FormattedCharSequence l : ql) { g.drawString(font, l, x + 9, ly, 0xFFF0C8D0, false); ly += 10; }
-            if (ClientState.questSeconds >= 0) {
+            if (secs) {
                 int qs = ClientState.questSeconds;
                 g.drawString(font, String.format("⏳ %d:%02d", qs / 60, qs % 60), x + 9, ly, qs < 120 ? 0xFFFF6070 : Skin.DIM, false);
             }
@@ -163,13 +172,13 @@ public final class Hud {
             g.fill(0, 0, w, bar, 0xFF000000);
             g.fill(0, h - bar, w, h, 0xFF000000);
             return true;
-        } else if (ClientState.cineKind == 5 || ClientState.cineKind == 6) {   // поездка на лифте: полосы кино, затемнение/проявление, титр
+        } else if (ClientState.cineKind == 5 || ClientState.cineKind == 6 || ClientState.cineKind == 8) {   // поездка на лифте: полосы кино, затемнение/проявление, титр
             int bar = (int) (h * 0.09f);
             g.fill(0, 0, w, bar, 0xFF000000);
             g.fill(0, h - bar, w, h, 0xFF000000);
             float black = ClientState.cineKind == 5 ? Math.max(0, (k - 0.78f) / 0.22f) : Math.max(0, 1 - k / 0.18f);
             if (black > 0) g.fill(0, 0, w, h, ((int) (Math.min(1, black) * 255)) << 24);
-            if (ClientState.cineKind == 6 && !ClientState.cineText.isEmpty()) {
+            if ((ClientState.cineKind == 6 || ClientState.cineKind == 8) && !ClientState.cineText.isEmpty()) {
                 String[] lines = ClientState.cineText.split("\\n");
                 float ta = k < 0.15f ? 0 : k < 0.3f ? (k - 0.15f) / 0.15f : k > 0.85f ? (1 - k) / 0.15f : 1;
                 if (ta > 0.05f) {

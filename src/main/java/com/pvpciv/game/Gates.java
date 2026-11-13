@@ -74,6 +74,8 @@ public final class Gates {
                     () -> Floor2.polar(15, 76, Floor2.Y), 70, new Cost(() -> ModRegistry.NEON_TUBE.get(), 4), new Cost(() -> ModRegistry.GOLD_CHAIN.get(), 1)),
             new Gate("g_sewer", "Люк у Гоши", "Каморка сантехника в канализации. Крысы, трубы и слухи.", 2, "neon",
                     () -> Floor2.PLUMBER.offset(0, 0, 3), 80, new Cost(() -> ModRegistry.RUBBER_SCRAP.get(), 4)),
+            new Gate("g_throne", "Тронный сток", "У входа в логово Крысиного короля. Пахнет короной… и не только.", 2, "neon",
+                    () -> Floor2.polar(180, 58 - Floor2.RAT_R - 6, Floor2.YS), 110, new Cost(() -> ModRegistry.RUBBER_SCRAP.get(), 6), new Cost(() -> ModRegistry.GOLD_CHAIN.get(), 2)),
             new Gate("g_club", "У клуба «Серра»", "Двери клуба Дона Витторио. Внутрь — только с оружием.", 2, "neon",
                     () -> Floor2.polar(315, 120 - Floor2.CLUB_R - 7, Floor2.Y), 100, new Cost(() -> ModRegistry.DON_RING.get(), 1), new Cost(() -> ModRegistry.GOLD_CHAIN.get(), 4)),
             new Gate("g_library", "Сад библиотеки", "Южные тории Тихой библиотеки. Отсюда — тропы к деревням этажа 3.", 3, "ice",

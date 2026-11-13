@@ -203,7 +203,12 @@ def build(m):
         els = list(base)
         bl = [b for b in m.boxes if b[7]]
         for i, b in enumerate(bl): els.append(elem(b, glow=gi, inflate=infl, phase=i % 3))
-        json.dump({"textures": tex, "gui_light": "front", "elements": els, "display": disp}, open(os.path.join(md, f"{m.name}_g{gi+1}.json"), 'w'), separators=(',', ':'))
+        # 0.9.7: клинок — непрозрачный (cutout), ореол — отдельно полупрозрачный: иначе с шейдерами клинок «просвечивал»
+        gl = els[len(base):]
+        json.dump({"loader": "neoforge:composite", "textures": tex, "gui_light": "front", "display": disp,
+                   "children": {"blade": {"textures": tex, "elements": base, "render_type": "minecraft:cutout"},
+                                "glow": {"textures": tex, "elements": gl, "render_type": "minecraft:translucent"}},
+                   "item_render_order": ["blade", "glow"]}, open(os.path.join(md, f"{m.name}_g{gi+1}.json"), 'w'), separators=(',', ':'))
         variants.append({"predicate": {"pvpciv:stars": stars/16}, "model": f"pvpciv:item/{m.name}_g{gi+1}"})
     json.dump({"textures": tex, "render_type": "minecraft:cutout", "gui_light": "front", "elements": base, "display": disp, "overrides": variants}, open(os.path.join(md, f"{m.name}.json"), 'w'), separators=(',', ':'))
     # анимированная палитра

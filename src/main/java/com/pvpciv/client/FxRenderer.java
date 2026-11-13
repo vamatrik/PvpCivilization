@@ -65,7 +65,7 @@ public class FxRenderer extends EntityRenderer<FxEntity> {
             case FxEntity.BEAM -> {
                 float fade = Mth.sin(p * Mth.PI);
                 var v = e.vec();
-                beam(vc, m, v.x, v.y, v.z, 0.06f + 0.05f * pulse, c1, 0.9f * fade, c2, 0.9f * fade);
+                arc(vc, m, v.x, v.y, v.z, 0.05f + 0.03f * pulse, c1, c2, fade, age);
             }
             default -> {}
         }
@@ -115,6 +115,33 @@ public class FxRenderer extends EntityRenderer<FxEntity> {
         float dx = Mth.cos(a), dz = Mth.sin(a), nx = -dz * 0.07f, nz = dx * 0.07f;
         v(vc, m, nx, y, nz, c, al); v(vc, m, dx * r + nx, y, dz * r + nz, c, al); v(vc, m, dx * r - nx, y, dz * r - nz, c, al); v(vc, m, -nx, y, -nz, c, al);
         v(vc, m, -nx, y, -nz, c, al); v(vc, m, dx * r - nx, y, dz * r - nz, c, al); v(vc, m, dx * r + nx, y, dz * r + nz, c, al); v(vc, m, nx, y, nz, c, al);
+    }
+
+    /** Дуга вверх (квадратичная Безье) от себя к цели; по ней к цели бегут два огонька. */
+    private static void arc(VertexConsumer vc, Matrix4f m, float tx, float ty, float tz, float w, int c1, int c2, float fade, float age) {
+        float len = Mth.sqrt(tx * tx + ty * ty + tz * tz), hx = tx * 0.5f, hy = ty * 0.5f + 0.9f + len * 0.25f, hz = tz * 0.5f;
+        int n = 20;
+        float[] px = new float[n + 1], py = new float[n + 1], pz = new float[n + 1];
+        for (int i = 0; i <= n; i++) {
+            float u = i / (float) n, a = (1 - u) * (1 - u), b = 2 * u * (1 - u), c = u * u;
+            px[i] = b * hx + c * tx; py[i] = b * hy + c * ty; pz[i] = b * hz + c * tz;
+        }
+        float head1 = (age / 18f) % 1f, head2 = (age / 18f + 0.5f) % 1f;
+        for (int i = 0; i < n; i++) {
+            float u = (i + 0.5f) / n;
+            float g = (float) (Math.exp(-Math.pow((u - head1) / 0.08, 2)) + Math.exp(-Math.pow((u - head2) / 0.08, 2)));
+            float al = fade * (0.35f + 0.65f * Math.min(1, g)), ww = w * (1 + 1.6f * Math.min(1, g));
+            int col = g > 0.4f ? c2 : c1;
+            beam(vc, m, px[i], py[i], pz[i], px[i + 1] - px[i], py[i + 1] - py[i], pz[i + 1] - pz[i], ww, col, al, col, al);
+        }
+    }
+
+    private static void beam(VertexConsumer vc, Matrix4f m, float ox, float oy, float oz, float tx, float ty, float tz, float w, int c1, float a1, int c2, float a2) {
+        float[][] sides = {{w, 0, 0}, {0, w, 0}, {0, 0, w}};
+        for (float[] s : sides) {
+            v(vc, m, ox - s[0], oy - s[1], oz - s[2], c1, a1); v(vc, m, ox + s[0], oy + s[1], oz + s[2], c1, a1); v(vc, m, ox + tx + s[0], oy + ty + s[1], oz + tz + s[2], c2, a2); v(vc, m, ox + tx - s[0], oy + ty - s[1], oz + tz - s[2], c2, a2);
+            v(vc, m, ox + tx - s[0], oy + ty - s[1], oz + tz - s[2], c2, a2); v(vc, m, ox + tx + s[0], oy + ty + s[1], oz + tz + s[2], c2, a2); v(vc, m, ox + s[0], oy + s[1], oz + s[2], c1, a1); v(vc, m, ox - s[0], oy - s[1], oz - s[2], c1, a1);
+        }
     }
 
     /** Луч крестом из двух лент — виден с любой стороны. */

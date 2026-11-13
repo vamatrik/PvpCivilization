@@ -51,6 +51,32 @@ public class Floor2 extends Builder {
         }
     }
 
+    /**
+     * 0.9.7 (бета: «из города можно выйти в канализацию»): запечатать потолок канализации — везде, где под уровнем Y−2
+     * есть полость стока, а сверху дыра, ставим камень. Люки с лестницами и стеклянный пол станции лифта не трогаем.
+     */
+    public static void sealSewer(ServerLevel l) {
+        int n = 0;
+        for (int x = -R_EDGE - 12; x <= R_EDGE + 12; x++) for (int z = -R_EDGE - 12; z <= R_EDGE + 12; z++) {
+            if (Math.abs(x) <= 3 && Math.abs(z) <= 4) continue;   // колодец кабины лифта
+            boolean cavity = false;
+            for (int y = YS; y <= YS + 3 && !cavity; y++) cavity = l.getBlockState(new BlockPos(x, y, z)).isAir();
+            if (!cavity) continue;
+            for (int y = Y - 2; y <= Y - 1; y++) {
+                BlockPos b = new BlockPos(x, y, z);
+                var st = l.getBlockState(b);
+                if (st.is(Blocks.LADDER)) break;
+                if (y == Y - 2 && (st.isAir() || !st.getFluidState().isEmpty() && !st.isSolid())) {
+                    // дыра в потолке: если над ней тоже пусто (а не вода фонтана) — заделываем
+                    if (l.getBlockState(b.above()).is(Blocks.LADDER)) break;
+                    l.setBlock(b, Blocks.STONE.defaultBlockState(), 2);
+                    n++;
+                }
+            }
+        }
+        com.mojang.logging.LogUtils.getLogger().info("[pvpciv] канализация: заделано дыр в потолке — {}", n);
+    }
+
     public static BlockPos den() { return polar(DEN_DEG, denEnd() - 3, YS); }
     public static final BlockPos TOWER = polar(15, 62, Y);    // небоскрёб «Альтаир» с парашютистом на крыше
     public static final int TOWER_H = 58;
@@ -469,9 +495,9 @@ public class Floor2 extends Builder {
 
     private static void ensure(ServerLevel lvl, net.minecraft.world.entity.EntityType<com.pvpciv.entity.CityNpcEntity> type, Vec3 at) { ensureNpc(lvl, type, at, 180); }
 
-    public static void ensureNpc(ServerLevel lvl, net.minecraft.world.entity.EntityType<com.pvpciv.entity.CityNpcEntity> type, Vec3 at, float yaw) {
+    public static <T extends net.minecraft.world.entity.Mob> void ensureNpc(ServerLevel lvl, net.minecraft.world.entity.EntityType<T> type, Vec3 at, float yaw) {
         if (!lvl.areEntitiesLoaded(net.minecraft.world.level.ChunkPos.asLong(BlockPos.containing(at)))) return;
-        var list = lvl.getEntitiesOfClass(com.pvpciv.entity.CityNpcEntity.class, new net.minecraft.world.phys.AABB(BlockPos.containing(at)).inflate(24), e -> e.getType() == type);
+        var list = lvl.getEntitiesOfClass(net.minecraft.world.entity.Mob.class, new net.minecraft.world.phys.AABB(BlockPos.containing(at)).inflate(24), e -> e.getType() == type);
         for (int i = 1; i < list.size(); i++) list.get(i).discard();
         if (!list.isEmpty()) {
             if (list.get(0).position().distanceTo(at) > 3) list.get(0).teleportTo(at.x, at.y, at.z);

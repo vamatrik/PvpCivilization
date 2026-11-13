@@ -26,6 +26,10 @@ public class WordScreen extends PlainScreen {
         cur = "";
     }
 
+    private long rejectAt = 0;
+    /** Слова нет в словаре: строка трясётся и краснеет, введённое не стирается. */
+    public void reject() { rejectAt = System.currentTimeMillis(); }
+
     private boolean over() { return j.get("solved").getAsBoolean() || j.get("failed").getAsBoolean(); }
 
     @Override
@@ -35,14 +39,14 @@ public class WordScreen extends PlainScreen {
         g.drawCenteredString(font, head, left + w / 2, top + 20, trial ? Skin.WARN : Skin.DIM);
         int cell = 20, gx = left + (w - cell * 5 - 3 * 4) / 2, gy = top + 34;
         for (int r = 0; r < 6; r++) for (int c = 0; c < 5; c++) {
-            int x = gx + c * (cell + 3), y = gy + r * (cell + 3);
+            int x = gx + c * (cell + 3) + (r == words.size() && System.currentTimeMillis() - rejectAt < 400 ? (int) (Math.sin(System.currentTimeMillis() / 25.0) * 3) : 0), y = gy + r * (cell + 3);
             String ch = ""; int bg = 0xFF221E2C, border = 0xFF4A4458;
             if (r < words.size()) {
                 ch = String.valueOf(words.get(r).charAt(c));
                 char k = cols.get(r).charAt(c);
                 bg = k == '2' ? 0xFF3A9A50 : k == '1' ? 0xFFB89A2A : 0xFF3A3644;
                 border = bg;
-            } else if (r == words.size() && !over() && c < cur.length()) { ch = String.valueOf(cur.charAt(c)); border = 0xFFD9A441; }
+            } else if (r == words.size() && !over() && c < cur.length()) { ch = String.valueOf(cur.charAt(c)); border = System.currentTimeMillis() - rejectAt < 900 ? 0xFFE04050 : 0xFFD9A441; }
             g.fill(x - 1, y - 1, x + cell + 1, y + cell + 1, border);
             g.fill(x, y, x + cell, y + cell, bg);
             if (!ch.isEmpty()) {
@@ -68,7 +72,7 @@ public class WordScreen extends PlainScreen {
         }
         Skin.button(g, font, left + 40, ky + 44, 76, "⌫ Стереть", mx, my, !cur.isEmpty(), false);
         Skin.button(g, font, left + 124, ky + 44, 76, "Проверить", mx, my, cur.length() == 5 && !over(), true);
-        String foot = j.get("solved").getAsBoolean() ? (trial ? "Катана собрана!" : "Угадано! Награда — в сумке.")
+        String foot = System.currentTimeMillis() - rejectAt < 2000 ? "Такого слова нет в словаре" : j.get("solved").getAsBoolean() ? (trial ? "Катана собрана!" : "Угадано! Награда — в сумке.")
                 : j.get("failed").getAsBoolean() ? "Слово: «" + (j.has("answer") ? j.get("answer").getAsString() : "?") + "»"
                 : "Печатай или жми буквы · Enter — проверить";
         g.drawCenteredString(font, Skin.fit(font, foot, w - 16), left + w / 2, top + h - 14, j.get("solved").getAsBoolean() ? Skin.GOOD : Skin.FAINT);

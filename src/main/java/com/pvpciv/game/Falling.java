@@ -81,14 +81,37 @@ public final class Falling {
     }
 
     /** Купол над головой — ItemDisplay с 3D-моделью, едет на игроке (видят все). */
+    /** Купол парашюта: свой дисплей на игрока, каждый тик переносится за ним (бета 0.9.6: «модель остаётся в воздухе»). */
+    private static final java.util.Map<java.util.UUID, java.util.UUID> CANOPY = new java.util.HashMap<>();
+
+    /** Каждый тик: купола — за своими игроками. */
+    public static void follow(net.minecraft.server.MinecraftServer server) {
+        if (CANOPY.isEmpty()) return;
+        var it = CANOPY.entrySet().iterator();
+        while (it.hasNext()) {
+            var en = it.next();
+            ServerPlayer p = server.getPlayerList().getPlayer(en.getKey());
+            net.minecraft.world.entity.Entity d = p == null ? null : p.serverLevel().getEntity(en.getValue());
+            if (p == null || d == null) { if (d != null) d.discard(); it.remove(); continue; }
+            d.teleportTo(p.getX(), p.getY(), p.getZ());
+        }
+    }
+
     public static void canopy(ServerPlayer p, boolean on) {
         var l = p.serverLevel();
-        var list = l.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class, p.getBoundingBox().inflate(6), e -> e.getTags().contains("chute_" + p.getUUID()));
-        if (!on) { list.forEach(net.minecraft.world.entity.Entity::discard); return; }
-        if (!list.isEmpty()) return;
+        java.util.UUID id = CANOPY.get(p.getUUID());
+        net.minecraft.world.entity.Entity cur = id == null ? null : l.getEntity(id);
+        if (!on) {
+            if (cur != null) cur.discard();
+            CANOPY.remove(p.getUUID());
+            // подчистить старые «висящие» купола из прошлых версий
+            l.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class, p.getBoundingBox().inflate(48), e -> e.getTags().contains("chute_" + p.getUUID())).forEach(net.minecraft.world.entity.Entity::discard);
+            return;
+        }
+        if (cur != null && cur.isAlive()) return;
         var d = net.minecraft.world.entity.EntityType.ITEM_DISPLAY.create(l);
         if (d == null) return;
-        d.moveTo(p.getX(), p.getY() + 2, p.getZ());
+        d.moveTo(p.getX(), p.getY(), p.getZ());
         d.addTag("chute_" + p.getUUID());
         net.minecraft.nbt.CompoundTag t = new net.minecraft.nbt.CompoundTag();
         d.saveWithoutId(t);
@@ -103,7 +126,7 @@ public final class Falling {
         t.putInt("teleport_duration", 1);
         d.load(t);
         l.addFreshEntity(d);
-        d.startRiding(p, true);
+        CANOPY.put(p.getUUID(), d.getUUID());
     }
 
     private static net.minecraft.nbt.ListTag floats(float... v) {

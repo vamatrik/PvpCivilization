@@ -53,6 +53,7 @@ public class FxEntity extends Entity {
     @Override protected void addAdditionalSaveData(CompoundTag t) {}
     @Override public boolean shouldBeSaved() { return false; }
     @Override public boolean isPickable() { return false; }
+    @Override public net.minecraft.world.phys.AABB getBoundingBoxForCulling() { var v = vec(); return getBoundingBox().inflate(Math.max(radius() + 1.5, v.length() + 4)).expandTowards(0, 9, 0); }
     @Override public boolean shouldRenderAtSqrDistance(double d) { return d < 128 * 128; }
 
     // ------------------------------------------------------------------ создание

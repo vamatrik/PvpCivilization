@@ -77,6 +77,11 @@ public final class Floor3 extends Builder {
         }
     }
 
+    /** 0.9.7: вернуть верхнюю ступень лестницы на 2 этаж (её съедал проём). */
+    public static void fixStairs(ServerLevel level) {
+        for (int x = -16; x <= -14; x++) level.setBlock(new BlockPos(x, FL2, 17), Blocks.DARK_OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.SOUTH), 3);
+    }
+
     // ------------------------------------------------------------------ здание
     private boolean door(int x, int z) { return (Math.abs(x) <= 1 && Math.abs(z) > R - 3) || (Math.abs(z) <= 1 && Math.abs(x) > R - 3); }
 
@@ -179,7 +184,7 @@ public final class Floor3 extends Builder {
             set(-17, Y + i + 1, z, Blocks.DARK_OAK_FENCE);
             set(-13, Y + i + 1, z, Blocks.DARK_OAK_FENCE);
         }
-        for (int x = -16; x <= -14; x++) for (int z = 10; z <= 18; z++) set(x, FL2, z, z < 18 ? Blocks.AIR : Blocks.DARK_OAK_PLANKS);
+        for (int x = -16; x <= -14; x++) for (int z = 10; z <= 18; z++) if (z < 17) set(x, FL2, z, Blocks.AIR);   // бета 0.9.6: верхняя ступень (z=17) остаётся
         for (int x = -16; x <= -14; x++) for (int z = 10; z <= 17; z++) for (int y = FL2 + 1; y <= FL2 + 3; y++) if (y - Y > z - 10 + 1) set(x, y, z, Blocks.AIR);
         signPost(-12, Y, 9, Direction.SOUTH, DyeColor.WHITE, Blocks.DARK_OAK_FENCE, "2 ЭТАЖ", "архив и", "чайная комната", "");
     }

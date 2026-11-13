@@ -44,9 +44,9 @@ public final class ClientInit {
             e.registerEntityRenderer(ModRegistry.COURIER.get(), CourierRenderer::new);
             e.registerEntityRenderer(ModRegistry.GATE.get(), GateRenderer::new);
             e.registerEntityRenderer(ModRegistry.FX.get(), FxRenderer::new);
-            e.registerEntityRenderer(ModRegistry.LIBRARIAN.get(), ctx -> new Floor3NpcRenderer(ctx, false));
-            e.registerEntityRenderer(ModRegistry.CHEF.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/chef.png")));
-            e.registerEntityRenderer(ModRegistry.ASSASSIN.get(), ctx -> new Floor3NpcRenderer(ctx, true));
+            e.registerEntityRenderer(ModRegistry.LIBRARIAN.get(), GeoNpcRenderer::new);
+            e.registerEntityRenderer(ModRegistry.CHEF.get(), GeoNpcRenderer::new);
+            e.registerEntityRenderer(ModRegistry.ASSASSIN.get(), GeoNpcRenderer::new);
             e.registerEntityRenderer(ModRegistry.SMUGGLER.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/smuggler.png")));
             e.registerEntityRenderer(ModRegistry.CARMILLA.get(), GeoNpcRenderer::new);
             e.registerEntityRenderer(ModRegistry.ELEONORA.get(), GeoNpcRenderer::new);
@@ -59,6 +59,12 @@ public final class ClientInit {
             e.registerBlockEntityRenderer(ModRegistry.PEDESTAL_BE.get(), ctx -> new PedestalRenderer());
             e.registerBlockEntityRenderer(ModRegistry.SHOWCASE_BE.get(), ctx -> new ShowcaseRenderer());
             e.registerEntityRenderer(ModRegistry.TRADER.get(), SorokaRenderer::new);
+        });
+        modBus.addListener((net.neoforged.neoforge.client.event.EntityRenderersEvent.AddLayers e) -> {
+            for (var skin : e.getSkins()) {
+                var r = e.getSkin(skin);
+                if (r instanceof net.minecraft.client.renderer.entity.player.PlayerRenderer pr) pr.addLayer(new GasMaskLayer(pr));
+            }
         });
         modBus.addListener((RegisterGuiLayersEvent e) -> e.registerAbove(VanillaGuiLayers.HOTBAR, PvpCiv.id("hud"), Hud::render));
         modBus.addListener((RegisterMenuScreensEvent e) -> {
@@ -179,7 +185,7 @@ public final class ClientInit {
     private static net.minecraft.client.CameraType savedCam = null;
     private static float camYaw;
 
-    private static boolean liftCam() { return ClientState.cineKind == 5 && System.currentTimeMillis() - ClientState.cineStart < ClientState.cineLen; }
+    private static boolean liftCam() { return (ClientState.cineKind == 5 || ClientState.cineKind == 8) && System.currentTimeMillis() - ClientState.cineStart < ClientState.cineLen; }
 
     private static void onTick() {
         Minecraft mc = Minecraft.getInstance();

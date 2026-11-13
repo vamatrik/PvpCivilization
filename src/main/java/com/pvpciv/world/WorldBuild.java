@@ -12,7 +12,7 @@ import java.util.Map;
 
 /** Полная сборка мира 1 в его измерении: общежитие, подвал, обе локации этажа 1, трассы. */
 public final class WorldBuild {
-    public static final int VERSION = 31;
+    public static final int VERSION = 33;
 
     /** Мелкие правки уже построенного мира (без полной перестройки). */
     public static void patch(MinecraftServer server, int from) {
@@ -28,6 +28,8 @@ public final class WorldBuild {
         if (from < 21 && from >= 19) Basement.placeAltar(lvl);
         if (from < 22 && from >= 19) DormBuilder.placeHomeStations(lvl, CivData.get(server));   // 0.8: витрина трофеев
         if (from < 24) { RoofBuilder.build(lvl); com.pvpciv.floor.Floor2.build(CivWorld.f2(server)); }   // 0.8: Небесный лифт и этаж 2 (0.8.2 — 3D-кабина и монорельс)   // 0.7.1: пьедесталы с блок-сущностями (предметы кладутся руками)   // 0.7.1: Громила раз в 20 мин, Хранительница раз в 40   // 0.6.8: соединённые решётки/заборы, повороты станций
+        if (from < 33 && from >= 24) com.pvpciv.floor.Floor2.sealSewer(CivWorld.f2(server));   // 0.9.7
+        if (from >= 28 && from < 32) com.pvpciv.floor.Floor3.fixStairs(CivWorld.f3(server));
         if (from < 31 && from >= 28) com.pvpciv.floor.Floor3.build(CivWorld.f3(server));   // 0.9.0: деревни самураев и Кумихо, тропа и путь
         if (from < 28) { com.pvpciv.floor.Floor3.build(CivWorld.f3(server)); com.pvpciv.game.Library.placeBooks(server); }   // 0.9.0: этаж 3 — Тихая библиотека
         if (from < 27 && from >= 24) { RoofBuilder.collar(lvl); com.pvpciv.floor.Floor2.fixDen(CivWorld.f2(server)); }   // 0.8.8: рамка проёма монорельса, негорючий пол у контрабандиста

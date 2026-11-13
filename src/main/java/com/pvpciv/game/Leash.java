@@ -33,7 +33,8 @@ public final class Leash {
     }
 
     public static void tick(Mob m) {
-        if (!(m.level() instanceof ServerLevel lvl) || !eligible(m) || (m.tickCount + m.getId()) % 10 != 0) return;
+        // бета 0.9.6: «мобы лежат на полу» — лечение умирающего моба воскрешало его в позе смерти
+        if (!(m.level() instanceof ServerLevel lvl) || !m.isAlive() || m.isDeadOrDying() || !eligible(m) || (m.tickCount + m.getId()) % 10 != 0) return;
         CompoundTag t = m.getPersistentData();
         // застрял в камне / под кустом — вытолкнуть
         if (m.isInWall()) {

@@ -143,7 +143,8 @@ public class InfusionMenu extends CivMenu {
         shown.add(display(lvl, c.add(0, 0.4, 0), center));
         lvl.playSound(null, a, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 1.2f, 0.7f);
         // 0.9.0: неоновые лучи от пьедесталов к алтарю и столб над ним
-        for (Vec3 s0 : spots) { var f = com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.BEAM, s0, 0.1f, 46, 0xE0204A, 0xFF9AD8); if (f != null) f.to(c); }
+        // бета 0.9.6: лучи — только от пьедесталов, где что-то лежит; дугой вверх, с бегущим к центру огоньком
+        for (int i = 0; i < 8; i++) if (!edgeItems.get(i).isEmpty()) { var f = com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.BEAM, spots.get(i), 0.1f, 46, 0xE0204A, 0xFF9AD8); if (f != null) f.to(c); }
         com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.ZONE, Vec3.atBottomCenterOf(a), 3.6f, 50, 0xC0103A, 0xFF80C0);
         DustParticleOptions red = new DustParticleOptions(new Vector3f(0.9f, 0.1f, 0.25f), 1.0f);
         for (int t = 0; t < 10; t++) {

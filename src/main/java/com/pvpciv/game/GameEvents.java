@@ -144,6 +144,7 @@ public final class GameEvents {
         if (ticks % 20 == 0) for (ServerPlayer p : server.getPlayerList().getPlayers()) Story.tickPlayer(p);
         if (ticks % 10 == 0) for (ServerPlayer p : server.getPlayerList().getPlayers()) com.pvpciv.inv.Bag.sweep(p);
         if (ticks % 5 == 0) for (ServerPlayer p : server.getPlayerList().getPlayers()) Falling.tick(p);
+        Falling.follow(server);
         if (ticks % 10 == 3) for (ServerPlayer p : server.getPlayerList().getPlayers()) { Marks.tick(p); Taxi.tick(p); }
         if (ticks % 20 == 7) for (ServerPlayer p : server.getPlayerList().getPlayers()) { FoodApp.tick(p); Gates.tick(p); }
         if (ticks % 40 == 11) for (ServerPlayer p : server.getPlayerList().getPlayers()) Library.tick(p);

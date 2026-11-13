@@ -203,12 +203,12 @@ public final class ModRegistry {
             () -> EntityType.Builder.<com.pvpciv.entity.CityNpcEntity>of((t, l) -> new com.pvpciv.entity.CityNpcEntity(t, l, com.pvpciv.entity.CityNpcEntity.Role.PLUMBER), MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("plumber"));
     public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.CityNpcEntity>> SMUGGLER = ENTITIES.register("smuggler",
             () -> EntityType.Builder.<com.pvpciv.entity.CityNpcEntity>of((t, l) -> new com.pvpciv.entity.CityNpcEntity(t, l, com.pvpciv.entity.CityNpcEntity.Role.SMUGGLER), MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("smuggler"));
-    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.CityNpcEntity>> LIBRARIAN = ENTITIES.register("librarian",
-            () -> EntityType.Builder.<com.pvpciv.entity.CityNpcEntity>of((t, l) -> new com.pvpciv.entity.CityNpcEntity(t, l, com.pvpciv.entity.CityNpcEntity.Role.LIBRARIAN), MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("librarian"));
-    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.CityNpcEntity>> CHEF = ENTITIES.register("chef",
-            () -> EntityType.Builder.<com.pvpciv.entity.CityNpcEntity>of((t, l) -> new com.pvpciv.entity.CityNpcEntity(t, l, com.pvpciv.entity.CityNpcEntity.Role.CHEF), MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("chef"));
-    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.CityNpcEntity>> ASSASSIN = ENTITIES.register("assassin",
-            () -> EntityType.Builder.<com.pvpciv.entity.CityNpcEntity>of((t, l) -> new com.pvpciv.entity.CityNpcEntity(t, l, com.pvpciv.entity.CityNpcEntity.Role.ASSASSIN), MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("assassin"));
+    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.AnimeNpc>> LIBRARIAN = ENTITIES.register("librarian",
+            () -> EntityType.Builder.<com.pvpciv.entity.AnimeNpc>of((t, l) -> new com.pvpciv.entity.AnimeNpc(t, l, com.pvpciv.entity.AnimeNpc.Kind.SHODO), MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("librarian"));
+    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.AnimeNpc>> CHEF = ENTITIES.register("chef",
+            () -> EntityType.Builder.<com.pvpciv.entity.AnimeNpc>of((t, l) -> new com.pvpciv.entity.AnimeNpc(t, l, com.pvpciv.entity.AnimeNpc.Kind.HARUKI), MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("chef"));
+    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.AnimeNpc>> ASSASSIN = ENTITIES.register("assassin",
+            () -> EntityType.Builder.<com.pvpciv.entity.AnimeNpc>of((t, l) -> new com.pvpciv.entity.AnimeNpc(t, l, com.pvpciv.entity.AnimeNpc.Kind.YUKI), MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("assassin"));
     public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.LiftCabin>> LIFT_CABIN = ENTITIES.register("lift_cabin",
             () -> EntityType.Builder.<com.pvpciv.entity.LiftCabin>of(com.pvpciv.entity.LiftCabin::new, MobCategory.MISC).sized(2.6F, 3.0F).clientTrackingRange(16).updateInterval(1).build("lift_cabin"));
     public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.GateEntity>> GATE = ENTITIES.register("gate",

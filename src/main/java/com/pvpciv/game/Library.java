@@ -93,7 +93,7 @@ public final class Library {
     }
 
     private static void onUseBlock(PlayerInteractEvent.RightClickBlock e) {
-        if (!(e.getEntity() instanceof ServerPlayer p) || !p.level().getBlockState(e.getPos()).is(Blocks.LECTERN)) return;
+        if (!(e.getEntity() instanceof ServerPlayer p)) return;
         int fl = CivWorld.floor(p.level());
         for (Tome t : TOMES) {
             if (t.floor != fl || !pos(p.server, t).equals(e.getPos())) continue;
@@ -121,12 +121,47 @@ public final class Library {
             if (t.floor != fl || (d.libFound & t.bit) != 0) continue;
             BlockPos b = pos(p.server, t);
             if (p.blockPosition().distSqr(b) < 48 * 48)
-                p.serverLevel().sendParticles(p, ParticleTypes.END_ROD, true, b.getX() + 0.5, b.getY() + 1.6, b.getZ() + 0.5, 6, 0.15, 0.5, 0.15, 0.01);
+                p.serverLevel().sendParticles(p, ParticleTypes.END_ROD, true, b.getX() + 0.5, b.getY() + 1.4, b.getZ() + 0.5, 6, 0.15, 0.5, 0.15, 0.01);
         }
     }
 
     // ------------------------------------------------------------------ NPC и прибытие
+    /** 0.9.7: пьедестал + лежащая 3D-книга на каждом месте тома (бета: «на этаже 1 книги нет, только частицы»). Самовосстанавливается. */
+    private static void ensureTomes(MinecraftServer s) {
+        for (Tome t : TOMES) {
+            ServerLevel l = CivWorld.byFloor(s, t.floor);
+            BlockPos b = pos(s, t);
+            if (t.floor == 1 && com.pvpciv.data.CivData.get(s).bossNext("book1") <= 0) {
+                if (!l.isLoaded(b)) continue;
+                com.pvpciv.data.CivData.get(s).bossNext.put("book1", b.asLong()); com.pvpciv.data.CivData.get(s).setDirty();
+            }
+            if (!l.isLoaded(b) || !l.areEntitiesLoaded(net.minecraft.world.level.ChunkPos.asLong(b))) continue;
+            var st = l.getBlockState(b);
+            net.minecraft.world.level.block.Block ped = t.floor == 1 ? Blocks.CHISELED_STONE_BRICKS : t.floor == 2 ? Blocks.CHISELED_POLISHED_BLACKSTONE : Blocks.CHISELED_QUARTZ_BLOCK;
+            if (!st.is(ped)) l.setBlock(b, ped.defaultBlockState(), 3);
+            if (!l.getBlockState(b.above()).isAir()) l.setBlock(b.above(), Blocks.AIR.defaultBlockState(), 3);
+            String tag = "tome_" + t.bit;
+            var list = l.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class, new net.minecraft.world.phys.AABB(b).inflate(2), e -> e.getTags().contains(tag));
+            for (int i = 1; i < list.size(); i++) list.get(i).discard();
+            if (!list.isEmpty()) continue;
+            var d = net.minecraft.world.entity.EntityType.ITEM_DISPLAY.create(l);
+            if (d == null) continue;
+            d.moveTo(b.getX() + 0.5, b.getY() + 1.5, b.getZ() + 0.5, 30, 0);   // модель предмета центрирована: низ книги = y + 1.0
+            net.minecraft.nbt.CompoundTag nbt = new net.minecraft.nbt.CompoundTag();
+            d.saveWithoutId(nbt);
+            net.minecraft.nbt.CompoundTag item = new net.minecraft.nbt.CompoundTag();
+            item.putString("id", BuiltInRegistries.ITEM.getKey(t.item.get()).toString()); item.putInt("count", 1);
+            nbt.put("item", item);
+            nbt.putString("item_display", "fixed");
+            nbt.putFloat("view_range", 0.6f);
+            d.load(nbt);
+            d.addTag(tag);
+            l.addFreshEntity(d);
+        }
+    }
+
     public static void ensure(MinecraftServer s) {
+        ensureTomes(s);
         ServerLevel l = CivWorld.f3(s);
         if (!CivWorld.isF3(l)) return;
         Floor2.ensureNpc(l, ModRegistry.LIBRARIAN.get(), Floor3.LIBRARIAN, 180);
@@ -144,9 +179,9 @@ public final class Library {
     }
 
     // ------------------------------------------------------------------ диалог
-    public static void talk(ServerPlayer p, CityNpcEntity npc) {
+    public static void talk(ServerPlayer p, com.pvpciv.entity.AnimeNpc npc) {
         StoryData d = Progress.d(p);
-        String n = npc.role.name;
+        String n = npc.kind.name;
         DialogueManager.Dialogue dl = new DialogueManager.Dialogue("a");
         int carried = 0;
         for (Tome t : TOMES) if ((d.libGiven & t.bit) == 0 && Bag.has(p, s -> s.is(t.item.get()))) carried |= t.bit;
@@ -197,6 +232,16 @@ public final class Library {
     }
 
     // ------------------------------------------------------------------ убийства
+    /** Повар Харуки: приветствие и лавка. */
+    public static void chef(ServerPlayer p, com.pvpciv.entity.AnimeNpc npc) {
+        String[] hi = {"Ирассяимасэ! Рамен горячий, суши свежие, бэнто — для героев.", "Каппы опять воровали огурцы. Купи что-нибудь — мне на новый забор.",
+                "Императорский бэнто — один в завоз. Сила как у золотого яблока, только вкуснее."};
+        Story.say(p, npc.kind.name, npc.kind.color, hi[p.getRandom().nextInt(hi.length)]);
+        Shop.VENDOR.put(p.getUUID(), "chef");
+        p.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inv, pl) -> new com.pvpciv.menu.TraderMenu(id, inv), Component.literal("Повар Харуки")));
+        Shop.sendOffers(p);
+    }
+
     public static void onKill(ServerPlayer p, Mob mob, boolean elite) {
         Mobs.Kind k = Mobs.Kind.of(mob.getType());
         if (k == null) return;

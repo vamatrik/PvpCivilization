@@ -58,16 +58,8 @@ public class CityNpcEntity extends StoryNpc {
         if (DialogueManager.inDialogue(p)) return;
         switch (role) {
             case COURIER -> com.pvpciv.game.FoodApp.talk(p, this);
-            case LIBRARIAN -> com.pvpciv.game.Library.talk(p, this);
-            case ASSASSIN -> com.pvpciv.game.Assassin.talk(p, this);
-            case CHEF -> {
-                String[] hi = {"Ирассяимасэ! Рамен горячий, суши свежие, бэнто — для героев.", "Каппы опять воровали огурцы. Купи что-нибудь — мне на новый забор.",
-                        "Императорский бэнто — один в завоз. Сила как у золотого яблока, только вкуснее."};
-                Story.say(p, role.name, role.color, hi[p.getRandom().nextInt(hi.length)]);
-                com.pvpciv.game.Shop.VENDOR.put(p.getUUID(), "chef");
-                p.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inv, pl) -> new com.pvpciv.menu.TraderMenu(id, inv), Component.literal("Повар Харуки")));
-                com.pvpciv.game.Shop.sendOffers(p);
-            }
+            case LIBRARIAN, ASSASSIN -> {}
+            case CHEF -> {}
             case TIMOFEY -> {
                 Story.say(p, role.name, role.color, "Дневник подвигов открыт! Смотри, как растёшь — прям как акции.");
                 Milestones.open(p);

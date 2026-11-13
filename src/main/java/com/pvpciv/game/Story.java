@@ -58,8 +58,27 @@ public final class Story {
         Zones.Zone z = Zones.at(p);
         int boss = BossManager.secondsLeft(p.server);
         PacketDistributor.sendToPlayer(p, new Network.SyncState(d.stage, objective(d.stage), d.level, d.xp, Progress.xpToNext(d.level),
-                d.money, z.name(), z.type().ordinal(), boss, Vampire.hudLine(d), Vampire.hudSeconds(p, d), Vampire.jailSeconds(p),
+                d.money, z.name(), z.type().ordinal(), boss, questLines(d), Vampire.hudSeconds(p, d), Vampire.jailSeconds(p),
                 String.join(",", d.titles), d.activeTitle, BossManager.secondsLeft(p.server, "keeper"), d.trophies, String.join(",", d.boats) + "|" + d.activeBoat, bossTimers(p.server)));
+    }
+
+    /** 0.9.7: все активные задания для HUD-трекера — «id\u0001текст» через перевод строки; показываются закреплённые. */
+    public static String questLines(StoryData d) {
+        java.util.List<String> l = new java.util.ArrayList<>();
+        String c = Vampire.hudLine(d);
+        if (!c.isEmpty()) l.add("q_contract\u0001" + c);
+        if (d.libQuest == 1) l.add("q_lib\u0001Утерянные тома: " + Integer.bitCount(d.libGiven) + "/3 сдано, найдено " + Integer.bitCount(d.libFound) + "/3 (Сёдо, этаж 3)");
+        if (d.yukiTalk > 0 && d.huntStage < 6) {
+            int[] need = {50, 120, 200, 300, 450, 650};
+            l.add("q_hunt\u0001Охота Юки, урок " + (d.huntStage + 1) + "/6: " + (int) d.huntPts + "/" + need[d.huntStage] + " очков" + (d.huntPts >= need[d.huntStage] ? " — вернись к Юки!" : ""));
+        }
+        if (d.yukiTalk > 0) {
+            long day = Assassin.epochDay();
+            boolean done = d.wordDay == day && (d.wordSolved || d.wordTries >= 6);
+            if (!done) l.add("q_word\u0001Загадка Юки: слово дня ждёт");
+        }
+        if (!d.eleMark.isEmpty()) l.add("q_mark\u0001Метка Элеоноры: " + d.eleMark.replace(":", " — "));
+        return String.join("\n", l);
     }
 
     /** Раз в секунду: зона, таймер босса. */

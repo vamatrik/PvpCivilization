@@ -36,7 +36,7 @@ public final class SkyLift {
     public static final String[] FLOORS = {"Нижний Шпиль", "Неоновый город", "Тихая библиотека", "???", "Луна"};
 
     /** Этаж 3 — когда пали оба босса этажа 2 (Дон и Крысиный король, их трофеи). */
-    public static boolean f3Ok(StoryData d) { return d.liftOk && (d.trophies & 12) == 12; }
+    public static boolean f3Ok(StoryData d) { return d.liftOk && (d.trophies & 12) == 12 && (d.showcase & 12) == 12; }   // бета 0.9.6: и трофеи на витрине
     public static int unlocked(StoryData d) { return !d.liftOk ? 0b1 : f3Ok(d) ? 0b111 : 0b11; }
 
     /** ПКМ по табло лифта. */
@@ -50,7 +50,7 @@ public final class SkyLift {
         StoryData d = Progress.d(p);
         if (!d.liftOk && CivWorld.is(p.level()) && !CivWorld.isF2(p.level())) { summonLuna(p); return; }
         int cur = Math.max(1, CivWorld.floor(p.level()));
-        if (cur == 2 && !f3Ok(d) && (d.trophies & 12) != 12) p.displayClientMessage(Component.literal("Этаж 3 откроется, когда падут Дон Витторио и Крысиный король.").withStyle(ChatFormatting.GRAY), true);
+        if (cur == 2 && !f3Ok(d)) p.displayClientMessage(Component.literal((d.trophies & 12) != 12 ? "Этаж 3 откроется, когда падут Дон Витторио и Крысиный король." : "Этаж 3: поставь трофеи Дона и Крысиного короля на витрину в квартире.").withStyle(ChatFormatting.GRAY), true);
         PacketDistributor.sendToPlayer(p, new Network.OpenLift(unlocked(d), cur));
     }
 
@@ -120,7 +120,7 @@ public final class SkyLift {
         String title = "ЭТАЖ " + floor + "\n" + FLOORS[floor - 1];
         ServerLevel from = (ServerLevel) p.level();
         boolean up = floor > cur;
-        java.util.List<Vec3> path1 = com.pvpciv.world.Monorail.pathFrom(cur);
+        java.util.List<Vec3> path1 = com.pvpciv.world.Monorail.pathFrom(cur, floor > cur);
         int dur1 = cur == 1 ? 130 : 90;
         PacketDistributor.sendToPlayer(p, new Network.Cinematic(5, dur1, ""));
         from.playSound(null, p.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.2f, 0.6f);
@@ -131,12 +131,12 @@ public final class SkyLift {
             p.stopRiding();
             if (!p.isAlive() || p.hasDisconnected()) { RIDING.remove(p.getUUID()); return; }
             ServerLevel to = CivWorld.byFloor(p.server, floor);
-            java.util.List<Vec3> path2 = com.pvpciv.world.Monorail.pathTo(floor);
+            java.util.List<Vec3> path2 = com.pvpciv.world.Monorail.pathTo(floor, floor > cur);
             Vec3 s = path2.get(0);
             p.teleportTo(to, s.x, s.y, s.z, 0, 0);
             p.resetFallDistance();
             LiftCabin c2 = cabin(to, s);
-            PacketDistributor.sendToPlayer(p, new Network.Cinematic(6, 120, title));
+            PacketDistributor.sendToPlayer(p, new Network.Cinematic(8, 120, title));   // 0.9.7: прибытие тоже от 3 лица
             if (c2 == null) { arrive(p, floor); return; }
             p.startRiding(c2, true);
             c2.start(path2, 110, false, true, cc -> arrive(p, floor));
@@ -157,6 +157,9 @@ public final class SkyLift {
         p.resetFallDistance();
         Vec3 a = floor == 3 ? com.pvpciv.floor.Floor3.LIFT_ARRIVE : floor == 2 ? com.pvpciv.floor.Floor2.LIFT_ARRIVE : com.pvpciv.world.DormBuilder.LIFT_ARRIVE;
         p.teleportTo(CivWorld.byFloor(p.server, floor), a.x, a.y, a.z, 0, 0);
+        // бета 0.9.6: после схода с кабины игрока иногда сносило «под фонарь» — через 2 тика ставим на точку ещё раз
+        final var lvl = CivWorld.byFloor(p.server, floor);
+        GameEvents.later(p.server, 2, () -> { if (p.level() == lvl && p.position().distanceTo(a) > 0.8 && p.position().distanceTo(a) < 6) p.teleportTo(lvl, a.x, a.y, a.z, 0, 0); });
         if (floor == 3) com.pvpciv.game.Library.onArrive(p);
         p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1f, 1.4f);
     }

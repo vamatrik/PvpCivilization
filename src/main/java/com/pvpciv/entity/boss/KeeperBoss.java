@@ -158,7 +158,7 @@ public class KeeperBoss extends CivBoss {
         Vec3 c = home != null ? home : position();
         for (int i = 0; i < 2; i++) {
             double a = i * Math.PI + 0.7;
-            Mobs.spawn(lvl, Mobs.Kind.FROST_ZOMBIE, 7, false, c.add(Math.cos(a) * 5, 0, Math.sin(a) * 5), "floor1b_mob", "");
+            Mobs.spawn(lvl, Mobs.Kind.FROST_ZOMBIE, 7, false, c.add(Math.cos(a) * 5, 0, Math.sin(a) * 5), "floor1b_mob", "boss_minion");
         }
         cooldown = 40;
         for (ServerPlayer p : victims(lvl, 40))

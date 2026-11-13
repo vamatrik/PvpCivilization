@@ -140,9 +140,9 @@ public final class Assassin {
     }
 
     // ------------------------------------------------------------------ диалог
-    public static void talk(ServerPlayer p, CityNpcEntity npc) {
+    public static void talk(ServerPlayer p, com.pvpciv.entity.AnimeNpc npc) {
         StoryData d = Progress.d(p);
-        String n = npc.role.name;
+        String n = npc.kind.name;
         DialogueManager.Dialogue dl = new DialogueManager.Dialogue("a");
         if (d.yukiTalk == 0) {
             dl.node("a", n, C, "…Ты шумно ходишь. В библиотеке так нельзя. И в моём деле — тоже.",
@@ -245,6 +245,17 @@ public final class Assassin {
         return WORDS = l;
     }
 
+    private static java.util.Set<String> VALID;
+    /** Допустимые догадки: ~4000 существительных из 5 букв (OpenCorpora) + все загадываемые слова. */
+    public static java.util.Set<String> valid() {
+        if (VALID != null) return VALID;
+        java.util.Set<String> v = new java.util.HashSet<>(words());
+        try (var in = Assassin.class.getResourceAsStream("/assets/pvpciv/words/valid5.txt")) {
+            if (in != null) new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8)).lines().map(String::trim).filter(x -> x.length() == 5).forEach(v::add);
+        } catch (Exception ignored) {}
+        return VALID = v;
+    }
+
     /** День по Москве. */
     public static long epochDay() { return java.time.LocalDate.now(java.time.ZoneOffset.ofHours(3)).toEpochDay(); }
     public static String wordOf(long day) { List<String> w = words(); return w.get((int) Math.floorMod(day * 2654435761L + 17, w.size())); }
@@ -298,6 +309,8 @@ public final class Assassin {
     public static void guess(ServerPlayer p, String raw) {
         String s = raw.toLowerCase(Locale.ROOT).replace('ё', 'е').trim();
         if (s.length() != 5 || !s.chars().allMatch(c -> c >= 'а' && c <= 'я')) { p.displayClientMessage(Component.literal("Нужно слово из 5 русских букв.").withStyle(ChatFormatting.RED), true); return; }
+        if (!valid().contains(s)) { p.displayClientMessage(Component.literal("«" + s + "» — такого слова нет в словаре Юки (нужно существительное).").withStyle(ChatFormatting.RED), true);
+            PacketDistributor.sendToPlayer(p, new Network.PhoneData(12, "{}")); return; }
         Trial t = TRIAL.get(p.getUUID());
         if (t != null) { trialGuess(p, t, s); return; }
         StoryData d = Progress.d(p);
@@ -311,7 +324,27 @@ public final class Assassin {
         send(p, w, Arrays.asList(d.wordGuesses.split(",")), win, !win && d.wordTries >= 6, null);
         p.playNotifySound(win ? ModRegistry.FX_WORD_OK.get() : ModRegistry.FX_WORD_BAD.get(), SoundSource.PLAYERS, 0.8f, 1f);
         if (win) wordReward(p, d.wordTries);
-        else if (d.wordTries >= 6) Story.say(p, "Юки", C, "Слово было «" + w + "». Не расстраивайся. Хотя нет — расстраивайся, это полезно.");
+        else if (d.wordTries >= 6) { Story.say(p, "Юки", C, "Слово было «" + w + "». Ошибки… надо запоминать телом."); punish(p); }
+    }
+
+    /** Бета 0.9.6: проиграл загадку — Юки рубит катаной: 90% максимального здоровья (но не насмерть). */
+    private static void punish(ServerPlayer p) {
+        var yuki = p.serverLevel().getEntitiesOfClass(com.pvpciv.entity.AnimeNpc.class, p.getBoundingBox().inflate(16), n -> n.kind == com.pvpciv.entity.AnimeNpc.Kind.YUKI);
+        if (yuki.isEmpty()) return;
+        var y = yuki.get(0);
+        PacketDistributor.sendToPlayer(p, new Network.PhoneData(13, "{}"));   // закрыть экран загадки — пусть видит
+        y.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, p.getEyePosition());
+        y.setAnim("slash");
+        p.serverLevel().playSound(null, y.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.HOSTILE, 1.2f, 0.7f);
+        GameEvents.later(p.server, 8, () -> {
+            if (!p.isAlive()) return;
+            float dmg = Math.min(p.getMaxHealth() * 0.9f, p.getHealth() - 1f);
+            if (dmg > 0) p.hurt(p.damageSources().magic(), dmg);
+            p.serverLevel().sendParticles(ParticleTypes.SWEEP_ATTACK, p.getX(), p.getY() + 1.1, p.getZ(), 1, 0, 0, 0, 0);
+            p.serverLevel().sendParticles(ParticleTypes.CRIT, p.getX(), p.getY() + 1.1, p.getZ(), 20, 0.3, 0.4, 0.3, 0.3);
+            p.serverLevel().playSound(null, p.blockPosition(), ModRegistry.FX_CRIT.get(), SoundSource.HOSTILE, 1f, 0.6f);
+        });
+        GameEvents.later(p.server, 24, () -> y.setAnim(""));
     }
 
     private static void wordReward(ServerPlayer p, int tries) {
@@ -331,7 +364,7 @@ public final class Assassin {
     }
 
     private static void trialGuess(ServerPlayer p, Trial t, String s) {
-        if (System.currentTimeMillis() > t.until) { TRIAL.remove(p.getUUID()); Story.say(p, "Юки", C, "Время вышло. " + t.solved + " из 10. Обломки — твои. Приходи, когда соберёшься."); send(p, t.word, t.guesses, false, true, t); return; }
+        if (System.currentTimeMillis() > t.until) { TRIAL.remove(p.getUUID()); Story.say(p, "Юки", C, "Время вышло. " + t.solved + " из 10. Обломки — твои. Приходи, когда соберёшься."); send(p, t.word, t.guesses, false, true, t); punish(p); return; }
         t.guesses.add(s);
         p.playNotifySound(s.equals(t.word) ? ModRegistry.FX_WORD_OK.get() : ModRegistry.FX_WORD_BAD.get(), SoundSource.PLAYERS, 0.8f, 1f);
         if (s.equals(t.word)) {

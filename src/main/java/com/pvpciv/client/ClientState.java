@@ -20,6 +20,15 @@ public final class ClientState {
     public static long zoneChangedAt = 0;
     public static com.pvpciv.net.Network.DeathInfo death = null;
     public static String quest = "";
+    /** Задания: id → текст. Контракт показывается всегда, если не скрыт; остальные — если закреплены. */
+    public static java.util.LinkedHashMap<String, String> quests() {
+        var m = new java.util.LinkedHashMap<String, String>();
+        if (quest.isEmpty()) return m;
+        for (String l : quest.split("\n")) { int i = l.indexOf('\u0001'); if (i > 0) m.put(l.substring(0, i), l.substring(i + 1)); else m.put("q_contract", l); }
+        return m;
+    }
+    public static boolean questShown(String id) { return id.equals("q_contract") ? !pinned("hide_q_contract") : pinned(id); }
+    public static void toggleQuest(String id) { togglePin(id.equals("q_contract") ? "hide_q_contract" : id); }
     /** Обчищенные тайники: позиция → когда снова готовы (мс). */
     public static final java.util.Map<Long, Long> stash = new java.util.HashMap<>();
     public static boolean stashLooted(net.minecraft.core.BlockPos p) { Long t = stash.get(p.asLong()); return t != null && t > System.currentTimeMillis(); }

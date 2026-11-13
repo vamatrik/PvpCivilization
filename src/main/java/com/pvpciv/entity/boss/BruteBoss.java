@@ -117,7 +117,7 @@ public class BruteBoss extends CivBoss {
         Vec3 c = home != null ? home : position();
         for (int i = 0; i < 3; i++) {
             double a = i * 2.1;
-            Mobs.spawn(lvl, Mobs.Kind.ASH_ZOMBIE, 4, false, c.add(Math.cos(a) * 6, 0, Math.sin(a) * 6), "floor1_mob", "");
+            Mobs.spawn(lvl, Mobs.Kind.ASH_ZOMBIE, 4, false, c.add(Math.cos(a) * 6, 0, Math.sin(a) * 6), "floor1_mob", "boss_minion");
         }
         var sp = getAttribute(Attributes.MOVEMENT_SPEED);
         if (sp != null) sp.addOrReplacePermanentModifier(new AttributeModifier(com.pvpciv.PvpCiv.id("brute_rage"), 0.2, AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
