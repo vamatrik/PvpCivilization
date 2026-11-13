@@ -40,7 +40,7 @@ public final class Shop {
 
     public static List<Offer> offers(ServerPlayer p) {
         String v = VENDOR.get(p.getUUID());
-        return "smuggler".equals(v) ? smuggler() : "eleonora".equals(v) ? eleonora() : offers();
+        return "chef".equals(v) ? chef() : "smuggler".equals(v) ? smuggler() : "eleonora".equals(v) ? eleonora() : offers();
     }
 
     public static boolean tokenShop(ServerPlayer p) { return "eleonora".equals(VENDOR.get(p.getUUID())); }
@@ -79,8 +79,21 @@ public final class Shop {
         out.add(new Offer("s_filter", new ItemStack(ModRegistry.GAS_MASK_FILTER.get()), 380, 2));
         out.add(new Offer("s_scroll", new ItemStack(ModRegistry.TEMPER_SCROLL.get()), 1600, 1));
         out.add(new Offer("s_blood", new ItemStack(ModRegistry.BLOOD_STAR_W1.get()), 5200, 1));
-        out.add(new Offer("katana", Gear.withRarity(new ItemStack(ModRegistry.SAMURAI_KATANA.get()), Rarity.RARE), 7500, 1));
+        out.add(new Offer("katana", Gear.withRarity(new ItemStack(ModRegistry.SAMURAI_KATANA.get()), Rarity.RARE), 4800, 1));   // 0.9.0: было 7500 — дорого для своего урона
         out.add(new Offer("pack", new ItemStack(ModRegistry.SMUGGLER_PACK.get()), 6000, 1));
+        return out;
+    }
+
+    /** Повар Харуки (деревня самураев, этаж 3): японская кухня и одно особое блюдо в завоз. */
+    public static List<Offer> chef() {
+        List<Offer> out = new ArrayList<>();
+        out.add(new Offer("c_onigiri", new ItemStack(ModRegistry.ONIGIRI.get(), 3), 45, 999));
+        out.add(new Offer("c_ramen", new ItemStack(ModRegistry.RAMEN.get()), 70, 12));
+        out.add(new Offer("c_sushi", new ItemStack(ModRegistry.SUSHI.get(), 2), 80, 10));
+        out.add(new Offer("c_mochi", new ItemStack(ModRegistry.MOCHI.get(), 2), 60, 10));
+        out.add(new Offer("c_tako", new ItemStack(ModRegistry.TAKOYAKI.get()), 110, 6));
+        out.add(new Offer("c_seal", new ItemStack(ModRegistry.JADE_SEAL.get()), 520, 2));
+        out.add(new Offer("c_bento", new ItemStack(ModRegistry.IMPERIAL_BENTO.get()), 2400, 1));
         return out;
     }
 

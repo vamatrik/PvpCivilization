@@ -50,7 +50,9 @@ public final class ArmorUp {
     public static boolean native_(ItemStack armor, ItemStack junk) {
         if (!(armor.getItem() instanceof CivArmorItem a)) return false;
         return a.set.startsWith("Инеевый") ? junk.is(ModRegistry.RIME_SHARD.get())
-                : a.set.contains("ликвидатора") && junk.is(ModRegistry.RUBBER_SCRAP.get());
+                : a.set.contains("ликвидатора") ? junk.is(ModRegistry.RUBBER_SCRAP.get())
+                : a.set.startsWith("Самурай") ? junk.is(ModRegistry.SILK_SCRAP.get())
+                : a.set.startsWith("Лисий") && junk.is(ModRegistry.FOX_FUR.get());
     }
 
     public static int junkFor(ItemStack armor, ItemStack junk) {
@@ -80,7 +82,7 @@ public final class ArmorUp {
     }
 
     /** Попытка улучшения. Текст результата — в чат. */
-    public static void upgrade(ServerPlayer p, ItemStack armor) {
+    public static void upgrade(ServerPlayer p, ItemStack armor, ItemStack coreSlot) {
         if (!(armor.getItem() instanceof CivArmorItem)) return;
         int lvl = level(armor);
         if (lvl >= MAX) { msg(p, "Эта броня уже +11 — выше некуда.", ChatFormatting.GOLD); return; }
@@ -107,12 +109,13 @@ public final class ArmorUp {
             return;
         }
         int target = lvl + 1;
-        int core = coreFor(p, target);
-        if (core < 0) { msg(p, "Нужно ядро брони +" + target + " или сильнее (алтарь инфузии в подвале: медальон и " + (target <= 8 ? target + " зв." : (16 - target) + " обычных + " + (target - 8) + " благословенных зв.") + ").", ChatFormatting.RED); return; }
+        if (!coreSlot.is(ModRegistry.ARMOR_CORE.get()) || ArmorCoreItem.level(coreSlot) < coreNeed(target)) {
+            msg(p, (coreSlot.isEmpty() ? "Положи в слот ядро брони +" : "Ядро слабовато — нужно +") + target + " или сильнее (алтарь инфузии в подвале: медальон и " + (target <= 8 ? target + " зв." : (16 - target) + " обычных + " + (target - 8) + " благословенных зв.") + ").", ChatFormatting.RED);
+            return;
+        }
         boolean scroll = scrollNeed(target);
         if (scroll && Bag.count(p, s -> s.is(ModRegistry.TEMPER_SCROLL.get())) < 1) { msg(p, "На +" + target + " нужен Свиток закалки.", ChatFormatting.RED); return; }
-        final int fc = core;
-        Bag.take(p, s -> s.is(ModRegistry.ARMOR_CORE.get()) && ArmorCoreItem.level(s) == fc, 1);
+        coreSlot.shrink(1);
         if (scroll) Bag.take(p, s -> s.is(ModRegistry.TEMPER_SCROLL.get()), 1);
         Gear.setStars(armor, target);
         armor.set(ModRegistry.ARMOR_XP.get(), 0);

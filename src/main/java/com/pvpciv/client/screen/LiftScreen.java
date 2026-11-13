@@ -8,7 +8,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 /** Табло Небесного лифта: этажи мира 1, закрытые — с замком. */
 public class LiftScreen extends PlainScreen {
     private final int mask, current;
-    private static final String[] NAMES = {"Нижний Шпиль", "Неоновый город", "Этаж 3", "Этаж 4", "Этаж 5", "Этаж 6", "Этаж 7", "Этаж 8", "Этаж 9", "Этаж 10"};
+    private static final String[] NAMES = {"Нижний Шпиль", "Неоновый город", "Тихая библиотека", "Этаж 4", "Этаж 5", "Этаж 6", "Этаж 7", "Этаж 8", "Этаж 9", "Этаж 10"};
 
     public LiftScreen(int mask, int current) { super("Небесный лифт", 220, 200, false); this.mask = mask; this.current = current; }
 

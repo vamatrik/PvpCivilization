@@ -14,7 +14,8 @@ import java.util.function.Predicate;
 /** Сумка игрока: до 63 слотов, открываются уровнем и пряжками. Ванильные 27 слотов не используются. */
 public final class Bag {
     public static final int MAX = 63, BASE = 18;
-    public static final int[] LEVEL_MILESTONES = {4, 8, 12, 16, 20};
+    public static final int[] LEVEL_MILESTONES = {10, 20, 30, 40, 50};   // 0.9.0: строка раз в 10 уровней (было 4/8/12/16/20)
+    static final int[] OLD_MILESTONES = {4, 8, 12, 16, 20};
 
     public static ItemStackHandler get(Player p) { return p.getData(ModRegistry.BAG.get()); }
 
@@ -22,6 +23,16 @@ public final class Bag {
         int n = BASE;
         for (int m : LEVEL_MILESTONES) if (level >= m) n += 9;
         return Math.min(MAX, n + extra);
+    }
+
+    /** 0.9.0: правило строк поменялось — уже открытые строки не отнимаем (добавляем в «пряжки»). */
+    public static void migrate(StoryData d) {
+        if (d.bagRule >= 1) return;
+        d.bagRule = 1;
+        int old = 0, now = 0;
+        for (int m : OLD_MILESTONES) if (d.level >= m) old += 9;
+        for (int m : LEVEL_MILESTONES) if (d.level >= m) now += 9;
+        if (old > now) d.extraSlots += old - now;
     }
 
     public static int unlocked(Player p) {

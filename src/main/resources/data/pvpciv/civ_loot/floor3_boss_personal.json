@@ -1,0 +1,67 @@
+{
+ "entries": [
+  {
+   "item": "pvpciv:sparks",
+   "chance": 1,
+   "min": 220,
+   "max": 360
+  },
+  {
+   "item": "pvpciv:kappa_dish",
+   "chance": 0.6,
+   "min": 1,
+   "max": 2
+  },
+  {
+   "item": "pvpciv:jade_seal",
+   "chance": 1,
+   "min": 1,
+   "max": 2
+  },
+  {
+   "item": "pvpciv:star_w1",
+   "chance": 1,
+   "min": 2,
+   "max": 4
+  },
+  {
+   "item": "pvpciv:blessed_star_w1",
+   "chance": 0.35
+  },
+  {
+   "weapons": [
+    "pvpciv:kappa_naginata"
+   ],
+   "chance": 0.18,
+   "min_rarity": "EPIC"
+  },
+  {
+   "weapons": [
+    "pvpciv:nodachi",
+    "pvpciv:kama",
+    "pvpciv:kunai",
+    "pvpciv:tetsubo"
+   ],
+   "chance": 0.5,
+   "min_rarity": "RARE"
+  },
+  {
+   "gear": [
+    "pvpciv:samurai_helmet",
+    "pvpciv:samurai_chestplate",
+    "pvpciv:samurai_leggings",
+    "pvpciv:samurai_boots"
+   ],
+   "chance": 0.35,
+   "min_rarity": "RARE"
+  },
+  {
+   "item": "pvpciv:temper_scroll",
+   "chance": 0.3
+  },
+  {
+   "item": "pvpciv:blood_star_w1",
+   "chance": 0.12
+  }
+ ]
+}

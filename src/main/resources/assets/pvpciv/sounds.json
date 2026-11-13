@@ -8,5 +8,53 @@
     "stream": true
    }
   ]
+ },
+ "fx.zone": {
+  "category": "hostile",
+  "sounds": [
+   "pvpciv:fx/zone"
+  ]
+ },
+ "fx.impact": {
+  "category": "hostile",
+  "sounds": [
+   "pvpciv:fx/impact"
+  ]
+ },
+ "fx.wave": {
+  "category": "hostile",
+  "sounds": [
+   "pvpciv:fx/wave"
+  ]
+ },
+ "fx.crit": {
+  "category": "player",
+  "sounds": [
+   "pvpciv:fx/crit"
+  ]
+ },
+ "fx.word_ok": {
+  "category": "player",
+  "sounds": [
+   "pvpciv:fx/word_ok"
+  ]
+ },
+ "fx.word_bad": {
+  "category": "player",
+  "sounds": [
+   "pvpciv:fx/word_bad"
+  ]
+ },
+ "fx.gate": {
+  "category": "player",
+  "sounds": [
+   "pvpciv:fx/gate"
+  ]
+ },
+ "fx.splash": {
+  "category": "hostile",
+  "sounds": [
+   "pvpciv:fx/splash"
+  ]
  }
 }

@@ -1,0 +1,26 @@
+{
+ "entries": [
+  {
+   "item": "pvpciv:sparks",
+   "chance": 1,
+   "min": 100,
+   "max": 200
+  },
+  {
+   "item": "pvpciv:fox_fur",
+   "chance": 1,
+   "min": 4,
+   "max": 8
+  },
+  {
+   "item": "pvpciv:star_w1",
+   "chance": 0.7,
+   "min": 1,
+   "max": 2
+  },
+  {
+   "item": "pvpciv:foxfire",
+   "chance": 0.2
+  }
+ ]
+}

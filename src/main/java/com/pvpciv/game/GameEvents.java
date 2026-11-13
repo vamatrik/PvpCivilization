@@ -70,8 +70,12 @@ public final class GameEvents {
         bus.addListener(GameEvents::onNameFormat);
         // реген от сытости и эффекта «Регенерация» — в процентах от макс. HP (ваниль лечит по 1 HP — при 100 HP это вечность)
         bus.addListener((net.neoforged.neoforge.event.entity.living.LivingHealEvent e) -> {
-            if (e.getEntity() instanceof ServerPlayer p && e.getAmount() <= 1.0001f && p.getMaxHealth() > 20)
-                e.setAmount(e.getAmount() * p.getMaxHealth() / 20f);
+            if (e.getEntity() instanceof ServerPlayer p && e.getAmount() <= 1.0001f) {
+                float a = p.getMaxHealth() > 20 ? e.getAmount() * p.getMaxHealth() / 20f : e.getAmount();
+                // бета 0.8.7: в бою (бил или получал урон за последние 6 с) реген вдвое слабее
+                if (p.getLastHurtByMobTimestamp() > p.tickCount - 120 || p.getLastHurtMobTimestamp() > p.tickCount - 120) a *= 0.5f;
+                e.setAmount(a);
+            }
         });
         bus.addListener((net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish e) -> {
             if (e.getEntity() instanceof ServerPlayer p && e.getItem().has(net.minecraft.core.component.DataComponents.FOOD)) Marks.onEat(p);
@@ -80,6 +84,7 @@ public final class GameEvents {
             if (e.getEntity() instanceof ServerPlayer p) Marks.onDeath(p);
         });
         CombatEvents.register(bus);
+        Library.register(bus);
     }
 
     private static void onReload(AddReloadListenerEvent e) { e.addListener(LootTables.INSTANCE); }
@@ -141,12 +146,16 @@ public final class GameEvents {
         if (ticks % 5 == 0) for (ServerPlayer p : server.getPlayerList().getPlayers()) Falling.tick(p);
         if (ticks % 10 == 3) for (ServerPlayer p : server.getPlayerList().getPlayers()) { Marks.tick(p); Taxi.tick(p); }
         if (ticks % 20 == 7) for (ServerPlayer p : server.getPlayerList().getPlayers()) { FoodApp.tick(p); Gates.tick(p); }
+        if (ticks % 40 == 11) for (ServerPlayer p : server.getPlayerList().getPlayers()) Library.tick(p);
+        if (ticks % 20 == 13) for (ServerPlayer p : server.getPlayerList().getPlayers()) Assassin.setBonus(p);
         if (ticks % 100 == 41) Gates.ensure(server);
         if (ticks % 100 == 0) {
             LunaEntity.ensure(server); TraderEntity.ensure(server);
             com.pvpciv.entity.CarmillaEntity.ensure(server); com.pvpciv.entity.EleonoraEntity.ensure(server);
             com.pvpciv.floor.Floor2.ensureNpcs(server);
             com.pvpciv.world.Monorail.ensure(server);
+            com.pvpciv.world.Monorail.ensure3(server);
+            Library.ensure(server);
         }
         com.pvpciv.world.IceTrack.tick(server);
     }
@@ -390,6 +399,17 @@ public final class GameEvents {
                     d.trophies |= 3; d.showcase |= 3;
                     p.setData(ModRegistry.STORY.get(), d);
                     c.getSource().sendSuccess(() -> Component.literal("Трофеи этажа 1 засчитаны и выставлены (тест). Поговори с Луной у лифта."), false);
+                    return 1;
+                }))
+                .then(Commands.literal("fx").requires(s -> s.hasPermission(2)).executes(c -> {   // тест неоновых эффектов
+                    ServerPlayer p = c.getSource().getPlayerOrException();
+                    net.minecraft.world.phys.Vec3 f = p.position().add(p.getLookAngle().multiply(6, 0, 6));
+                    var F = com.pvpciv.entity.FxEntity.class;
+                    com.pvpciv.entity.FxEntity.spawn(p.serverLevel(), com.pvpciv.entity.FxEntity.ZONE, f, 3f, 60, 0xFF2A1E, 0xFFB0A0);
+                    com.pvpciv.entity.FxEntity.spawn(p.serverLevel(), com.pvpciv.entity.FxEntity.ZONE, f.add(7, 0, 0), 4f, 60, 0x7FD8FF, 0xE8FBFF).cone((float) Math.toRadians(-90), 0.6f);
+                    com.pvpciv.entity.FxEntity.spawn(p.serverLevel(), com.pvpciv.entity.FxEntity.WAVE, f.add(-8, 0, 0), 7f, 40, 0xFFC23A, 0xFF4FD8);
+                    com.pvpciv.entity.FxEntity.spawn(p.serverLevel(), com.pvpciv.entity.FxEntity.PILLAR, f.add(0, 0, 6), 0.9f, 60, 0x9AFF40, 0xD070FF);
+                    com.pvpciv.entity.FxEntity.spawn(p.serverLevel(), com.pvpciv.entity.FxEntity.BEAM, f.add(-4, 1, 4), 0.1f, 60, 0xE0204A, 0xFF9AD8).to(f.add(4, 3, 4));
                     return 1;
                 }))
                 .then(Commands.literal("jail").requires(s -> s.hasPermission(2)).executes(c -> {

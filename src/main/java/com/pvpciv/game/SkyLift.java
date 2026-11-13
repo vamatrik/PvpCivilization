@@ -33,9 +33,11 @@ import static com.pvpciv.game.DialogueManager.opt;
 public final class SkyLift {
     public static final int C = 0x9A5AE0;
     private static final Set<UUID> RIDING = new HashSet<>();
-    public static final String[] FLOORS = {"Нижний Шпиль", "Неоновый город", "???", "???", "Луна"};
+    public static final String[] FLOORS = {"Нижний Шпиль", "Неоновый город", "Тихая библиотека", "???", "Луна"};
 
-    public static int unlocked(StoryData d) { return d.liftOk ? 0b11 : 0b1; }
+    /** Этаж 3 — когда пали оба босса этажа 2 (Дон и Крысиный король, их трофеи). */
+    public static boolean f3Ok(StoryData d) { return d.liftOk && (d.trophies & 12) == 12; }
+    public static int unlocked(StoryData d) { return !d.liftOk ? 0b1 : f3Ok(d) ? 0b111 : 0b11; }
 
     /** ПКМ по табло лифта. */
     private static final java.util.Map<UUID, Long> LAST = new java.util.HashMap<>();
@@ -47,7 +49,8 @@ public final class SkyLift {
         if (last != null && now - last < 10) return;   // ПКМ приходит дважды (обе руки) — один раз
         StoryData d = Progress.d(p);
         if (!d.liftOk && CivWorld.is(p.level()) && !CivWorld.isF2(p.level())) { summonLuna(p); return; }
-        int cur = CivWorld.isF2(p.level()) ? 2 : 1;
+        int cur = Math.max(1, CivWorld.floor(p.level()));
+        if (cur == 2 && !f3Ok(d) && (d.trophies & 12) != 12) p.displayClientMessage(Component.literal("Этаж 3 откроется, когда падут Дон Витторио и Крысиный король.").withStyle(ChatFormatting.GRAY), true);
         PacketDistributor.sendToPlayer(p, new Network.OpenLift(unlocked(d), cur));
     }
 
@@ -109,7 +112,7 @@ public final class SkyLift {
     public static void ride(ServerPlayer p, int floor) {
         StoryData d = Progress.d(p);
         if ((unlocked(d) & (1 << (floor - 1))) == 0 || RIDING.contains(p.getUUID())) return;
-        int cur = CivWorld.isF2(p.level()) ? 2 : 1;
+        int cur = Math.max(1, CivWorld.floor(p.level()));
         if (floor == cur) return;
         RIDING.add(p.getUUID());
         if (p.isPassenger()) p.stopRiding();
@@ -117,7 +120,7 @@ public final class SkyLift {
         String title = "ЭТАЖ " + floor + "\n" + FLOORS[floor - 1];
         ServerLevel from = (ServerLevel) p.level();
         boolean up = floor > cur;
-        java.util.List<Vec3> path1 = cur == 1 ? com.pvpciv.world.Monorail.roofPath(0, 110) : com.pvpciv.world.Monorail.f2Path(0, -60);
+        java.util.List<Vec3> path1 = com.pvpciv.world.Monorail.pathFrom(cur);
         int dur1 = cur == 1 ? 130 : 90;
         PacketDistributor.sendToPlayer(p, new Network.Cinematic(5, dur1, ""));
         from.playSound(null, p.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.2f, 0.6f);
@@ -127,8 +130,8 @@ public final class SkyLift {
         c1.start(path1, dur1, true, false, cab -> {
             p.stopRiding();
             if (!p.isAlive() || p.hasDisconnected()) { RIDING.remove(p.getUUID()); return; }
-            ServerLevel to = floor == 2 ? CivWorld.f2(p.server) : CivWorld.level(p.server);
-            java.util.List<Vec3> path2 = floor == 2 ? com.pvpciv.world.Monorail.f2Path(-60, 0) : com.pvpciv.world.Monorail.roofPath(110, 0);
+            ServerLevel to = CivWorld.byFloor(p.server, floor);
+            java.util.List<Vec3> path2 = com.pvpciv.world.Monorail.pathTo(floor);
             Vec3 s = path2.get(0);
             p.teleportTo(to, s.x, s.y, s.z, 0, 0);
             p.resetFallDistance();
@@ -152,8 +155,9 @@ public final class SkyLift {
         RIDING.remove(p.getUUID());
         p.stopRiding();
         p.resetFallDistance();
-        Vec3 a = floor == 2 ? com.pvpciv.floor.Floor2.LIFT_ARRIVE : com.pvpciv.world.DormBuilder.LIFT_ARRIVE;
-        p.teleportTo(floor == 2 ? CivWorld.f2(p.server) : CivWorld.level(p.server), a.x, a.y, a.z, 0, 0);
+        Vec3 a = floor == 3 ? com.pvpciv.floor.Floor3.LIFT_ARRIVE : floor == 2 ? com.pvpciv.floor.Floor2.LIFT_ARRIVE : com.pvpciv.world.DormBuilder.LIFT_ARRIVE;
+        p.teleportTo(CivWorld.byFloor(p.server, floor), a.x, a.y, a.z, 0, 0);
+        if (floor == 3) com.pvpciv.game.Library.onArrive(p);
         p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1f, 1.4f);
     }
 }

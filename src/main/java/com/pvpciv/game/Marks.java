@@ -28,7 +28,7 @@ public final class Marks {
         Type(String t, int b) { title = t; bonus = b; }
     }
 
-    private static final Map<String, Integer> BASE = Map.of("brute", 4, "keeper", 6, "don", 7, "rat_king", 9);
+    private static final Map<String, Integer> BASE = Map.of("brute", 4, "keeper", 6, "don", 7, "rat_king", 9, "kappa", 11, "kumiho", 13);
     private static final Map<String, Integer> FAST_S = Map.of("brute", 90, "keeper", 120, "don", 120, "rat_king", 150);
 
     public static long day() { return java.time.LocalDate.now(java.time.ZoneId.of("Europe/Moscow")).toEpochDay(); }

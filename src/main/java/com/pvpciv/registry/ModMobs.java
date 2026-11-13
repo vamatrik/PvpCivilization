@@ -44,6 +44,17 @@ public final class ModMobs {
     public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.beast.CivRat>> RAT = mob("rat", com.pvpciv.entity.beast.CivRat::new, 0.85f, 0.6f, 0x6a6058, 0xd09090);
     public static final DeferredHolder<EntityType<?>, EntityType<CivZombie>> GHOUL = mob("sewer_ghoul", CivZombie::new, 0.6f, 1.95f, 0x4a5a3a, 0x8ad040);
     public static final DeferredHolder<EntityType<?>, EntityType<CivGunner>> GUNNER = mob("gunner", CivGunner::new, 0.6f, 1.99f, 0x2a2a2a, 0xe0a040);
+    // этаж 3: деревня самураев (ур. 10–12) и деревня Кумихо (ур. 13–15)
+    public static final DeferredHolder<EntityType<?>, EntityType<CivZombie>> SAMURAI = mob("samurai", CivZombie::new, 0.6f, 1.95f, 0x7a1a1a, 0xd8b048);
+    public static final DeferredHolder<EntityType<?>, EntityType<CivZombie>> NINJA = mob("ninja", CivZombie::new, 0.6f, 1.95f, 0x1a1a24, 0xc02040);
+    public static final DeferredHolder<EntityType<?>, EntityType<CivSkeleton>> ASHIGARU = mob("ashigaru", CivSkeleton::new, 0.6f, 1.99f, 0x4a3a24, 0x6a2a1a);
+    public static final DeferredHolder<EntityType<?>, EntityType<CivZombie>> WEREWOLF = mob("werewolf", CivZombie::new, 0.7f, 2.2f, 0x6a5a4a, 0xffd040);
+    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.beast.CivFox>> FOX = mob("fox_spirit", com.pvpciv.entity.beast.CivFox::new, 0.8f, 0.85f, 0xe0782a, 0xf4ece0);
+    public static final DeferredHolder<EntityType<?>, EntityType<CivSkeleton>> KITSUNE_ARCHER = mob("kitsune_archer", CivSkeleton::new, 0.6f, 1.99f, 0xf4ece0, 0xd02030);
+    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.boss.KappaBoss>> KAPPA_BOSS = ENTITIES.register("kappa",
+            () -> EntityType.Builder.of(com.pvpciv.entity.boss.KappaBoss::new, MobCategory.MONSTER).sized(0.9f, 1.7f).fireImmune().clientTrackingRange(10).build("kappa"));
+    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.boss.KumihoBoss>> KUMIHO_BOSS = ENTITIES.register("kumiho",
+            () -> EntityType.Builder.of(com.pvpciv.entity.boss.KumihoBoss::new, MobCategory.MONSTER).sized(0.8f, 2.3f).fireImmune().clientTrackingRange(10).build("kumiho"));
     public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.beast.PetRat>> PET_RAT = ENTITIES.register("pet_rat",
             () -> EntityType.Builder.of(com.pvpciv.entity.beast.PetRat::new, MobCategory.MISC).sized(0.5f, 0.45f).clientTrackingRange(8).build("pet_rat"));
 
@@ -77,6 +88,14 @@ public final class ModMobs {
         e.put(THUG.get(), Zombie.createAttributes().build());
         e.put(GHOUL.get(), Zombie.createAttributes().build());
         e.put(GUNNER.get(), Skeleton.createAttributes().build());
+        e.put(SAMURAI.get(), Zombie.createAttributes().build());
+        e.put(NINJA.get(), Zombie.createAttributes().add(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED, 0.31).build());
+        e.put(ASHIGARU.get(), Skeleton.createAttributes().build());
+        e.put(WEREWOLF.get(), Zombie.createAttributes().add(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED, 0.27).build());
+        e.put(FOX.get(), com.pvpciv.entity.beast.CivBeast.attributes(0.36).build());
+        e.put(KITSUNE_ARCHER.get(), Skeleton.createAttributes().build());
+        e.put(KAPPA_BOSS.get(), com.pvpciv.entity.boss.CivBoss.attributes(400, 8, 0.28).build());
+        e.put(KUMIHO_BOSS.get(), com.pvpciv.entity.boss.CivBoss.attributes(900, 10, 0.3).build());
         e.put(STREET_DOG.get(), com.pvpciv.entity.beast.CivBeast.attributes(0.33).build());
         e.put(RAT.get(), com.pvpciv.entity.beast.CivBeast.attributes(0.32).build());
         e.put(PET_RAT.get(), com.pvpciv.entity.beast.CivBeast.attributes(0.34).build());

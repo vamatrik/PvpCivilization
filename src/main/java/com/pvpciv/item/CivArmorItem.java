@@ -66,6 +66,8 @@ public class CivArmorItem extends ArmorItem {
         String t = tier == Math.floor(tier) ? String.valueOf((int) tier) : (int) Math.floor(tier) + "+";
         tip.add(Component.literal(r.title + " • " + set + " • Тир " + t).withStyle(x -> x.withColor(rc)));
         tip.add(Component.literal(String.format("Броня: +%.1f   Здоровье: +%.1f", armor(st), health(st))).withStyle(ChatFormatting.GRAY));
+        if (set.startsWith("Самурай")) tip.add(Component.literal("Полный комплект: +5% шанс крита").withStyle(ChatFormatting.DARK_AQUA));
+        if (set.startsWith("Лисий")) tip.add(Component.literal("Полный комплект: прыжок и скорость").withStyle(ChatFormatting.DARK_AQUA));
         int lv = Gear.stars(st);
         if (lv >= com.pvpciv.game.ArmorUp.MAX) tip.add(Component.literal("Улучшение: +11 (максимум)").withStyle(ChatFormatting.DARK_RED));
         else {

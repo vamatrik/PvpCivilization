@@ -1,0 +1,58 @@
+{
+ "entries": [
+  {
+   "item": "pvpciv:sparks",
+   "chance": 1,
+   "min": 70,
+   "max": 110
+  },
+  {
+   "item": "pvpciv:fox_fur",
+   "chance": 1,
+   "min": 3,
+   "max": 6
+  },
+  {
+   "item": "pvpciv:foxfire",
+   "chance": 0.35
+  },
+  {
+   "item": "pvpciv:jade_seal",
+   "chance": 0.4
+  },
+  {
+   "item": "pvpciv:star_w1",
+   "chance": 0.4
+  },
+  {
+   "item": "pvpciv:blessed_star_w1",
+   "chance": 0.07
+  },
+  {
+   "weapons": [
+    "pvpciv:fox_fang",
+    "pvpciv:foxfire_blade"
+   ],
+   "chance": 0.45,
+   "min_rarity": "UNCOMMON"
+  },
+  {
+   "gear": [
+    "pvpciv:fox_helmet",
+    "pvpciv:fox_chestplate",
+    "pvpciv:fox_leggings",
+    "pvpciv:fox_boots"
+   ],
+   "chance": 0.12,
+   "min_rarity": "UNCOMMON"
+  },
+  {
+   "item": "pvpciv:temper_scroll",
+   "chance": 0.1
+  },
+  {
+   "item": "pvpciv:blood_star_w1",
+   "chance": 0.04
+  }
+ ]
+}

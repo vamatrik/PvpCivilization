@@ -103,7 +103,7 @@ public class DonBoss extends CivBoss {
         for (int i = 0; i < n; i++) {
             double a = random.nextDouble() * Math.PI * 2;
             var m = Mobs.spawn(lvl, Mobs.Kind.THUG, 9, false, c.add(Math.cos(a) * 9, 0, Math.sin(a) * 9), "floor2_mob", "don_goon");
-            if (m != null) lvl.sendParticles(ParticleTypes.POOF, m.getX(), m.getY() + 1, m.getZ(), 10, 0.3, 0.5, 0.3, 0.02);
+            if (m != null) com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.PILLAR, new Vec3(m.getX(), m.getY(), m.getZ()), 0.6f, 14, 0xFFC23A, 0xFF4FD8);
         }
     }
 

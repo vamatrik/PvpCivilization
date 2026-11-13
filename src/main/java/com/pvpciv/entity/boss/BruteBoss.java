@@ -52,7 +52,7 @@ public class BruteBoss extends CivBoss {
             knock(p, c, 0.9, 0.8);
         }).fx(at -> {
             lvl.playSound(null, blockPosition(), SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 1.6f, 0.6f);
-            lvl.sendParticles(ParticleTypes.EXPLOSION, at.x, at.y + 0.3, at.z, 8, 2.5, 0.2, 2.5, 0);
+            lvl.sendParticles(ParticleTypes.EXPLOSION, at.x, at.y + 0.3, at.z, 2, 1.5, 0.2, 1.5, 0);
             lvl.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, at.x, at.y + 0.2, at.z, 40, 3, 0.1, 3, 0.02);
             wave(lvl, at, 14, 0.45, dmg() * 0.8f, RED);
             if (enraged) later(12, () -> wave(lvl, at, 14, 0.5, dmg() * 0.8f, RED));
@@ -112,7 +112,8 @@ public class BruteBoss extends CivBoss {
         castYaw = getYRot();
         lvl.playSound(null, blockPosition(), SoundEvents.RAVAGER_ROAR, SoundSource.HOSTILE, 3f, 0.5f);
         lvl.playSound(null, blockPosition(), SoundEvents.ZOMBIE_VILLAGER_CONVERTED, SoundSource.HOSTILE, 2f, 0.6f);
-        lvl.sendParticles(ParticleTypes.ANGRY_VILLAGER, getX(), getY() + 3, getZ(), 12, 1.2, 0.6, 1.2, 0);
+        lvl.sendParticles(ParticleTypes.ANGRY_VILLAGER, getX(), getY() + 3, getZ(), 6, 1.2, 0.6, 1.2, 0);
+        com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.PILLAR, new Vec3(getX(), getY(), getZ()), 1.6f, 30, 0xFF3A20, 0xFFC060);
         Vec3 c = home != null ? home : position();
         for (int i = 0; i < 3; i++) {
             double a = i * 2.1;

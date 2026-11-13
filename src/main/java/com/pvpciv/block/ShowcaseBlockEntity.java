@@ -21,10 +21,11 @@ public class ShowcaseBlockEntity extends BlockEntity {
     public static Item trophy(int i) {
         return switch (i) {
             case 0 -> ModRegistry.BRUTE_TROPHY.get(); case 1 -> ModRegistry.KEEPER_TROPHY.get();
-            case 2 -> ModRegistry.DON_TROPHY.get(); case 3 -> ModRegistry.RAT_KING_TROPHY.get(); default -> null;
+            case 2 -> ModRegistry.DON_TROPHY.get(); case 3 -> ModRegistry.RAT_KING_TROPHY.get();
+            case 4 -> ModRegistry.KAPPA_TROPHY.get(); case 5 -> ModRegistry.KUMIHO_TROPHY.get(); default -> null;
         };
     }
-    public static int bitOf(Item it) { for (int i = 0; i < 4; i++) if (trophy(i) == it) return 1 << i; return 0; }
+    public static int bitOf(Item it) { for (int i = 0; i < 6; i++) if (trophy(i) == it) return 1 << i; return 0; }
 
     public void add(int bit) {
         bits |= bit;

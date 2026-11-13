@@ -101,6 +101,8 @@ public final class ArenaManager {
         return center().add(Math.cos(a) * 12, 0, Math.sin(a) * 12);
     }
 
+    public static boolean isArena(Mob m) { return mobs.contains(m.getUUID()); }
+
     private static void add(Mob m) { if (m != null) { mobs.add(m.getUUID()); m.setTarget(null); } }
 
     private static void spawnWave(ServerLevel lvl) {

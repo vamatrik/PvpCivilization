@@ -115,7 +115,6 @@ public abstract class CivBoss extends Monster implements GeoEntity {
         for (int i = zones.size() - 1; i >= 0; i--) {
             Zone z = zones.get(i);
             z.t--;
-            if (z.t % 2 == 0 && z.t > 0) drawZone(lvl, z);
             if (z.t <= 0) { zones.remove(i); impact(lvl, z); }
         }
         for (int i = waves.size() - 1; i >= 0; i--) if (tickWave(lvl, waves.get(i))) waves.remove(i);
@@ -166,12 +165,12 @@ public abstract class CivBoss extends Monster implements GeoEntity {
 
     // ------------------------------------------------------------------ зоны
     public static final class Zone {
-        Vec3 c; double r; int t; final int total; Vector3f color; Consumer<ServerPlayer> hit; Consumer<Vec3> fx;
+        Vec3 c; double r; int t; final int total; Vector3f color; Consumer<ServerPlayer> hit; Consumer<Vec3> fx; com.pvpciv.entity.FxEntity ent;
         double dirYaw = Double.NaN, half;   // конус: направление (рад) и полуугол
         Zone(Vec3 c, double r, int delay, Vector3f color) { this.c = c; this.r = r; this.t = delay; this.total = delay; this.color = color; }
         public Zone onHit(Consumer<ServerPlayer> h) { hit = h; return this; }
         public Zone fx(Consumer<Vec3> f) { fx = f; return this; }
-        public Zone cone(double yawRad, double halfRad) { dirYaw = yawRad; half = halfRad; return this; }
+        public Zone cone(double yawRad, double halfRad) { dirYaw = yawRad; half = halfRad; if (ent != null) ent.cone((float) yawRad, (float) halfRad); return this; }
         boolean inside(Vec3 p) {
             double dx = p.x - c.x, dz = p.z - c.z;
             if (dx * dx + dz * dz > r * r || Math.abs(p.y - c.y) > 3) return false;
@@ -184,33 +183,17 @@ public abstract class CivBoss extends Monster implements GeoEntity {
     protected Zone zone(ServerLevel lvl, Vec3 at, double r, int delay, Vector3f color) {
         Zone z = new Zone(new Vec3(at.x, ground(lvl, at), at.z), r, delay, color);
         zones.add(z);
-        drawZone(lvl, z);
+        // 0.9.0: цельный неоновый телеграф вместо частиц
+        z.ent = com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.ZONE, z.c, (float) r, delay, com.pvpciv.entity.FxEntity.rgb(color), light(color));
         return z;
     }
 
-    private void drawZone(ServerLevel lvl, Zone z) {
-        double prog = 1 - z.t / (double) z.total;
-        DustParticleOptions edge = new DustParticleOptions(z.color, 1.6f), fill = new DustParticleOptions(z.color, 1.0f);
-        int n = Math.max(12, (int) (z.r * 8));
-        boolean cone = !Double.isNaN(z.dirYaw);
-        for (int i = 0; i < n; i++) {
-            double a = 2 * Math.PI * i / n;
-            if (cone && Math.abs(Mth.wrapDegrees(Math.toDegrees(a - z.dirYaw))) > Math.toDegrees(z.half)) continue;
-            lvl.sendParticles(edge, z.c.x + Math.cos(a) * z.r, z.c.y + 0.12, z.c.z + Math.sin(a) * z.r, 1, 0, 0, 0, 0);
-        }
-        if (cone) for (double s : new double[]{-z.half, z.half})
-            for (double d = 0.8; d < z.r; d += 0.7)
-                lvl.sendParticles(edge, z.c.x + Math.cos(z.dirYaw + s) * d, z.c.y + 0.12, z.c.z + Math.sin(z.dirYaw + s) * d, 1, 0, 0, 0, 0);
-        double ri = z.r * prog;   // заполняющийся круг: когда дойдёт до контура — удар
-        int m = Math.max(6, (int) (ri * 7));
-        for (int i = 0; i < m; i++) {
-            double a = 2 * Math.PI * i / m;
-            if (cone && Math.abs(Mth.wrapDegrees(Math.toDegrees(a - z.dirYaw))) > Math.toDegrees(z.half)) continue;
-            lvl.sendParticles(fill, z.c.x + Math.cos(a) * ri, z.c.y + 0.1, z.c.z + Math.sin(a) * ri, 1, 0, 0, 0, 0);
-        }
-    }
+    /** Светлый вариант цвета — для градиента. */
+    public static int light(Vector3f c) { return com.pvpciv.entity.FxEntity.rgb(new Vector3f(c).lerp(new Vector3f(1, 1, 1), 0.55f)); }
 
     private void impact(ServerLevel lvl, Zone z) {
+        com.pvpciv.entity.FxEntity f = com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.BURST, z.c, (float) z.r, 12, com.pvpciv.entity.FxEntity.rgb(z.color), light(z.color));
+        if (f != null && !Double.isNaN(z.dirYaw)) f.cone((float) z.dirYaw, (float) z.half);
         if (z.fx != null) z.fx.accept(z.c);
         if (!isAlive()) return;
         for (ServerPlayer p : victims(lvl, 64)) if (z.inside(p.position()) && z.hit != null) { z.hit.accept(p); com.pvpciv.game.Marks.onZoneHit(p); }
@@ -224,17 +207,13 @@ public abstract class CivBoss extends Monster implements GeoEntity {
 
     /** Кольцо от центра наружу: бьёт игроков на земле, когда проходит под ними. */
     protected void wave(ServerLevel lvl, Vec3 c, double max, double speed, float dmg, Vector3f color) {
-        waves.add(new Wave(new Vec3(c.x, ground(lvl, c), c.z), max, speed, dmg, new DustParticleOptions(color, 2.0f)));
+        Vec3 at = new Vec3(c.x, ground(lvl, c), c.z);
+        waves.add(new Wave(at, max, speed, dmg, new DustParticleOptions(color, 2.0f)));
+        com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.WAVE, at, (float) max, (int) Math.ceil((max - 1) / speed), com.pvpciv.entity.FxEntity.rgb(color), light(color));
     }
 
     private boolean tickWave(ServerLevel lvl, Wave w) {
         w.r += w.speed;
-        int n = Math.max(16, (int) (w.r * 7));
-        for (int i = 0; i < n; i++) {
-            double a = 2 * Math.PI * i / n + w.r;
-            lvl.sendParticles(w.part, w.c.x + Math.cos(a) * w.r, w.c.y + 0.25, w.c.z + Math.sin(a) * w.r, 1, 0, 0.1, 0, 0);
-            if (i % 4 == 0) lvl.sendParticles(net.minecraft.core.particles.ParticleTypes.CLOUD, w.c.x + Math.cos(a) * w.r, w.c.y + 0.2, w.c.z + Math.sin(a) * w.r, 1, 0, 0.05, 0, 0.01);
-        }
         if (isAlive()) for (ServerPlayer p : victims(lvl, 64)) {
             double d = Math.hypot(p.getX() - w.c.x, p.getZ() - w.c.z);
             if (Math.abs(d - w.r) < 0.8 && p.onGround() && Math.abs(p.getY() - w.c.y) < 1.5 && w.hit.add(p.getUUID())) {

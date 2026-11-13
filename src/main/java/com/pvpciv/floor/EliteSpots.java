@@ -29,6 +29,9 @@ public final class EliteSpots {
         public Spot(String id, BlockPos pos, Mobs.Kind kind, int level, String name, String loot) { this(id, pos, kind, level, name, loot, false); }
     }
 
+    /** Группы лута, где вторые элитки разнесены по локации: Пепельная пустошь, деревня самураев. */
+    private static final java.util.Set<String> ROAM = java.util.Set.of("floor1_mob", "floor3_mob");
+
     public static final List<Spot> SPOTS = twins(List.of(
             new Spot("e_hall", new BlockPos(Floor1.RUINS.getX(), Floor1.Y, Floor1.RUINS.getZ() - 20), Mobs.Kind.WITHERED, 4, "Пепельный капрал", "floor1_mob"),
             new Spot("e_grove", Floor1.GROVE.offset(5, 0, 3), Mobs.Kind.ASH_SPIDER, 4, "Хозяйка рощи", "floor1_mob"),
@@ -50,7 +53,18 @@ public final class EliteSpots {
                 Spot s = g.get(i), o = g.get((i + 1) % g.size());
                 for (int j = 1; j < g.size() && o.kind() == s.kind(); j++) o = g.get((i + 1 + j) % g.size());
                 // имя — по виду (у исходной элиты имя привязано к её месту: «Хозяйка рощи» у столпов звучала бы странно)
-                out.add(new Spot(s.id() + "_b", s.pos().offset(s.id().contains("crypt") ? 0 : 6, 0, s.id().contains("crypt") ? 5 : 3), o.kind(), s.level(), "Элитный " + Character.toLowerCase(o.kind().title.charAt(0)) + o.kind().title.substring(1), s.loot(), s.f2()));
+                // 0.9.0: на «открытых» локациях вторая элитка бродит отдельно (20–32 блока от первой), на остальных — парой
+                BlockPos tp;
+                if (ROAM.contains(grp)) {
+                    double a = Math.floorMod(s.id().hashCode(), 360) * Math.PI / 180, r = 20 + Math.floorMod(s.id().hashCode() >> 8, 13);
+                    tp = s.pos().offset((int) Math.round(Math.cos(a) * r), 0, (int) Math.round(Math.sin(a) * r));
+                    if (grp.equals("floor1_mob")) tp = new BlockPos(Math.max(Floor1.X0 + 8, Math.min(Floor1.X1 - 8, tp.getX())), tp.getY(), Math.max(Floor1.Z0 + 12, Math.min(Floor1.Z1 - 8, tp.getZ())));
+                    else {   // деревня самураев: не дальше края острова
+                        BlockPos c = Floor3Areas.SV; double dx = tp.getX() - c.getX(), dz = tp.getZ() - c.getZ(), dd = Math.hypot(dx, dz), max = Floor3Areas.SV_R - 10;
+                        if (dd > max) tp = new BlockPos(c.getX() + (int) (dx / dd * max), tp.getY(), c.getZ() + (int) (dz / dd * max));
+                    }
+                } else tp = s.pos().offset(s.id().contains("crypt") ? 0 : 6, 0, s.id().contains("crypt") ? 5 : 3);
+                out.add(new Spot(s.id() + "_b", tp, o.kind(), s.level(), "Элитный " + Character.toLowerCase(o.kind().title.charAt(0)) + o.kind().title.substring(1), s.loot(), s.f2()));
             }
         }
         return out;
@@ -62,13 +76,14 @@ public final class EliteSpots {
 
     /** Элитный моб с точки убит — запомнить время возрождения. */
     public static void onDeath(Mob m) {
-        for (Spot s : java.util.stream.Stream.concat(SPOTS.stream(), Floor2.ELITES.stream()).toList()) if (m.getTags().contains(tag(s)))
+        for (Spot s : java.util.stream.Stream.of(SPOTS.stream(), Floor2.ELITES.stream(), Floor3Areas.ELITES.stream()).flatMap(x -> x).toList()) if (m.getTags().contains(tag(s)))
             RESPAWN.put(s.id(), m.level().getGameTime() + 20L * (180 + m.getRandom().nextInt(121)));
     }
 
     public static void tick(MinecraftServer server) {
         tick(server, CivWorld.level(server), SPOTS);
         tick(server, CivWorld.f2(server), Floor2.ELITES);
+        if (CivWorld.isF3(CivWorld.f3(server))) tick(server, CivWorld.f3(server), Floor3Areas.ELITES);
         bossHolograms(server);
     }
 
@@ -84,12 +99,12 @@ public final class EliteSpots {
             long at = RESPAWN.getOrDefault(s.id(), 0L);
             if (alive.isEmpty() && at <= now) {
                 int y = s.f2() ? s.pos().getY() : lvl.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, s.pos().getX(), s.pos().getZ());
-                Mob m = Mobs.spawn(lvl, s.kind(), s.level(), true, new Vec3(c.x, y, c.z), s.loot(), tag(s));
+                Vec3 sp = s.f2() ? ground(lvl, BlockPos.containing(c.x, y, c.z)) : com.pvpciv.game.Taxi.safe(lvl, BlockPos.containing(c.x, y, c.z));   // бета 0.8.7: элитка в камне
+                Mob m = Mobs.spawn(lvl, s.kind(), s.level(), true, sp, s.loot(), tag(s));
                 if (m != null) Mobs.setup(m, s.level(), true, s.name(), s.loot());
                 hologram(lvl, "holo_" + s.id(), c.add(0, 2.6, 0), null);
             } else if (!alive.isEmpty()) {
                 Mob m = alive.get(0);
-                if (m.position().distanceTo(c) > 14) m.teleportTo(c.x, m.getY(), c.z);   // не уходит далеко от точки
                 hologram(lvl, "holo_" + s.id(), c.add(0, 2.6, 0), null);
             } else {
                 long sec = Math.max(0, (at - now) / 20);
@@ -101,7 +116,7 @@ public final class EliteSpots {
 
     private static void bossHolograms(MinecraftServer server) {
         for (BossManager.Def bd : BossManager.DEFS) {
-            ServerLevel lvl = bd.f2() ? CivWorld.f2(server) : CivWorld.level(server);
+            ServerLevel lvl = BossManager.f3(bd) ? CivWorld.f3(server) : bd.f2() ? CivWorld.f2(server) : CivWorld.level(server);
             int bs = BossManager.secondsLeft(server, bd.id());
             Vec3 lair = Vec3.atBottomCenterOf(bd.lair().get()).add(0, 4, 0);
             boolean nearLair = false;
@@ -136,5 +151,15 @@ public final class EliteSpots {
         t.putBoolean("shadow", true);
         t.putInt("line_width", 220);
         d.load(t);
+    }
+
+    /** Для точек с фиксированной высотой (этажи 2–3): ближайшая клетка, где под ногами пол, а сверху два блока воздуха (не крыша). */
+    private static Vec3 ground(ServerLevel l, BlockPos b) {
+        for (int r = 0; r <= 8; r++) for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++) {
+            if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
+            BlockPos p = b.offset(dx, 0, dz);
+            if (l.getBlockState(p.below()).isSolid() && l.getBlockState(p).isAir() && l.getBlockState(p.above()).isAir()) return Vec3.atBottomCenterOf(p);
+        }
+        return com.pvpciv.game.Taxi.safe(l, b);
     }
 }

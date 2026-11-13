@@ -94,6 +94,7 @@ public final class Taxi {
     public static int homePrice(ServerPlayer p) {
         com.pvpciv.data.CivData.Apartment a = com.pvpciv.data.CivData.get(p.server).byId(Progress.d(p).apartment);
         if (a == null) return -1;
+        if (CivWorld.isF3(p.level())) return 60 + LIFT_FEE;
         if (CivWorld.isF2(p.level())) return 40 + LIFT_FEE / 2;
         return 30 + (int) Math.min(60, Math.hypot(p.getX() - a.door.getX(), p.getZ() - a.door.getZ()) / 10);
     }
@@ -116,7 +117,7 @@ public final class Taxi {
 
     /** Ближайшая точка к игроку (в пределах PICKUP_R) или -1. */
     public static int nearest(ServerPlayer p) {
-        int fl = CivWorld.isF2(p.level()) ? 2 : p.level().dimension() == CivWorld.WORLD1 ? 1 : 0;
+        int fl = CivWorld.floor(p.level());
         int best = -1; double bd = PICKUP_R * PICKUP_R;
         for (int i = 0; i < PTS.length; i++) {
             Pt t = PTS[i];
@@ -133,7 +134,7 @@ public final class Taxi {
         com.google.gson.JsonObject j = new com.google.gson.JsonObject();
         j.addProperty("f2", d.liftOk);
         j.addProperty("here", nearest(p));
-        j.addProperty("floor", CivWorld.isF2(p.level()) ? 2 : 1);
+        j.addProperty("floor", Math.max(1, CivWorld.floor(p.level())));
         j.addProperty("homePrice", homePrice(p));
         if (o != null) { j.addProperty("pf", o.from); j.addProperty("pt", o.to); }
         PacketDistributor.sendToPlayer(p, new Network.PhoneData(2, j.toString()));
@@ -183,7 +184,7 @@ public final class Taxi {
         if (o.from < 0) { here = p.position().distanceToSqr(o.at) < 36; fromName = "здесь"; }
         else {
             Pt a = PTS[o.from];
-            here = a.floor == (CivWorld.isF2(p.level()) ? 2 : p.level().dimension() == CivWorld.WORLD1 ? 1 : 0)
+            here = a.floor == CivWorld.floor(p.level())
                     && p.distanceToSqr(a.x + 0.5, a.y, a.z + 0.5) < PICKUP_R * PICKUP_R;
             fromName = a.name;
         }

@@ -30,6 +30,9 @@ public final class DialogueManager {
             return this;
         }
         public Dialogue onEnd(Consumer<ServerPlayer> c) { onEnd = c; return this; }
+        /** Действие после закрытия диалога: опция с next = "!id". */
+        final java.util.Map<String, Consumer<ServerPlayer>> actions = new java.util.HashMap<>();
+        public Dialogue action(String id, Consumer<ServerPlayer> c) { actions.put(id, c); return this; }
         public Dialogue onAbort(Consumer<ServerPlayer> c) { onAbort = c; return this; }
     }
 
@@ -77,7 +80,8 @@ public final class DialogueManager {
         Node n = s.d.nodes.get(s.node);
         if (n == null || idx >= n.opts().size()) return;
         Opt o = n.opts().get(idx);
-        if (o.next() == null) finish(p, s);
+        if (o.next() != null && o.next().startsWith("!")) { finish(p, s); var act = s.d.actions.get(o.next().substring(1)); if (act != null) act.accept(p); }
+        else if (o.next() == null) finish(p, s);
         else enter(p, s, o.next());
     }
 

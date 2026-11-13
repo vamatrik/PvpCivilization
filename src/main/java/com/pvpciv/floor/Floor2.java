@@ -36,6 +36,21 @@ public class Floor2 extends Builder {
     /** Логово контрабандиста: конец северного туннеля, перед ним — паркур над лавой. */
     public static final double DEN_DEG = 270;
     public static double denEnd() { return edge(Math.toRadians(DEN_DEG)) - 10; }
+    /** 0.8.8: пол логова контрабандиста — не горючий; потушить огонь. */
+    public static void fixDen(ServerLevel l) {
+        BlockPos d = den();
+        for (int x = -9; x <= 9; x++) for (int z = -9; z <= 9; z++) for (int y = -2; y <= 3; y++) {
+            BlockPos b = d.offset(x, y, z);
+            var st = l.getBlockState(b);
+            if (st.is(Blocks.FIRE)) l.setBlock(b, Blocks.AIR.defaultBlockState(), 3);
+            else if (y == -1 && (st.is(Blocks.DARK_OAK_PLANKS) || st.isAir())) {
+                double t = Math.hypot(b.getX(), b.getZ());
+                if (st.is(Blocks.DARK_OAK_PLANKS) || (Math.abs(t - (denEnd() - 2.5)) <= 3 && Math.abs(radialW(b.getX(), b.getZ())) <= 3.2))
+                    l.setBlock(b, Blocks.POLISHED_BLACKSTONE_BRICKS.defaultBlockState(), 3);
+            }
+        }
+    }
+
     public static BlockPos den() { return polar(DEN_DEG, denEnd() - 3, YS); }
     public static final BlockPos TOWER = polar(15, 62, Y);    // небоскрёб «Альтаир» с парашютистом на крыше
     public static final int TOWER_H = 58;
@@ -254,7 +269,7 @@ public class Floor2 extends Builder {
         // логово: ковёр, сундуки, фонари
         for (double t = end - 5; t <= end; t += 0.5) for (double w = -3; w <= 3; w += 0.5) {
             int x = (int) Math.round(ux * t + vx * w), z = (int) Math.round(uz * t + vz * w);
-            set(x, YS - 1, z, Blocks.DARK_OAK_PLANKS);
+            set(x, YS - 1, z, Blocks.POLISHED_BLACKSTONE_BRICKS);   // бета 0.8.7: доски у лавы горели
             if (Math.abs(w) <= 1.5 && t < end - 1) set(x, YS, z, Blocks.PURPLE_CARPET);
         }
         BlockPos d = den();
@@ -452,7 +467,9 @@ public class Floor2 extends Builder {
         ensure(lvl, ModRegistry.SMUGGLER.get(), new Vec3(d.getX() + 0.5, YS, d.getZ() + 0.5));
     }
 
-    private static void ensure(ServerLevel lvl, net.minecraft.world.entity.EntityType<com.pvpciv.entity.CityNpcEntity> type, Vec3 at) {
+    private static void ensure(ServerLevel lvl, net.minecraft.world.entity.EntityType<com.pvpciv.entity.CityNpcEntity> type, Vec3 at) { ensureNpc(lvl, type, at, 180); }
+
+    public static void ensureNpc(ServerLevel lvl, net.minecraft.world.entity.EntityType<com.pvpciv.entity.CityNpcEntity> type, Vec3 at, float yaw) {
         if (!lvl.areEntitiesLoaded(net.minecraft.world.level.ChunkPos.asLong(BlockPos.containing(at)))) return;
         var list = lvl.getEntitiesOfClass(com.pvpciv.entity.CityNpcEntity.class, new net.minecraft.world.phys.AABB(BlockPos.containing(at)).inflate(24), e -> e.getType() == type);
         for (int i = 1; i < list.size(); i++) list.get(i).discard();
@@ -462,7 +479,8 @@ public class Floor2 extends Builder {
         }
         var e = type.create(lvl);
         if (e == null) return;
-        e.moveTo(at.x, at.y, at.z, 180, 0);
+        e.moveTo(at.x, at.y, at.z, yaw, 0);
+        e.setYHeadRot(yaw);
         lvl.addFreshEntity(e);
     }
 }

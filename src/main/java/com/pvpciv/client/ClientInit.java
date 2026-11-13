@@ -43,6 +43,10 @@ public final class ClientInit {
             e.registerEntityRenderer(ModRegistry.PLUMBER.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/plumber.png")));
             e.registerEntityRenderer(ModRegistry.COURIER.get(), CourierRenderer::new);
             e.registerEntityRenderer(ModRegistry.GATE.get(), GateRenderer::new);
+            e.registerEntityRenderer(ModRegistry.FX.get(), FxRenderer::new);
+            e.registerEntityRenderer(ModRegistry.LIBRARIAN.get(), ctx -> new Floor3NpcRenderer(ctx, false));
+            e.registerEntityRenderer(ModRegistry.CHEF.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/chef.png")));
+            e.registerEntityRenderer(ModRegistry.ASSASSIN.get(), ctx -> new Floor3NpcRenderer(ctx, true));
             e.registerEntityRenderer(ModRegistry.SMUGGLER.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/smuggler.png")));
             e.registerEntityRenderer(ModRegistry.CARMILLA.get(), GeoNpcRenderer::new);
             e.registerEntityRenderer(ModRegistry.ELEONORA.get(), GeoNpcRenderer::new);
@@ -54,7 +58,7 @@ public final class ClientInit {
             e.registerBlockEntityRenderer(ModRegistry.STASH_BE.get(), ctx -> new StashRenderer());
             e.registerBlockEntityRenderer(ModRegistry.PEDESTAL_BE.get(), ctx -> new PedestalRenderer());
             e.registerBlockEntityRenderer(ModRegistry.SHOWCASE_BE.get(), ctx -> new ShowcaseRenderer());
-            e.registerEntityRenderer(ModRegistry.TRADER.get(), ctx -> new NpcRenderer<>(ctx, true, PvpCiv.id("textures/entity/trader.png")));
+            e.registerEntityRenderer(ModRegistry.TRADER.get(), SorokaRenderer::new);
         });
         modBus.addListener((RegisterGuiLayersEvent e) -> e.registerAbove(VanillaGuiLayers.HOTBAR, PvpCiv.id("hud"), Hud::render));
         modBus.addListener((RegisterMenuScreensEvent e) -> {
@@ -126,6 +130,14 @@ public final class ClientInit {
         int tier = b instanceof com.pvpciv.entity.CivBoat cb ? cb.tier() : b.getVariant() == net.minecraft.world.entity.vehicle.Boat.Type.BIRCH ? 2 : 1;
         var in = mc.player.input;
         float turn = com.pvpciv.item.BoatSummonItem.turnBonus(tier);
+        // бета 0.8.7: «странно управляется» — ванильная лодка копит вращение и крутится после отпускания клавиши.
+        // Гасим занос: без руля вращение быстро затухает, с рулём — ограничено.
+        Float rot = spin(b);
+        if (rot != null) {
+            float lim = 5f + turn;
+            float nr = in.left == in.right ? rot * 0.45f : Math.max(-lim, Math.min(lim, rot));
+            if (nr != rot) spin(b, nr);
+        }
         if (turn > 0 && in.left != in.right) {
             float d = in.left ? -turn : turn;
             b.setYRot(b.getYRot() + d);
@@ -152,6 +164,17 @@ public final class ClientInit {
         b.setDeltaMovement(v.x * k, Math.min(v.y, 0.5), v.z * k);
     }
 
+    private static java.lang.reflect.Field SPIN;
+    private static boolean spinFailed;
+    private static Float spin(net.minecraft.world.entity.vehicle.Boat b) {
+        if (spinFailed) return null;
+        try {
+            if (SPIN == null) { SPIN = net.minecraft.world.entity.vehicle.Boat.class.getDeclaredField("deltaRotation"); SPIN.setAccessible(true); }
+            return SPIN.getFloat(b);
+        } catch (Exception e) { spinFailed = true; return null; }
+    }
+    private static void spin(net.minecraft.world.entity.vehicle.Boat b, float v) { try { SPIN.setFloat(b, v); } catch (Exception e) { spinFailed = true; } }
+
     private static boolean calibrated = false;
     private static net.minecraft.client.CameraType savedCam = null;
     private static float camYaw;
@@ -177,7 +200,8 @@ public final class ClientInit {
         while (PHONE.consumeClick()) if (mc.player != null && mc.screen == null) PacketDistributor.sendToServer(new Network.PhoneCmd("open"));
         for (int k = 1; k <= 2; k++) while (SKILL_KEYS[k].consumeClick()) {
             if (mc.player == null) continue;
-            int need = k == 1 ? 8 : 18;
+            if (k == 1) { PacketDistributor.sendToServer(new Network.PhoneCmd("skill:2")); continue; }
+            int need = k == 1 ? 10 : 35;
             mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal(ClientState.level < need
                     ? "Слот навыка " + (k + 1) + " откроется на " + need + " уровне."
                     : "Слот навыка " + (k + 1) + " пуст — навыки для него появятся с этажом 3.").withStyle(net.minecraft.ChatFormatting.GRAY), true);

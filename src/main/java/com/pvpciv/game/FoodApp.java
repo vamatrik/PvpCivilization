@@ -171,7 +171,7 @@ public final class FoodApp {
             spot = BlockPos.containing(d.food.getDouble("x"), d.food.getDouble("y"), d.food.getDouble("z"));
         } else if (Gates.byId(dest) != null) {
             Gates.Gate g = Gates.byId(dest);
-            lvl = g.floor() == 2 ? CivWorld.f2(p.server) : CivWorld.level(p.server);
+            lvl = CivWorld.byFloor(p.server, g.floor());
             Vec3 at = Taxi.safe(lvl, g.pos().get().offset(2, 0, 2));
             spot = BlockPos.containing(at);
         } else {
@@ -217,7 +217,7 @@ public final class FoodApp {
         if (p.getLastHurtByMobTimestamp() > p.tickCount - 100) return "ты в бою — «я тут постою»";
         if (com.pvpciv.floor.Zones.at(p).type() == com.pvpciv.floor.Zones.Type.PVP) return "в PvP-зону курьеры не ходят";
         for (com.pvpciv.floor.BossManager.Def d : com.pvpciv.floor.BossManager.DEFS) {
-            if (d.f2() != CivWorld.isF2(p.level())) continue;
+            if (com.pvpciv.floor.BossManager.floor(d) != CivWorld.floor(p.level())) continue;
             if (p.position().distanceTo(Vec3.atBottomCenterOf(d.lair().get())) < d.lairR() + 8) return "к логову босса он не полезет";
         }
         return null;

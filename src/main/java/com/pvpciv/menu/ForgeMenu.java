@@ -93,7 +93,7 @@ public class ForgeMenu extends CivMenu {
         ServerLevel lvl = sp.serverLevel();
         Vector3f col = rgb(Gear.starColor(s + 1));
         double fx = pos.getX() + 0.5, fy = pos.getY() + 1.3, fz = pos.getZ() + 0.5;
-        if (s + 1 >= 8) broadcast(lvl, sp.getGameProfile().getName() + " точит " + w.getHoverName().getString() + " до +" + (s + 1) + "... шанс " + Math.round(chance() * 100) + "%", ChatFormatting.LIGHT_PURPLE);
+        if (s + 1 >= 8) broadcast(lvl, sp.getGameProfile().getName() + " точит " + com.pvpciv.util.Ru.name(w) + " до +" + (s + 1) + "... шанс " + Math.round(chance() * 100) + "%", ChatFormatting.LIGHT_PURPLE);
         for (int t = 1; t <= RITUAL; t++) {
             int tt = t;
             GameEvents.later(sp.server, t, () -> {
@@ -141,8 +141,8 @@ public class ForgeMenu extends CivMenu {
             lvl.sendParticles(ParticleTypes.SMOKE, fx, fy, fz, 30, 0.3, 0.3, 0.3, 0.02);
         } else {
             int tier = w.getItem() instanceof CivWeaponItem cw ? cw.tier : 1;
-            String name = w.getHoverName().getString();
-            box.setItem(0, new ItemStack(ModRegistry.WEAPON_SHARDS.get(), 1 + tier + pendingFrom / 2));
+            String name = com.pvpciv.util.Ru.name(w);
+            box.setItem(0, w.is(ModRegistry.YUKI_KATANA.get()) ? com.pvpciv.game.Assassin.remainsOf(w, pendingFrom) : new ItemStack(ModRegistry.WEAPON_SHARDS.get(), 1 + tier + pendingFrom / 2));
             result.set(3);
             lvl.playSound(null, pos, SoundEvents.ANVIL_DESTROY, SoundSource.BLOCKS, 1f, 0.8f);
             lvl.playSound(null, pos, SoundEvents.ITEM_BREAK, SoundSource.BLOCKS, 1f, 0.6f);

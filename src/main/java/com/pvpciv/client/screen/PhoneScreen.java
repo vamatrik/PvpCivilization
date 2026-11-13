@@ -47,7 +47,7 @@ public class PhoneScreen extends Screen {
         if (kind != app) { java.util.Arrays.fill(cart, 0); }
         app = kind; data = j; dataAt = System.currentTimeMillis();
         if (kind == TAXI) {
-            tFloor = j.get("floor").getAsInt();
+            tFloor = Math.min(2, j.get("floor").getAsInt());   // карта такси — пока этажи 1–2
             tFrom = j.get("here").getAsInt(); tTo = -1;
             if (j.has("pf")) { tFrom = j.get("pf").getAsInt(); tTo = j.get("pt").getAsInt(); }
         }

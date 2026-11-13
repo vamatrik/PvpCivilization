@@ -83,6 +83,8 @@ public final class ClientPayloads {
                 else mc.setScreen(new com.pvpciv.client.screen.PhoneScreen(p.kind(), j));
             }
             case 7 -> mc.setScreen(new com.pvpciv.client.screen.GateScreen(j));
+            case 9 -> mc.setScreen(new com.pvpciv.client.screen.AlmanacScreen(j));
+            case 10 -> { if (mc.screen instanceof com.pvpciv.client.screen.WordScreen ws) ws.data(j); else mc.setScreen(new com.pvpciv.client.screen.WordScreen(j)); }
             case 8 -> { ClientState.gatesFixed.clear(); for (var el : j.getAsJsonArray("fixed")) ClientState.gatesFixed.add(el.getAsString()); }
             case 6 -> ClientState.pvpShield = j.has("pvpShield") && j.get("pvpShield").getAsBoolean();
             case 3 -> ClientState.callUntil = System.currentTimeMillis() + (j.has("sec") ? j.get("sec").getAsInt() : 10) * 1000L;

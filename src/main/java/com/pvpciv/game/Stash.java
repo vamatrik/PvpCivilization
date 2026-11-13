@@ -25,9 +25,10 @@ public final class Stash {
         java.util.List<Long> pos = new java.util.ArrayList<>(), ready = new java.util.ArrayList<>();
         for (var e : data.stash.entrySet()) {
             if (!e.getKey().endsWith(suffix) || e.getValue() <= now || e.getValue() > now * 2) continue;
-            boolean kf2 = e.getKey().startsWith("f2:");
-            if (kf2 != com.pvpciv.world.CivWorld.isF2(p.level())) continue;   // крышки — только тайников своего измерения
-            String[] c = e.getKey().substring(kf2 ? 3 : 0, e.getKey().indexOf('|')).split(",");
+            String pre = prefix(p.level());
+            boolean kf = e.getKey().startsWith("f2:") || e.getKey().startsWith("f3:");
+            if (pre.isEmpty() ? kf : !e.getKey().startsWith(pre)) continue;   // крышки — только тайников своего измерения
+            String[] c = e.getKey().substring(kf ? 3 : 0, e.getKey().indexOf('|')).split(",");
             pos.add(BlockPos.asLong(Integer.parseInt(c[0]), Integer.parseInt(c[1]), Integer.parseInt(c[2])));
             ready.add(e.getValue());
         }
@@ -38,8 +39,10 @@ public final class Stash {
     public static final long COOLDOWN_MS = 8L * 60 * 60 * 1000;
 
     private static String key(BlockPos pos, ServerPlayer p) {
-        return (com.pvpciv.world.CivWorld.isF2(p.level()) ? "f2:" : "") + pos.getX() + "," + pos.getY() + "," + pos.getZ() + "|" + p.getUUID();
+        return prefix(p.level()) + pos.getX() + "," + pos.getY() + "," + pos.getZ() + "|" + p.getUUID();
     }
+
+    private static String prefix(net.minecraft.world.level.Level l) { return com.pvpciv.world.CivWorld.isF3(l) ? "f3:" : com.pvpciv.world.CivWorld.isF2(l) ? "f2:" : ""; }
 
     /** Минимальный уровень: тайник локации открывается только с её уровня. */
     public static int minLevel(BlockPos pos) {
@@ -52,7 +55,7 @@ public final class Stash {
         ServerLevel lvl = p.serverLevel();
         CivData data = CivData.get(p.server);
         boolean f2 = com.pvpciv.world.CivWorld.isF2(lvl);
-        int need = f2 ? com.pvpciv.floor.Floor2.stashLevel(pos) : minLevel(pos);
+        int need = com.pvpciv.world.CivWorld.isF3(lvl) ? com.pvpciv.floor.Floor3Areas.stashLevel(pos) : f2 ? com.pvpciv.floor.Floor2.stashLevel(pos) : minLevel(pos);
         if (com.pvpciv.progress.Progress.d(p).level < need) {
             p.displayClientMessage(Component.literal("Ты слишком слаб, чтобы открыть этот тайник (нужен ур. " + need + ").").withStyle(ChatFormatting.RED), true);
             lvl.playSound(null, pos, SoundEvents.CHEST_LOCKED, SoundSource.BLOCKS, 0.8f, 0.8f);
@@ -73,7 +76,7 @@ public final class Stash {
         com.pvpciv.progress.Progress.d(p).stashesOpened++;
         data.setDirty();
         sync(p);
-        String table = f2 ? com.pvpciv.floor.Floor2.stashTable(pos) : com.pvpciv.floor.FloorNorth.CRYPT_STASHES.contains(pos) || (pos.getZ() < -560 && Math.abs(pos.getX() - 3) < 10) ? "floor1b_crypt"
+        String table = com.pvpciv.world.CivWorld.isF3(lvl) ? (pos.getX() < 0 ? "floor3b_stash" : "floor3_stash") : f2 ? com.pvpciv.floor.Floor2.stashTable(pos) : com.pvpciv.floor.FloorNorth.CRYPT_STASHES.contains(pos) || (pos.getZ() < -560 && Math.abs(pos.getX() - 3) < 10) ? "floor1b_crypt"
                 : pos.getZ() < 0 ? "floor1b_stash" : "floor1_stash";
         List<ItemStack> loot = LootTables.roll(table, lvl.random, 1.0);
         MutableComponent msg = Component.literal("Тайник: ").withStyle(ChatFormatting.GOLD);

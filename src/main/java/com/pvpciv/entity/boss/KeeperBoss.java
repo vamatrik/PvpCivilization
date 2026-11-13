@@ -100,7 +100,7 @@ public class KeeperBoss extends CivBoss {
             knock(p, c, 0.8, 0.6);
         }).fx(at -> {
             lvl.playSound(null, blockPosition(), SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 2f, 0.5f);
-            lvl.sendParticles(ICE, at.x, at.y + 0.3, at.z, 120, 3, 0.3, 3, 0.2);
+            lvl.sendParticles(ICE, at.x, at.y + 0.3, at.z, 40, 3, 0.3, 3, 0.2);
             lvl.sendParticles(ParticleTypes.SNOWFLAKE, at.x, at.y + 0.5, at.z, 60, 3, 0.5, 3, 0.05);
             wave(lvl, at, 12, 0.4, dmg() * 0.7f, WHITE);
         });
@@ -119,7 +119,7 @@ public class KeeperBoss extends CivBoss {
 
     private void spear(ServerLevel lvl, Vec3 at) {
         CivBoss.Zone z = zone(lvl, at, 2.0, 28, CYAN);
-        later(16, () -> { for (int k = 0; k < 6; k++) lvl.sendParticles(ParticleTypes.END_ROD, z.c.x, z.c.y + 9 - k * 1.2, z.c.z, 1, 0.05, 0.1, 0.05, 0); });
+        later(10, () -> com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.PILLAR, new Vec3(z.c.x, z.c.y, z.c.z), 0.7f, 14, 0x7FD8FF, 0xE8FBFF));
         z.onHit(p -> {
             p.hurt(damageSources().mobAttack(this), dmg() * 1.25f);
             p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1));
@@ -136,11 +136,13 @@ public class KeeperBoss extends CivBoss {
         Vec3 c = home != null ? home : old;
         triggerAnim("main", "blink");
         lvl.playSound(null, blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.HOSTILE, 1.5f, 1.4f);
-        lvl.sendParticles(ParticleTypes.SNOWFLAKE, old.x, old.y + 1.2, old.z, 60, 0.5, 1.0, 0.5, 0.08);
+        lvl.sendParticles(ParticleTypes.SNOWFLAKE, old.x, old.y + 1.2, old.z, 20, 0.5, 1.0, 0.5, 0.08);
+        com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.PILLAR, new Vec3(old.x, old.y, old.z), 1.0f, 18, 0x7FD8FF, 0xFFFFFF);
         double a = random.nextDouble() * Math.PI * 2;
         Vec3 to = safeSpot(lvl, new Vec3(c.x + Math.cos(a) * 8, c.y, c.z + Math.sin(a) * 8), c);
         teleportTo(to.x, to.y, to.z);
-        lvl.sendParticles(ParticleTypes.SNOWFLAKE, getX(), getY() + 1.2, getZ(), 60, 0.5, 1.0, 0.5, 0.08);
+        lvl.sendParticles(ParticleTypes.SNOWFLAKE, getX(), getY() + 1.2, getZ(), 20, 0.5, 1.0, 0.5, 0.08);
+        com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.PILLAR, new Vec3(getX(), getY(), getZ()), 1.0f, 18, 0x7FD8FF, 0xFFFFFF);
         zone(lvl, old, 3.0, 15, CYAN).onHit(p -> {
             p.hurt(damageSources().mobAttack(this), dmg());
             CombatEvents.frost(p, lvl);

@@ -42,6 +42,8 @@ public class LootTables extends SimpleJsonResourceReloadListener {
         LogUtils.getLogger().info("[PvpCiv] Loaded {} civ loot tables", TABLES.size());
     }
 
+    public static Map<String, JsonArray> tables() { return java.util.Collections.unmodifiableMap(TABLES); }
+
     public static List<ItemStack> roll(String table, RandomSource rnd, double chanceMult) {
         List<ItemStack> out = new ArrayList<>();
         JsonArray entries = TABLES.get(table);

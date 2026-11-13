@@ -18,6 +18,14 @@ import net.minecraft.world.effect.MobEffects;
 public final class Falling {
     public static void tick(ServerPlayer p) {
         if (p.isCreative() || p.isSpectator() || p.getVehicle() instanceof com.pvpciv.entity.LiftCabin) return;
+        if (CivWorld.isF3(p.level()) && p.getY() < com.pvpciv.floor.Floor3.Y - 40) {
+            var to = CivWorld.f2(p.server);
+            net.minecraft.world.phys.Vec3 at = landingF2(to, p.getRandom());
+            p.teleportTo(to, at.x, at.y, at.z, p.getYRot(), 30);
+            p.resetFallDistance();
+            p.sendSystemMessage(Component.literal("Ты сорвался с острова библиотеки и летишь вниз, на этаж 2!").withStyle(ChatFormatting.RED));
+            return;
+        }
         if (CivWorld.isF2(p.level()) && p.getY() < Floor2.YS - 16) {
             var to = CivWorld.level(p.server);
             net.minecraft.world.phys.Vec3 at = landing(to, p.getRandom());
@@ -47,6 +55,18 @@ public final class Falling {
      * Куда падаешь: случайная точка этажа 1, под которой есть земля (не бездна, не вода и не лава), на 150 блоков выше неё.
      * Раньше — всегда у лагеря Пустоши (бета 12.11).
      */
+    /** Падение с этажа 3: случайная улица Неонового города (не крыша небоскрёба). */
+    private static net.minecraft.world.phys.Vec3 landingF2(net.minecraft.server.level.ServerLevel l, net.minecraft.util.RandomSource r) {
+        for (int i = 0; i < 60; i++) {
+            int x = -110 + r.nextInt(221), z = -110 + r.nextInt(221);
+            int y = l.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+            if (y < Floor2.Y - 1 || y > Floor2.Y + 3) continue;
+            if (!l.getBlockState(new net.minecraft.core.BlockPos(x, y - 1, z)).getFluidState().isEmpty()) continue;
+            return new net.minecraft.world.phys.Vec3(x + 0.5, y + 150, z + 0.5);
+        }
+        return new net.minecraft.world.phys.Vec3(Floor2.LIFT_ARRIVE.x, Floor2.Y + 150, Floor2.LIFT_ARRIVE.z);
+    }
+
     private static net.minecraft.world.phys.Vec3 landing(net.minecraft.server.level.ServerLevel l, net.minecraft.util.RandomSource r) {
         for (int i = 0; i < 40; i++) {
             int x = -90 + r.nextInt(191), z = -595 + r.nextInt(1280);

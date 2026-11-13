@@ -19,7 +19,7 @@ import java.util.List;
 public final class Hud {
     private static final String[] ZONE_GEM = {"green", "amber", "red"};
     private static final String[] ZONE_SUB = {"Безопасная зона", "PvE-зона: монстры", "PvP-зона: игроки могут атаковать!"};
-    private static final int[] SKILL_LEVELS = {1, 8, 18};
+    private static final int[] SKILL_LEVELS = {1, 10, 35};   // 0.9.0
 
     public static void render(GuiGraphics g, DeltaTracker dt) {
         Minecraft mc = Minecraft.getInstance();

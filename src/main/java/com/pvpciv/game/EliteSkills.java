@@ -47,6 +47,7 @@ public final class EliteSkills {
                     boolean ranged = m instanceof net.minecraft.world.entity.monster.AbstractSkeleton;
                     if (!ranged && m.distanceTo(p) > 6) continue;
                     ACTIVE.add(new Tele(m, lvl, p.position(), ranged ? 3.2 : 2.8, now, 24, ranged));
+                    com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.ZONE, p.position(), ranged ? 3.2f : 2.8f, 24, ranged ? 0xFFCC33 : 0xFF2A1E, ranged ? 0xFFF4C0 : 0xFFB0A0);
                     m.getNavigation().stop();
                     m.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 26, 6, false, false));
                     lvl.playSound(null, m.blockPosition(), ranged ? SoundEvents.CROSSBOW_LOADING_MIDDLE.value() : SoundEvents.RAVAGER_ROAR, SoundSource.HOSTILE, 0.8f, ranged ? 1.2f : 1.6f);
@@ -60,23 +61,10 @@ public final class EliteSkills {
             if (!t.mob().isAlive()) { it.remove(); continue; }
             float k = Math.min(1f, (now - t.start()) / (float) t.dur());
             Vector3f col = t.ranged() ? new Vector3f(1f, 0.8f, 0.2f) : new Vector3f(1f, 0.15f, 0.12f);
-            if (now % 2 == 0) {
-                // контур
-                for (int i = 0; i < 28; i++) {
-                    double a = Math.PI * 2 * i / 28;
-                    t.lvl().sendParticles(new DustParticleOptions(col, 1.1f), t.c().x + Math.cos(a) * t.r(), t.c().y + 0.15, t.c().z + Math.sin(a) * t.r(), 1, 0, 0, 0, 0);
-                }
-                // заполнение — растущий круг (градиент: ярче к краю заполнения)
-                double rr = t.r() * k;
-                for (int i = 0; i < 18; i++) {
-                    double a = Math.PI * 2 * i / 18 + k * 2;
-                    t.lvl().sendParticles(new DustParticleOptions(new Vector3f(col).mul(0.6f + 0.4f * k), 0.8f), t.c().x + Math.cos(a) * rr, t.c().y + 0.12, t.c().z + Math.sin(a) * rr, 1, 0, 0, 0, 0);
-                }
-            }
             if (k < 1f) continue;
             it.remove();
             double dmg = t.mob().getAttributeValue(Attributes.ATTACK_DAMAGE) * (t.ranged() ? 1.3 : 1.6);
-            t.lvl().sendParticles(t.ranged() ? ParticleTypes.CRIT : ParticleTypes.EXPLOSION, t.c().x, t.c().y + 0.3, t.c().z, t.ranged() ? 40 : 3, t.r() * 0.5, 0.2, t.r() * 0.5, 0.1);
+            com.pvpciv.entity.FxEntity.spawn(t.lvl(), com.pvpciv.entity.FxEntity.BURST, t.c(), (float) t.r(), 12, t.ranged() ? 0xFFCC33 : 0xFF2A1E, t.ranged() ? 0xFFF4C0 : 0xFFB0A0);
             t.lvl().playSound(null, net.minecraft.core.BlockPos.containing(t.c()), t.ranged() ? SoundEvents.ARROW_HIT : SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 0.9f, 1.2f);
             for (ServerPlayer v : t.lvl().getEntitiesOfClass(ServerPlayer.class, new AABB(t.c(), t.c()).inflate(t.r(), 2, t.r()))) {
                 if (Math.hypot(v.getX() - t.c().x, v.getZ() - t.c().z) > t.r() || v.isCreative()) continue;

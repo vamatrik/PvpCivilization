@@ -26,7 +26,7 @@ public class ArmorBenchScreen extends CivScreen<ArmorBenchMenu> {
 
     private int count(Predicate<ItemStack> p) {
         int n = 0;
-        for (int i = 2; i < menu.slots.size(); i++) { ItemStack st = menu.slots.get(i).getItem(); if (p.test(st)) n += st.getCount(); }
+        for (int i = 3; i < menu.slots.size(); i++) { ItemStack st = menu.slots.get(i).getItem(); if (p.test(st)) n += st.getCount(); }
         return n;
     }
 
@@ -35,15 +35,15 @@ public class ArmorBenchScreen extends CivScreen<ArmorBenchMenu> {
         int x = leftPos, y = topPos;
         ItemStack armor = menu.box.getItem(0), junk = menu.box.getItem(1);
         Skin.inset(g, x + 10, y + 22, 152, 128);
-        g.drawString(font, "броня", x + 18, y + 33, Skin.FAINT, false);
-        g.drawString(font, "хлам", x + 19, y + 89, Skin.FAINT, false);
+        for (String[] l : new String[][]{{"броня", "29"}, {"ядро", "63"}, {"хлам", "97"}})
+            g.drawString(font, l[0], x + 30 - font.width(l[0]) / 2, y + Integer.parseInt(l[1]), Skin.FAINT, false);
         boolean can = false;
         if (!(armor.getItem() instanceof CivArmorItem)) {
-            g.drawString(font, "Положи броню.", x + 46, y + 34, Skin.GOLD_L, false);
-            g.drawString(font, "Хлам → опыт брони", x + 46, y + 50, Skin.DIM, false);
-            g.drawString(font, "Полоска + ядро → +1", x + 46, y + 61, Skin.DIM, false);
-            g.drawString(font, "Свиток: на +5 и +10", x + 46, y + 72, Skin.DIM, false);
-            g.drawString(font, "До +10 — без риска", x + 46, y + 83, Skin.GOOD, false);
+            g.drawString(font, "Положи броню.", x + 52, y + 34, Skin.GOLD_L, false);
+            g.drawString(font, "Хлам → опыт брони", x + 52, y + 50, Skin.DIM, false);
+            g.drawString(font, "Полоска + ядро → +1", x + 52, y + 61, Skin.DIM, false);
+            g.drawString(font, "Свиток: на +5 и +10", x + 52, y + 72, Skin.DIM, false);
+            g.drawString(font, "До +10 — без риска", x + 52, y + 83, Skin.GOOD, false);
         } else {
             int lv = ArmorUp.level(armor);
             g.drawString(font, "Уровень +" + lv + (lv >= ArmorUp.MAX ? " (макс.)" : ""), x + 46, y + 28, Skin.GOLD_L, false);
@@ -56,9 +56,13 @@ public class ArmorBenchScreen extends CivScreen<ArmorBenchMenu> {
                 boolean full = xp >= need;
                 if (lv < 10) {
                     int cn = ArmorUp.coreNeed(target);
-                    int have = count(st -> st.is(ModRegistry.ARMOR_CORE.get()) && ArmorCoreItem.level(st) >= cn);
-                    ly = req(g, x + 44, ly, ModRegistry.ARMOR_CORE.get(), "Ядро +" + cn + " или выше", have, 1);
-                    boolean ok = have > 0;
+                    ItemStack core = menu.box.getItem(2);
+                    boolean ok = core.is(ModRegistry.ARMOR_CORE.get()) && ArmorCoreItem.level(core) >= cn;
+                    g.renderItem(ArmorCoreItem.of(cn), x + 44, ly);
+                    g.drawString(font, "Ядро +" + cn + "+", x + 62, ly + 4, Skin.TEXT, false);
+                    String cs = core.isEmpty() ? "в слот" : ok ? "✓" : "слабое";
+                    g.drawString(font, cs, x + 160 - font.width(cs), ly + 4, ok ? Skin.GOOD : 0xFFFF7060, false);
+                    ly += 17;
                     if (ArmorUp.scrollNeed(target)) {
                         int sh = count(st -> st.is(ModRegistry.TEMPER_SCROLL.get()));
                         ly = req(g, x + 44, ly, ModRegistry.TEMPER_SCROLL.get(), "Свиток закалки", sh, 1);
@@ -67,13 +71,13 @@ public class ArmorBenchScreen extends CivScreen<ArmorBenchMenu> {
                     can = full && ok;
                 } else {
                     int bl = count(st -> st.is(ModRegistry.BLESSED_STAR_W1.get())), bd = count(st -> st.is(ModRegistry.BLOOD_STAR_W1.get()));
-                    ly = req(g, x + 44, ly, ModRegistry.BLESSED_STAR_W1.get(), "Благословенные", bl, ArmorUp.BLESSED_11);
+                    ly = req(g, x + 44, ly, ModRegistry.BLESSED_STAR_W1.get(), "Благослов.", bl, ArmorUp.BLESSED_11);
                     ly = req(g, x + 44, ly, ModRegistry.BLOOD_STAR_W1.get(), "Кровавые", bd, ArmorUp.BLOOD_11);
-                    g.drawString(font, "50%! Провал — откат до +5", x + 44, ly + 2, 0xFFFF7060, false);
+                    g.drawString(font, "50%: провал — до +5", x + 44, ly + 2, 0xFFFF7060, false);
                     can = full && bl >= ArmorUp.BLESSED_11 && bd >= ArmorUp.BLOOD_11;
                 }
                 int v = ArmorUp.junkFor(armor, junk);
-                if (v > 0) g.drawString(font, "+" + v + " за шт." + (ArmorUp.native_(armor, junk) ? " (родной ×1.5)" : ""), x + 44, y + 138, Skin.GOOD, false);
+                if (v > 0) g.drawString(font, "+" + v + "/шт" + (ArmorUp.native_(armor, junk) ? " · родной ×1.5" : ""), x + 44, y + 138, Skin.GOOD, false);
             }
         }
         boolean feed = armor.getItem() instanceof CivArmorItem && ArmorUp.junk(junk) > 0 && !ArmorUp.full(armor);
@@ -89,14 +93,14 @@ public class ArmorBenchScreen extends CivScreen<ArmorBenchMenu> {
         g.renderItem(new ItemStack(it), x, y);
         g.drawString(font, name, x + 18, y + 4, Skin.TEXT, false);
         String t = have + "/" + need;
-        g.drawString(font, t, x + 114 - font.width(t), y + 4, have >= need ? Skin.GOOD : 0xFFFF7060, false);
+        g.drawString(font, t, x + 116 - font.width(t), y + 4, have >= need ? Skin.GOOD : 0xFFFF7060, false);
         return y + 17;
     }
 
     @Override
     public boolean mouseClicked(double mx, double my, int b) {
-        if (in(mx, my, 10, 154, 74, 16)) { fx.burst(leftPos + 30, topPos + 52, 16, 0x8FE3FF, 50); click(ArmorBenchMenu.BTN_FEED); return true; }
-        if (in(mx, my, 88, 154, 74, 16)) { fx.burst(leftPos + 30, topPos + 52, 36, 0xFFE08A, 90); click(ArmorBenchMenu.BTN_UP); return true; }
+        if (in(mx, my, 10, 154, 74, 16)) { fx.burst(leftPos + 30, topPos + 48, 16, 0x8FE3FF, 50); click(ArmorBenchMenu.BTN_FEED); return true; }
+        if (in(mx, my, 88, 154, 74, 16)) { fx.burst(leftPos + 30, topPos + 48, 36, 0xFFE08A, 90); click(ArmorBenchMenu.BTN_UP); return true; }
         return super.mouseClicked(mx, my, b);
     }
 }

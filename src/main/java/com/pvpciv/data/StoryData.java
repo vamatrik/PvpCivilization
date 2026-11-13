@@ -27,6 +27,12 @@ public class StoryData implements INBTSerializable<CompoundTag> {
     public boolean pvpShield = false;
     /** Врата: id → 1 найдены, 2 починены; уровень домашних врат (1 — этаж 1). */
     public net.minecraft.nbt.CompoundTag gates = new net.minecraft.nbt.CompoundTag();
+    /** 0.9.0, этаж 3: квест библиотекаря (0 — не начат, 1 — ищет тома, 2 — Альманах выдан), найденные/сданные тома (биты), убийства по видам. */
+    public int libQuest = 0, libFound = 0, libGiven = 0;
+    public net.minecraft.nbt.CompoundTag bestiary = new net.minecraft.nbt.CompoundTag();   // элитки (_e) и боссы (boss_)
+    /** Убийца: очки охоты, ступень цепочки, крит, дружба, загадка дня, навык. */
+    public double huntPts = 0; public int huntStage = 0, critChance = 0, critDmg = 0, yukiFriend = 0, yukiTalk = 0; public long wordDay = -1; public int wordTries = 0; public boolean wordSolved = false, yukiKatana = false, touchSkill = false;
+    public String wordGuesses = "";
     public int homeGate = 1;
     public int eleTokens = 0;
     public String eleMark = "";
@@ -37,7 +43,7 @@ public class StoryData implements INBTSerializable<CompoundTag> {
     /** Счётчики «дневника подвигов» Тимофея и сданные вехи. */
     public long hits = 0, distM = 0, stashesOpened = 0;
     public net.minecraft.nbt.CompoundTag milestones = new net.minecraft.nbt.CompoundTag();
-    public int forgeLvl = 1, dismLvl = 1, extraSlots = 0;
+    public int forgeLvl = 1, dismLvl = 1, extraSlots = 0, bagRule = 0;
     public boolean starterFood = false;
     public CompoundTag shop = new CompoundTag();
     // титулы
@@ -76,13 +82,14 @@ public class StoryData implements INBTSerializable<CompoundTag> {
         t.putInt("showcase", showcase);
         t.putBoolean("liftOk", liftOk);
         t.putInt("eleStage", eleStage); t.put("phoneCd", phoneCd);
-        t.putBoolean("pvpShield", pvpShield); t.put("gates", gates); t.putInt("homeGate", homeGate); t.putInt("eleTokens", eleTokens); t.putString("eleMark", eleMark); t.putLong("eleMarkDay", eleMarkDay); t.put("eleDone", eleDone); t.put("eleShop", eleShop);
+        t.putBoolean("pvpShield", pvpShield); t.put("gates", gates); t.putInt("libQuest", libQuest); t.putInt("libFound", libFound); t.putInt("libGiven", libGiven); t.put("bestiary", bestiary); t.putDouble("huntPts", huntPts); t.putInt("huntStage", huntStage); t.putInt("critChance", critChance); t.putInt("critDmg", critDmg); t.putInt("yukiFriend", yukiFriend); t.putInt("yukiTalk", yukiTalk); t.putLong("wordDay", wordDay); t.putInt("wordTries", wordTries); t.putBoolean("wordSolved", wordSolved); t.putBoolean("yukiKatana", yukiKatana); t.putBoolean("touchSkill", touchSkill); t.putString("wordGuesses", wordGuesses); t.putInt("homeGate", homeGate); t.putInt("eleTokens", eleTokens); t.putString("eleMark", eleMark); t.putLong("eleMarkDay", eleMarkDay); t.put("eleDone", eleDone); t.put("eleShop", eleShop);
         t.put("food", food); t.put("foodStock", foodStock);
         t.putLong("hits", hits); t.putLong("distM", distM); t.putLong("stashesOpened", stashesOpened);
         t.put("milestones", milestones);
         t.putInt("forgeLvl", forgeLvl);
         t.putInt("dismLvl", dismLvl);
         t.putInt("extraSlots", extraSlots);
+        t.putInt("bagRule", bagRule);
         t.putBoolean("starterFood", starterFood);
         t.put("shop", shop);
         t.putString("titles", String.join(",", titles));
@@ -112,13 +119,14 @@ public class StoryData implements INBTSerializable<CompoundTag> {
         showcase = t.getInt("showcase");
         liftOk = t.getBoolean("liftOk");
         eleStage = t.getInt("eleStage"); phoneCd = t.getCompound("phoneCd");
-        pvpShield = t.getBoolean("pvpShield"); gates = t.getCompound("gates"); homeGate = Math.max(1, t.getInt("homeGate")); eleTokens = t.getInt("eleTokens"); eleMark = t.getString("eleMark"); eleMarkDay = t.getLong("eleMarkDay"); eleDone = t.getCompound("eleDone"); eleShop = t.getCompound("eleShop");
+        pvpShield = t.getBoolean("pvpShield"); gates = t.getCompound("gates"); libQuest = t.getInt("libQuest"); libFound = t.getInt("libFound"); libGiven = t.getInt("libGiven"); bestiary = t.getCompound("bestiary"); huntPts = t.getDouble("huntPts"); huntStage = t.getInt("huntStage"); critChance = t.getInt("critChance"); critDmg = t.getInt("critDmg"); yukiFriend = t.getInt("yukiFriend"); yukiTalk = t.getInt("yukiTalk"); wordDay = t.contains("wordDay") ? t.getLong("wordDay") : -1; wordTries = t.getInt("wordTries"); wordSolved = t.getBoolean("wordSolved"); yukiKatana = t.getBoolean("yukiKatana"); touchSkill = t.getBoolean("touchSkill"); wordGuesses = t.getString("wordGuesses"); homeGate = Math.max(1, t.getInt("homeGate")); eleTokens = t.getInt("eleTokens"); eleMark = t.getString("eleMark"); eleMarkDay = t.getLong("eleMarkDay"); eleDone = t.getCompound("eleDone"); eleShop = t.getCompound("eleShop");
         food = t.getCompound("food"); foodStock = t.getCompound("foodStock");
         hits = t.getLong("hits"); distM = t.getLong("distM"); stashesOpened = t.getLong("stashesOpened");
         milestones = t.getCompound("milestones");
         forgeLvl = Math.max(1, t.getInt("forgeLvl"));
         dismLvl = Math.max(1, t.getInt("dismLvl"));
         extraSlots = t.getInt("extraSlots");
+        bagRule = t.getInt("bagRule");
         starterFood = t.getBoolean("starterFood");
         shop = t.getCompound("shop");
         titles = new java.util.LinkedHashSet<>();

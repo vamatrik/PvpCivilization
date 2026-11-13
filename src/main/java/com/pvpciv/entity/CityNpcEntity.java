@@ -18,7 +18,7 @@ import static com.pvpciv.game.DialogueManager.opt;
 /** NPC Неонового города: Тимофей (вехи), парашютистка Ника (парашют), сантехник Гоша (канализация). */
 public class CityNpcEntity extends StoryNpc {
     public enum Role { TIMOFEY("Тимофей Глыба", 0xE05050), PARACHUTIST("Ника-парашютистка", 0xF09040), PLUMBER("Сантехник Гоша", 0x4A8AE0), SMUGGLER("Контрабандист Шнырь", 0xA070E0),
-        COURIER("Курьер «Шпиль.Еды»", 0xF2C230);
+        COURIER("Курьер «Шпиль.Еды»", 0xF2C230), LIBRARIAN("Хранитель Сёдо", 0xC8A86A), ASSASSIN("Юки, Тихая тень", 0xE0405A), CHEF("Повар Харуки", 0xF0A040);
         public final String name; public final int color;
         Role(String n, int c) { name = n; color = c; } }
     public final Role role;
@@ -58,6 +58,16 @@ public class CityNpcEntity extends StoryNpc {
         if (DialogueManager.inDialogue(p)) return;
         switch (role) {
             case COURIER -> com.pvpciv.game.FoodApp.talk(p, this);
+            case LIBRARIAN -> com.pvpciv.game.Library.talk(p, this);
+            case ASSASSIN -> com.pvpciv.game.Assassin.talk(p, this);
+            case CHEF -> {
+                String[] hi = {"Ирассяимасэ! Рамен горячий, суши свежие, бэнто — для героев.", "Каппы опять воровали огурцы. Купи что-нибудь — мне на новый забор.",
+                        "Императорский бэнто — один в завоз. Сила как у золотого яблока, только вкуснее."};
+                Story.say(p, role.name, role.color, hi[p.getRandom().nextInt(hi.length)]);
+                com.pvpciv.game.Shop.VENDOR.put(p.getUUID(), "chef");
+                p.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inv, pl) -> new com.pvpciv.menu.TraderMenu(id, inv), Component.literal("Повар Харуки")));
+                com.pvpciv.game.Shop.sendOffers(p);
+            }
             case TIMOFEY -> {
                 Story.say(p, role.name, role.color, "Дневник подвигов открыт! Смотри, как растёшь — прям как акции.");
                 Milestones.open(p);

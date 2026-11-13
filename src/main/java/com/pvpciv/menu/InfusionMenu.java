@@ -80,7 +80,7 @@ public class InfusionMenu extends CivMenu {
     public static Kind kind(ItemStack c, List<ItemStack> e) {
         int normal = edges(e, ModRegistry.STAR_W1.get()), blessed = edges(e, ModRegistry.BLESSED_STAR_W1.get());
         if (c.getItem() instanceof CivWeaponItem && Gear.stars(c) >= 5 && normal == 8) return Kind.BLESSED;
-        if ((c.is(ModRegistry.FROZEN_LOCKET.get()) || c.is(ModRegistry.GAS_MASK_FILTER.get())) && coreLevel(e) > 0) return Kind.CORE;
+        if ((c.is(ModRegistry.FROZEN_LOCKET.get()) || c.is(ModRegistry.GAS_MASK_FILTER.get()) || c.is(ModRegistry.JADE_SEAL.get())) && coreLevel(e) > 0) return Kind.CORE;
         return Kind.NONE;
     }
 
@@ -142,6 +142,9 @@ public class InfusionMenu extends CivMenu {
         for (int i = 0; i < 8; i++) shown.add(display(lvl, spots.get(i), edgeItems.get(i)));
         shown.add(display(lvl, c.add(0, 0.4, 0), center));
         lvl.playSound(null, a, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 1.2f, 0.7f);
+        // 0.9.0: неоновые лучи от пьедесталов к алтарю и столб над ним
+        for (Vec3 s0 : spots) { var f = com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.BEAM, s0, 0.1f, 46, 0xE0204A, 0xFF9AD8); if (f != null) f.to(c); }
+        com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.ZONE, Vec3.atBottomCenterOf(a), 3.6f, 50, 0xC0103A, 0xFF80C0);
         DustParticleOptions red = new DustParticleOptions(new Vector3f(0.9f, 0.1f, 0.25f), 1.0f);
         for (int t = 0; t < 10; t++) {
             final int step = t;
@@ -151,10 +154,6 @@ public class InfusionMenu extends CivMenu {
                     Vec3 s = spots.get(i), cur = s.lerp(c, f * 0.85);
                     Display.ItemDisplay d = shown.get(i);
                     if (d != null) d.teleportTo(cur.x, cur.y + Math.sin(f * Math.PI) * 0.8, cur.z);
-                    for (double u = 0; u < 1; u += 0.12) {
-                        Vec3 q = s.lerp(c, u);
-                        lvl.sendParticles(red, q.x, q.y + 0.1, q.z, 1, 0, 0, 0, 0);
-                    }
                 }
                 lvl.sendParticles(ParticleTypes.ENCHANT, c.x, c.y + 0.5, c.z, 20, 0.4, 0.6, 0.4, 0.6);
                 lvl.playSound(null, a, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 0.8f, 0.6f + step * 0.12f);
@@ -165,10 +164,14 @@ public class InfusionMenu extends CivMenu {
             if (ok) {
                 lvl.playSound(null, a, SoundEvents.TOTEM_USE, SoundSource.BLOCKS, 0.8f, 1.3f);
                 lvl.sendParticles(ParticleTypes.END_ROD, c.x, c.y + 0.5, c.z, 40, 0.3, 0.6, 0.3, 0.12);
-                lvl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, c.x, c.y, c.z, 30, 1.2, 0.3, 1.2, 0.02);
-                Bag.give(sp, result);
-                sp.sendSystemMessage(Component.literal(k == Kind.BLESSED ? "Инфузия удалась: Благословенная звезда!" : "Ритуал завершён: ").withStyle(ChatFormatting.LIGHT_PURPLE)
-                        .append(k == Kind.CORE ? result.getHoverName() : Component.empty()));
+                lvl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, c.x, c.y, c.z, 10, 1.2, 0.3, 1.2, 0.02);
+                com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.PILLAR, Vec3.atBottomCenterOf(a).add(0, 1, 0), 0.6f, 24, 0xFF4FA0, 0xFFFFFF);
+                // бета 0.8.7: результат ложится на алтарь — забираешь сам (ПКМ по алтарю)
+                if (lvl.getBlockEntity(a) instanceof PedestalBlockEntity be && be.item().isEmpty()) be.set(result.copy(), sp.getUUID(), sp.getGameProfile().getName());
+                else Bag.give(sp, result);
+                sp.sendSystemMessage(Component.literal(k == Kind.BLESSED ? "Инфузия удалась: Благословенная звезда! " : "Ритуал завершён: ").withStyle(ChatFormatting.LIGHT_PURPLE)
+                        .append(k == Kind.CORE ? result.getHoverName() : Component.empty())
+                        .append(Component.literal(" — забери с алтаря (ПКМ).").withStyle(ChatFormatting.GRAY)));
             } else {
                 lvl.playSound(null, a, SoundEvents.GENERIC_EXTINGUISH_FIRE, SoundSource.BLOCKS, 1.2f, 0.6f);
                 lvl.sendParticles(ParticleTypes.LARGE_SMOKE, c.x, c.y, c.z, 40, 0.6, 0.4, 0.6, 0.03);

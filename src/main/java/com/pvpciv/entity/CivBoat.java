@@ -39,7 +39,7 @@ public class CivBoat extends Boat implements GeoEntity {
 
     public int tier() { return entityData.get(TIER); }
     public void setTier(int t) { entityData.set(TIER, t); }
-    public String model() { return tier() >= 3 ? "neon_car" : "rime_boat"; }
+    public String model() { return tier() >= 4 ? "fox_boat" : tier() >= 3 ? "neon_car" : "rime_boat"; }
 
     @Override protected void defineSynchedData(SynchedEntityData.Builder b) { super.defineSynchedData(b); b.define(TIER, 2); }
     @Override protected void addAdditionalSaveData(CompoundTag t) { super.addAdditionalSaveData(t); t.putInt("civTier", tier()); }

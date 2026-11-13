@@ -21,7 +21,21 @@ public class RoofBuilder extends Builder {
 
     private RoofBuilder(ServerLevel level) { super(level, 77); }
 
-    public static void build(ServerLevel level) { new RoofBuilder(level).hall(); }
+    public static void build(ServerLevel level) { RoofBuilder b = new RoofBuilder(level); b.hall(); b.collar(); }
+
+    /** 0.8.8: обрамление проёма, из которого выходит рельс (неоновая рамка на потолке). */
+    public static void collar(ServerLevel level) { new RoofBuilder(level).collar(); }
+
+    private void collar() {
+        java.util.Set<Long> hole = new java.util.HashSet<>();
+        for (int x = X0 + 1; x < X1; x++) for (int z = Z0 + 1; z < Z1; z++) if (level.getBlockState(new BlockPos(x, RY + H, z)).isAir()) hole.add(BlockPos.asLong(x, 0, z));
+        for (int x = X0; x <= X1; x++) for (int z = Z0; z <= Z1; z++) {
+            if (hole.contains(BlockPos.asLong(x, 0, z))) continue;
+            boolean rim = false;
+            for (int dx = -1; dx <= 1 && !rim; dx++) for (int dz = -1; dz <= 1 && !rim; dz++) rim = hole.contains(BlockPos.asLong(x + dx, 0, z + dz));
+            if (rim) set(x, RY + H, z, (x + z) % 2 == 0 ? Blocks.SEA_LANTERN : Blocks.GOLD_BLOCK);
+        }
+    }
 
     private void hall() {
         // пол, стены, стеклянный потолок

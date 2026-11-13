@@ -25,6 +25,14 @@ public final class MobRenderers {
         zombie(e, ModMobs.POLICE.get(), "police");
         zombie(e, ModMobs.THUG.get(), "thug");
         zombie(e, ModMobs.GHOUL.get(), "sewer_ghoul");
+        zombie(e, ModMobs.SAMURAI.get(), "samurai");
+        zombie(e, ModMobs.NINJA.get(), "ninja");
+        zombie(e, ModMobs.WEREWOLF.get(), "werewolf");
+        skeleton(e, ModMobs.ASHIGARU.get(), "ashigaru");
+        skeleton(e, ModMobs.KITSUNE_ARCHER.get(), "kitsune_archer");
+        e.registerEntityRenderer(ModMobs.FOX.get(), ctx -> new BeastRenderer<>(ctx, 0.4f));
+        e.registerEntityRenderer(ModMobs.KAPPA_BOSS.get(), ctx -> new BossRenderer<>(ctx, "kappa", 1.25f, 0.6f));
+        e.registerEntityRenderer(ModMobs.KUMIHO_BOSS.get(), ctx -> new BossRenderer<>(ctx, "kumiho", 1.2f, 0.6f));
         ResourceLocation gt = tex("gunner");
         e.registerEntityRenderer(ModMobs.GUNNER.get(), ctx -> new HumanoidMobRenderer<net.minecraft.world.entity.monster.Skeleton, net.minecraft.client.model.HumanoidModel<net.minecraft.world.entity.monster.Skeleton>>(
                 ctx, new net.minecraft.client.model.HumanoidModel<>(ctx.bakeLayer(net.minecraft.client.model.geom.ModelLayers.ZOMBIE)), 0.5f) {

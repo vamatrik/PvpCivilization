@@ -75,7 +75,17 @@ public final class Gates {
             new Gate("g_sewer", "Люк у Гоши", "Каморка сантехника в канализации. Крысы, трубы и слухи.", 2, "neon",
                     () -> Floor2.PLUMBER.offset(0, 0, 3), 80, new Cost(() -> ModRegistry.RUBBER_SCRAP.get(), 4)),
             new Gate("g_club", "У клуба «Серра»", "Двери клуба Дона Витторио. Внутрь — только с оружием.", 2, "neon",
-                    () -> Floor2.polar(315, 120 - Floor2.CLUB_R - 7, Floor2.Y), 100, new Cost(() -> ModRegistry.DON_RING.get(), 1), new Cost(() -> ModRegistry.GOLD_CHAIN.get(), 4))
+                    () -> Floor2.polar(315, 120 - Floor2.CLUB_R - 7, Floor2.Y), 100, new Cost(() -> ModRegistry.DON_RING.get(), 1), new Cost(() -> ModRegistry.GOLD_CHAIN.get(), 4)),
+            new Gate("g_library", "Сад библиотеки", "Южные тории Тихой библиотеки. Отсюда — тропы к деревням этажа 3.", 3, "ice",
+                    () -> new BlockPos(6, com.pvpciv.floor.Floor3.Y, com.pvpciv.floor.Floor3.R + 12), 60, new Cost(() -> ModRegistry.NEON_TUBE.get(), 4), new Cost(() -> ModRegistry.RUBBER_SCRAP.get(), 4)),
+            new Gate("g_samurai", "Деревня самураев", "Конец Ледяной тропы. Чинить — тем, что найдёшь у ронинов.", 3, "ice",
+                    () -> com.pvpciv.floor.Floor3Areas.SV.offset(-com.pvpciv.floor.Floor3Areas.SV_R + 10, 0, -6), 90, new Cost(() -> ModRegistry.SILK_SCRAP.get(), 6), new Cost(() -> ModRegistry.RUSTY_TSUBA.get(), 4)),
+            new Gate("g_pond", "Пруд капп", "У берега пруда. Братья не любят, когда шумят.", 3, "ice",
+                    () -> com.pvpciv.floor.Floor3Areas.KAPPA_POND.offset(-17, 0, 0), 120, new Cost(() -> ModRegistry.JADE_SEAL.get(), 2), new Cost(() -> ModRegistry.SILK_SCRAP.get(), 8)),
+            new Gate("g_kumiho", "Деревня Кумихо", "Конец Каменного пути. Лисы чинят врата только за мех.", 3, "neon",
+                    () -> com.pvpciv.floor.Floor3Areas.KV.offset(com.pvpciv.floor.Floor3Areas.KV_R - 10, 0, -6), 140, new Cost(() -> ModRegistry.FOX_FUR.get(), 8), new Cost(() -> ModRegistry.FOXFIRE.get(), 1)),
+            new Gate("g_shrine", "Святилище", "У алых колонн святилища девяти хвостов.", 3, "neon",
+                    () -> com.pvpciv.floor.Floor3Areas.KUMIHO_SHRINE.offset(17, 0, 0), 180, new Cost(() -> ModRegistry.FOXFIRE.get(), 2), new Cost(() -> ModRegistry.FOX_FUR.get(), 10))
     );
 
     public static Gate byId(String id) { for (Gate g : ALL) if (g.id.equals(id)) return g; return null; }
@@ -90,11 +100,12 @@ public final class Gates {
     /** Уровень домашних врат: 1 — только этаж 1; +1 этаж за улучшение. */
     public static int home(StoryData d) { return Math.max(1, d.homeGate); }
 
-    public static final int[] HOME_UP_MONEY = {0, 0, 800};
-    public static final Cost[][] HOME_UP = {{}, {}, {new Cost(() -> ModRegistry.NEON_TUBE.get(), 6), new Cost(() -> ModRegistry.GOLD_CHAIN.get(), 3), new Cost(() -> ModRegistry.RUBBER_SCRAP.get(), 3)}};
+    public static final int[] HOME_UP_MONEY = {0, 0, 800, 2000};
+    public static final Cost[][] HOME_UP = {{}, {}, {new Cost(() -> ModRegistry.NEON_TUBE.get(), 6), new Cost(() -> ModRegistry.GOLD_CHAIN.get(), 3), new Cost(() -> ModRegistry.RUBBER_SCRAP.get(), 3)},
+            {new Cost(() -> ModRegistry.DON_RING.get(), 2), new Cost(() -> ModRegistry.RAT_CROWN_SHARD.get(), 2), new Cost(() -> ModRegistry.GOLD_CHAIN.get(), 4)}};
 
     // ------------------------------------------------------------------ мир
-    private static ServerLevel lvl(MinecraftServer s, int floor) { return floor == 2 ? CivWorld.f2(s) : CivWorld.level(s); }
+    private static ServerLevel lvl(MinecraftServer s, int floor) { return CivWorld.byFloor(s, floor); }
 
     /** Место под врата: площадка 3×3 с твёрдым полом и 3 блоками воздуха над ней, ближайшая к задуманной точке. */
     private static Vec3 spot(MinecraftServer s, Gate g) {
@@ -181,7 +192,7 @@ public final class Gates {
     /** Раз в секунду: находка врат рядом и перенос, который «заряжается». */
     public static void tick(ServerPlayer p) {
         StoryData d = Progress.d(p);
-        int fl = CivWorld.isF2(p.level()) ? 2 : p.level().dimension() == CivWorld.WORLD1 ? 1 : 0;
+        int fl = CivWorld.floor(p.level());
         for (Gate g : ALL) {
             if (g.floor != fl || found(d, g.id)) continue;
             Vec3 at = SPOTS.get(g.id);
@@ -226,7 +237,7 @@ public final class Gates {
         if (fixed(d, id)) { open(p, id); return; }
         // починка
         StringBuilder need = new StringBuilder();
-        for (Cost c : g.costs) need.append(c.item.get().getDescription().getString()).append("\u00A0×").append(c.n).append(", ");
+        for (Cost c : g.costs) need.append(com.pvpciv.util.Ru.name(c.item.get())).append("\u00A0×").append(c.n).append(", ");
         need.append(g.money).append(" ✦");
         DialogueManager.Dialogue dl = new DialogueManager.Dialogue("a")
                 .node("a", "Врата «" + g.name + "»", 0x8FE3FF, "Кристалл треснул и лежит на камне. Чтобы врата заработали, нужно: " + need + ".",
@@ -238,7 +249,7 @@ public final class Gates {
     private static void repair(ServerPlayer p, Gate g) {
         StoryData d = Progress.d(p);
         for (Cost c : g.costs) if (Bag.count(p, s -> s.is(c.item.get())) < c.n) {
-            p.sendSystemMessage(Component.literal("Не хватает: " + c.item.get().getDescription().getString() + " ×" + c.n + ".").withStyle(ChatFormatting.RED));
+            p.sendSystemMessage(Component.literal("Не хватает: " + com.pvpciv.util.Ru.name(c.item.get()) + " ×" + c.n + ".").withStyle(ChatFormatting.RED));
             return;
         }
         if (d.money < g.money) { p.sendSystemMessage(Component.literal("Не хватает Искр: " + g.money + " ✦.").withStyle(ChatFormatting.RED)); return; }
@@ -261,6 +272,7 @@ public final class Gates {
         j.addProperty("from", from);
         j.addProperty("home", home(d));
         j.addProperty("lift", d.liftOk);
+        j.addProperty("lift3", SkyLift.f3Ok(d));
         j.addProperty("money", d.money);
         j.addProperty("cd", Math.max(0, (CD.getOrDefault(p.getUUID(), 0L) - System.currentTimeMillis()) / 1000));
         com.google.gson.JsonObject st = new com.google.gson.JsonObject();
@@ -288,7 +300,7 @@ public final class Gates {
         if (!to.equals("home")) {
             Gate g = byId(to);
             if (g == null || !fixed(d, to)) { msg(p, "Эти врата ещё не починены.", ChatFormatting.RED); return; }
-            if (from.equals("home") ? g.floor > home(d) || (g.floor == 2 && !d.liftOk) : byId(from) == null || byId(from).floor != g.floor) {
+            if (from.equals("home") ? g.floor > home(d) || (g.floor == 2 && !d.liftOk) || (g.floor == 3 && !SkyLift.f3Ok(d)) : byId(from) == null || byId(from).floor != g.floor) {
                 msg(p, from.equals("home") ? "Врата общежития пока не достают до этого этажа — улучши их." : "С этих врат — только по своему этажу и домой.", ChatFormatting.RED);
                 return;
             }
@@ -323,6 +335,7 @@ public final class Gates {
         p.serverLevel().sendParticles(ParticleTypes.REVERSE_PORTAL, p.getX(), p.getY() + 1, p.getZ(), 60, 0.4, 0.9, 0.4, 0.1);
         PacketDistributor.sendToPlayer(p, new Network.Cinematic(6, 40, ""));
         p.teleportTo(l, at.x, at.y, at.z, p.getYRot(), 0);
+        l.playSound(null, at.x, at.y, at.z, ModRegistry.FX_GATE.get(), net.minecraft.sounds.SoundSource.PLAYERS, 1f, 1f);
         p.resetFallDistance();
         l.sendParticles(ParticleTypes.END_ROD, at.x, at.y + 1, at.z, 50, 0.4, 0.9, 0.4, 0.06);
         l.playSound(null, BlockPos.containing(at), SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 1f, 1.2f);
@@ -334,7 +347,8 @@ public final class Gates {
         int next = home(d) + 1;
         if (next >= HOME_UP.length) { msg(p, "Дальше этажей пока нет.", ChatFormatting.GRAY); return; }
         if (next == 2 && !d.liftOk) { msg(p, "Сначала открой этаж 2 (лифт и Луна).", ChatFormatting.RED); return; }
-        for (Cost c : HOME_UP[next]) if (Bag.count(p, s -> s.is(c.item.get())) < c.n) { msg(p, "Не хватает: " + c.item.get().getDescription().getString() + " ×" + c.n + ".", ChatFormatting.RED); return; }
+        if (next == 3 && !SkyLift.f3Ok(d)) { msg(p, "Сначала открой этаж 3: победи Дона и Крысиного короля.", ChatFormatting.RED); return; }
+        for (Cost c : HOME_UP[next]) if (Bag.count(p, s -> s.is(c.item.get())) < c.n) { msg(p, "Не хватает: " + com.pvpciv.util.Ru.name(c.item.get()) + " ×" + c.n + ".", ChatFormatting.RED); return; }
         if (d.money < HOME_UP_MONEY[next]) { msg(p, "Не хватает Искр: " + HOME_UP_MONEY[next] + " ✦.", ChatFormatting.RED); return; }
         for (Cost c : HOME_UP[next]) Bag.take(p, s -> s.is(c.item.get()), c.n);
         d.money -= HOME_UP_MONEY[next];
@@ -347,7 +361,7 @@ public final class Gates {
 
     public static String costText(Cost[] cs, int money) {
         StringBuilder sb = new StringBuilder();
-        for (Cost c : cs) sb.append(c.item.get().getDescription().getString()).append("\u00A0×").append(c.n).append(", ");
+        for (Cost c : cs) sb.append(com.pvpciv.util.Ru.name(c.item.get())).append("\u00A0×").append(c.n).append(", ");
         return sb.append(money).append(" ✦").toString();
     }
 

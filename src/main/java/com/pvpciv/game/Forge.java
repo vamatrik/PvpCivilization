@@ -60,9 +60,9 @@ public final class Forge {
         int target = s + 1;
         Vector3f col = rgb(Gear.starColor(target));
         double fx = forge.getX() + 0.5, fy = forge.getY() + 1.3, fz = forge.getZ() + 0.5;
-        p.sendSystemMessage(Component.literal(String.format("Заточка %s до +%d • шанс %d%% • %s", held.getHoverName().getString(), target,
+        p.sendSystemMessage(Component.literal(String.format("Заточка %s до +%d • шанс %d%% • %s", com.pvpciv.util.Ru.name(held), target,
                 (int) Math.round(chance * 100), blessed ? "благословенная звезда" : "обычная звезда (риск поломки)")).withStyle(ChatFormatting.GRAY));
-        if (target >= 8) broadcast(lvl, p.getGameProfile().getName() + " точит " + held.getHoverName().getString() + " до +" + target + "... шанс " + Math.round(chance * 100) + "%", ChatFormatting.LIGHT_PURPLE);
+        if (target >= 8) broadcast(lvl, p.getGameProfile().getName() + " точит " + com.pvpciv.util.Ru.name(held) + " до +" + target + "... шанс " + Math.round(chance * 100) + "%", ChatFormatting.LIGHT_PURPLE);
         // ритуал: 3 удара молота
         for (int i = 0; i < 3; i++) {
             int t = i * 12;
@@ -84,7 +84,7 @@ public final class Forge {
                 lvl.playSound(null, forge, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 1f, 1f);
                 lvl.sendParticles(new DustParticleOptions(col, 2.0f), fx, fy, fz, 80, 0.5, 0.6, 0.5, 0);
                 lvl.sendParticles(ParticleTypes.END_ROD, fx, fy, fz, 30, 0.2, 0.4, 0.2, 0.08);
-                if (pp != null) Story.title(pp, "+" + target, "Успех! " + result.getHoverName().getString(), Gear.starColor(target));
+                if (pp != null) Story.title(pp, "+" + target, "Успех! " + com.pvpciv.util.Ru.name(result), Gear.starColor(target));
                 if (target >= 8) broadcast(lvl, "УСПЕХ! " + p.getGameProfile().getName() + " получил +" + target + "!", ChatFormatting.GOLD);
             } else if (blessed) {
                 result = held;
@@ -94,13 +94,13 @@ public final class Forge {
                 if (pp != null) Story.title(pp, "Неудача", "Благословение спасло оружие: +" + Math.max(0, s - 1), 0xAAAAAA);
             } else {
                 int tier = held.getItem() instanceof CivWeaponItem cw ? cw.tier : 1;
-                result = new ItemStack(ModRegistry.WEAPON_SHARDS.get(), 1 + tier + s / 2);
+                result = held.is(ModRegistry.YUKI_KATANA.get()) ? com.pvpciv.game.Assassin.remainsOf(held, s) : new ItemStack(ModRegistry.WEAPON_SHARDS.get(), 1 + tier + s / 2);
                 lvl.playSound(null, forge, SoundEvents.ANVIL_DESTROY, SoundSource.BLOCKS, 1f, 0.8f);
                 lvl.playSound(null, forge, SoundEvents.ITEM_BREAK, SoundSource.BLOCKS, 1f, 0.6f);
                 lvl.sendParticles(ParticleTypes.LARGE_SMOKE, fx, fy, fz, 40, 0.4, 0.4, 0.4, 0.03);
                 lvl.sendParticles(ParticleTypes.CRIT, fx, fy, fz, 40, 0.4, 0.4, 0.4, 0.4);
-                if (pp != null) Story.title(pp, "СЛОМАНО", held.getHoverName().getString() + " → обломки", 0xFF5555);
-                if (s >= 7) broadcast(lvl, p.getGameProfile().getName() + " сломал " + held.getHoverName().getString() + ". Минута молчания.", ChatFormatting.DARK_GRAY);
+                if (pp != null) Story.title(pp, "СЛОМАНО", com.pvpciv.util.Ru.name(held) + " → обломки", 0xFF5555);
+                if (s >= 7) broadcast(lvl, p.getGameProfile().getName() + " сломал " + com.pvpciv.util.Ru.name(held) + ". Минута молчания.", ChatFormatting.DARK_GRAY);
             }
             if (pp != null) {
                 if (pp.getMainHandItem().isEmpty()) pp.setItemInHand(InteractionHand.MAIN_HAND, result);

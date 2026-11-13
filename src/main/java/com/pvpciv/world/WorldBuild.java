@@ -12,7 +12,7 @@ import java.util.Map;
 
 /** Полная сборка мира 1 в его измерении: общежитие, подвал, обе локации этажа 1, трассы. */
 public final class WorldBuild {
-    public static final int VERSION = 26;
+    public static final int VERSION = 31;
 
     /** Мелкие правки уже построенного мира (без полной перестройки). */
     public static void patch(MinecraftServer server, int from) {
@@ -28,6 +28,9 @@ public final class WorldBuild {
         if (from < 21 && from >= 19) Basement.placeAltar(lvl);
         if (from < 22 && from >= 19) DormBuilder.placeHomeStations(lvl, CivData.get(server));   // 0.8: витрина трофеев
         if (from < 24) { RoofBuilder.build(lvl); com.pvpciv.floor.Floor2.build(CivWorld.f2(server)); }   // 0.8: Небесный лифт и этаж 2 (0.8.2 — 3D-кабина и монорельс)   // 0.7.1: пьедесталы с блок-сущностями (предметы кладутся руками)   // 0.7.1: Громила раз в 20 мин, Хранительница раз в 40   // 0.6.8: соединённые решётки/заборы, повороты станций
+        if (from < 31 && from >= 28) com.pvpciv.floor.Floor3.build(CivWorld.f3(server));   // 0.9.0: деревни самураев и Кумихо, тропа и путь
+        if (from < 28) { com.pvpciv.floor.Floor3.build(CivWorld.f3(server)); com.pvpciv.game.Library.placeBooks(server); }   // 0.9.0: этаж 3 — Тихая библиотека
+        if (from < 27 && from >= 24) { RoofBuilder.collar(lvl); com.pvpciv.floor.Floor2.fixDen(CivWorld.f2(server)); }   // 0.8.8: рамка проёма монорельса, негорючий пол у контрабандиста
         if (from < 26 && from >= 18) DormBuilder.lunaPouf(lvl);   // 0.8.6: пуф-укрытие в комнате Луны
         if (from < 25 && from >= 24) com.pvpciv.floor.Floor2.build(CivWorld.f2(server));   // 0.8.5: канализация (торцы туннелей, лава, лестницы люков), выход на крышу «Альтаира»
         if (from < 17) { CivData d0 = CivData.get(server); DormBuilder.placeForges(lvl, d0); DormBuilder.placeDismantlers(lvl, d0); }   // 0.6.7: повороты станций, сакура   // 0.6.4: лёд не тает, бортик первого поворота   // 0.7: гравий, фонари, арки трассы, бортики
@@ -67,6 +70,8 @@ public final class WorldBuild {
         DormBuilder.placeHomeStations(lvl, data);
         RoofBuilder.build(lvl);
         com.pvpciv.floor.Floor2.build(CivWorld.f2(server));
+        com.pvpciv.floor.Floor3.build(CivWorld.f3(server));
+        com.pvpciv.game.Library.placeBooks(server);
         // при стройке отрываются цветы/свечи/ковры — убрать выпавшие предметы, чтобы не лагало
         java.util.List<net.minecraft.world.entity.Entity> drops = new java.util.ArrayList<>();
         for (var e : lvl.getAllEntities()) if (e instanceof net.minecraft.world.entity.item.ItemEntity) drops.add(e);

@@ -37,6 +37,7 @@ public final class CombatEvents {
         bus.addListener(CombatEvents::onDrops);
         bus.addListener(CombatEvents::onXpDrop);
         bus.addListener(CombatEvents::onMobTick);
+        bus.addListener(com.pvpciv.game.Leash::onTarget);
         bus.addListener(CombatEvents::onJoin);
     }
 
@@ -97,6 +98,7 @@ public final class CombatEvents {
                 return;
             }
             e.setAmount(e.getAmount() * (float) (1 + 0.015 * (la - 1)));
+            crit(e, attacker, victim);
             // «Оглушающий удар» — только если удар прошёл (раньше оглушал и в безопасной зоне, где урон отменён)
             if (e.getSource().getDirectEntity() == attacker) com.pvpciv.game.WeaponSkills.onHit(attacker, victim);
             return;
@@ -112,6 +114,7 @@ public final class CombatEvents {
                 return;
             }
             e.setAmount((float) (e.getAmount() * (1 - r) * (1 + 0.015 * (Progress.d(p).level - 1))));
+            crit(e, p, mob);
             if (e.getSource().getDirectEntity() == p) com.pvpciv.game.WeaponSkills.onHit(p, mob);
             return;
         }
@@ -181,6 +184,7 @@ public final class CombatEvents {
         if (dead instanceof ServerPlayer p) {
             Entity killer = e.getSource().getEntity();
             boolean pvp = killer instanceof ServerPlayer k && k != p;
+            if (pvp) com.pvpciv.game.Assassin.onKill((ServerPlayer) killer, com.pvpciv.game.Assassin.PLAYER);
             long xpBefore = Progress.d(p).xp;
             long lost = Progress.deathPenalty(p, pvp ? 0.25 : 0.10);
             String killerName = killer == null ? "" : killer.getName().getString();
@@ -199,6 +203,8 @@ public final class CombatEvents {
             double mult = kind.endsWith("_elite") ? 3.0 : 1.0;
             Progress.addXp(p, Progress.xpFor(Progress.d(p).level, Mobs.level(mob), mult));
             com.pvpciv.game.Vampire.onKill(p, mob, kind.endsWith("_elite"));
+            com.pvpciv.game.Library.onKill(p, mob, kind.endsWith("_elite"));
+            com.pvpciv.game.Assassin.onKill(p, kind.endsWith("_elite") ? com.pvpciv.game.Assassin.ELITE : com.pvpciv.game.Assassin.MOB);
             com.pvpciv.floor.SpawnZones.onDeath(mob);
         }
     }
@@ -218,12 +224,25 @@ public final class CombatEvents {
         }
     }
 
+    /** 0.9.0: криты Юки — только прямой удар в ближнем бою. */
+    private static void crit(net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent e, ServerPlayer p, LivingEntity target) {
+        if (e.getSource().getDirectEntity() != p) return;
+        double ch = com.pvpciv.game.Assassin.critChance(p);
+        if (ch <= 0 || p.getRandom().nextDouble() >= ch) return;
+        e.setAmount((float) (e.getAmount() * com.pvpciv.game.Assassin.critMult(p)));
+        com.pvpciv.game.Assassin.particlesCrit(p, target);
+        if (target instanceof com.pvpciv.entity.boss.KappaBoss k) k.critHit(p);
+    }
+
     private static void onXpDrop(LivingExperienceDropEvent e) {
         if (e.getEntity() instanceof Mob mob && Mobs.level(mob) > 0) e.setCanceled(true);
     }
 
     private static void onMobTick(EntityTickEvent.Post e) {
-        if (e.getEntity() instanceof Mob m && !m.level().isClientSide && m.isOnFire() && !m.isInLava() && Mobs.level(m) > 0) m.clearFire();
+        if (e.getEntity() instanceof Mob m && !m.level().isClientSide) {
+            if (m.isOnFire() && !m.isInLava() && Mobs.level(m) > 0) m.clearFire();
+            com.pvpciv.game.Leash.tick(m);
+        }
     }
 
     private static void onJoin(EntityJoinLevelEvent e) {

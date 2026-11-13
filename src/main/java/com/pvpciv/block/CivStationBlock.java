@@ -123,7 +123,8 @@ public class CivStationBlock extends Block implements net.minecraft.world.level.
         if (level.isClientSide || !(player instanceof ServerPlayer sp)) return InteractionResult.sidedSuccess(level.isClientSide);
         switch (kind) {
             case ALTAR -> {
-                if (sp.isShiftKeyDown() && level.getBlockEntity(pos) instanceof PedestalBlockEntity be && takeBack(sp, be)) break;
+                if (level.getBlockEntity(pos) instanceof PedestalBlockEntity be && (sp.isShiftKeyDown() || be.item().getItem() instanceof com.pvpciv.item.ArmorCoreItem
+                        || be.item().is(com.pvpciv.registry.ModRegistry.BLESSED_STAR_W1.get())) && takeBack(sp, be)) break;   // результат ритуала — просто ПКМ
                 sp.openMenu(new SimpleMenuProvider((id, inv, pl) -> new InfusionMenu(id, inv, pos), Component.literal("Алтарь инфузии")), b -> b.writeBlockPos(pos));
             }
             case ARMOR -> sp.openMenu(new SimpleMenuProvider((id, inv, pl) -> new ArmorBenchMenu(id, inv), Component.literal("Стол брони")));

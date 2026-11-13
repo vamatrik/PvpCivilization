@@ -63,10 +63,22 @@ public final class BossManager {
             () -> Floor2.RAT_THRONE, Floor2.RAT_R, Vec3.ZERO, () -> com.pvpciv.registry.ModMobs.RAT_KING_BOSS.get(),
             "floor2b_boss_personal", "floor2b_boss_ground", 8, ModRegistry.RAT_KING_TROPHY, BossEvent.BossBarColor.PURPLE, ChatFormatting.DARK_PURPLE,
             "КРЫСИНЫЙ КОРОЛЬ ВЫПОЛЗ НА ТРОН! Канализация этажа 2.", true);
-    public static final List<Def> DEFS = List.of(BRUTE, KEEPER, DON, RAT_KING);
+    public static final Def KAPPA = new Def("kappa", "Братья-каппы", "Пруд деревни самураев, этаж 3", 13, 30 * MIN, 4.5, 1.45,
+            () -> Floor3Areas.KAPPA_POND, 14, Vec3.ZERO, () -> com.pvpciv.registry.ModMobs.KAPPA_BOSS.get(),
+            "floor3_boss_personal", "floor3_boss_ground", 16, ModRegistry.KAPPA_TROPHY, BossEvent.BossBarColor.GREEN, ChatFormatting.GREEN,
+            "БРАТЬЯ-КАППЫ ВЫШЛИ ИЗ ПРУДА! Деревня самураев, этаж 3. Поклонитесь… или нет.", false);
+    public static final Def KUMIHO = new Def("kumiho", "Кумихо", "Святилище в деревне Кумихо, этаж 3", 16, 40 * MIN, 14, 1.7,
+            () -> Floor3Areas.KUMIHO_SHRINE, 13, new Vec3(0, 0, -4), () -> com.pvpciv.registry.ModMobs.KUMIHO_BOSS.get(),
+            "floor3b_boss_personal", "floor3b_boss_ground", 32, ModRegistry.KUMIHO_TROPHY, BossEvent.BossBarColor.PINK, ChatFormatting.LIGHT_PURPLE,
+            "КУМИХО ПРОБУДИЛАСЬ! Девять хвостов над деревней лис, этаж 3.", false);
+    public static final List<Def> DEFS = List.of(BRUTE, KEEPER, DON, RAT_KING, KAPPA, KUMIHO);
+    /** Сколько тел у босса (каппы — четверо братьев, урон и лут общие). */
+    public static int group(Def d) { return d == KAPPA ? 4 : 1; }
+    public static boolean f3(Def d) { return d == KAPPA || d == KUMIHO; }
+    public static int floor(Def d) { return f3(d) ? 3 : d.f2() ? 2 : 1; }
 
     private static final class St {
-        UUID id; ServerBossEvent bar; int alive; boolean w5, w1;
+        UUID id; ServerBossEvent bar; int alive; boolean w5, w1, scanned;
         final Map<UUID, Float> dmg = new HashMap<>();
     }
     private static final Map<String, St> ST = new HashMap<>();
@@ -100,7 +112,7 @@ public final class BossManager {
     /** Реальное время в тиках: таймеры боссов идут, даже когда сервер выключен (бета 12.11). */
     public static long now() { return System.currentTimeMillis() / 50; }
 
-    private static ServerLevel lvl(MinecraftServer server, Def d) { return d.f2() ? com.pvpciv.world.CivWorld.f2(server) : com.pvpciv.world.CivWorld.level(server); }
+    private static ServerLevel lvl(MinecraftServer server, Def d) { if (f3(d)) return com.pvpciv.world.CivWorld.f3(server); return d.f2() ? com.pvpciv.world.CivWorld.f2(server) : com.pvpciv.world.CivWorld.level(server); }
 
     private static void tick(MinecraftServer server, Def d) {
         ServerLevel lvl = lvl(server, d);
@@ -113,15 +125,20 @@ public final class BossManager {
         if (data.bossNext(d.id()) < 0) { data.bossNext.put(d.id(), now + 20L * 180); data.setDirty(); }
         boolean lairLoaded = lvl.areEntitiesLoaded(net.minecraft.world.level.ChunkPos.asLong(lairPos));
         CivBoss boss = s.id == null ? null : (lvl.getEntity(s.id) instanceof CivBoss b ? b : null);
-        if (s.id == null && lairLoaded && now % 40 == 0) {
-            // подхватываем босса, пережившего перезапуск; старого Громилу-зомби (до 0.7) убираем
-            List<Mob> found = lvl.getEntitiesOfClass(Mob.class, new AABB(lairPos).inflate(40),
+        // раз в 2 с сверяемся с миром: ровно один босс на логово (бета 0.8.7: «боссов двое»)
+        if (!lairLoaded) s.scanned = false;
+        boolean scan = lairLoaded && (server.getTickCount() % 40 == 0 || (s.id == null && !s.scanned));
+        if (scan) {
+            s.scanned = true;
+            List<Mob> found = lvl.getEntitiesOfClass(Mob.class, new AABB(lairPos).inflate(d.lairR() + 60),
                     m -> m.getTags().contains(TAG) || (m instanceof CivBoss b && b.defId().equals(d.id())));
-            for (Mob m : found) {
-                if (m instanceof CivBoss b && boss == null) boss = b;
-                else m.discard();
-            }
-            if (boss != null) { s.id = boss.getUUID(); s.bar = bar(d); }
+            if (boss == null) for (Mob m : found) if (m instanceof CivBoss b && b.isAlive()) { boss = b; break; }
+            int keep = group(d) - 1;
+            for (Mob m : found) if (m != boss) { if (keep > 0 && m instanceof CivBoss b && b.isAlive()) keep--; else m.discard(); }
+            if (boss != null && s.id == null) { s.id = boss.getUUID(); s.bar = bar(d); }
+        }
+        if (s.id != null && (boss == null || !boss.isAlive()) && group(d) > 1 && lairLoaded) {   // каппы: живой брат становится «главным»
+            for (CivBoss b : lvl.getEntitiesOfClass(CivBoss.class, new AABB(lairPos).inflate(d.lairR() + 60), b -> b.isAlive() && b.defId().equals(d.id()))) { boss = b; s.id = b.getUUID(); break; }
         }
         if (s.id != null && (boss == null || !boss.isAlive())) {
             if (boss == null && !lairLoaded) return;   // игроки ушли — босс ждёт в выгруженном чанке
@@ -132,26 +149,22 @@ public final class BossManager {
             long left = data.bossNext(d.id()) - now;
             if (left <= 20L * 300 && !s.w5) { s.w5 = true; broadcast(server, d.name() + " проснётся через 5 минут: " + d.where() + " (PvP)!", ChatFormatting.GOLD); }
             if (left <= 20L * 60 && !s.w1) { s.w1 = true; broadcast(server, d.name() + " проснётся через минуту! Готовьте оружие.", d.chat()); }
-            if (left <= 0 && lairLoaded) spawn(lvl, d);
+            if (left <= 0 && lairLoaded && s.scanned) spawn(lvl, d);
             return;
         }
         Vec3 c = center(d);
-        boolean anyone = false;
-        for (ServerPlayer p : lvl.players()) if (p.position().distanceTo(c) < d.lairR() + 34) { anyone = true; break; }
-        // засыпает только после 30 минут боя без победы; если рядом никого — ждёт сколько угодно (с беты: боссы «пропадали»)
-        if (anyone && ++s.alive > 20 * 60 * 30) {
-            broadcast(server, d.name() + " теряет интерес и засыпает. Вернётся позже.", ChatFormatting.GRAY);
-            boss.discard();
-            cleanup(server, d);
-            return;
-        }
+        // без засыпаний: босс живёт, пока его не убьют; следующий — через фиксированное время после смерти
         if (boss.position().distanceTo(c) > d.lairR() + 6 || boss.getY() < c.y - 5) {
             lvl.sendParticles(ParticleTypes.LARGE_SMOKE, boss.getX(), boss.getY() + 1, boss.getZ(), 30, 0.6, 1, 0.6, 0.02);
             Vec3 sp = c.add(d.spawnOffset());
             boss.teleportTo(sp.x, sp.y, sp.z);
         }
         if (s.bar == null) s.bar = bar(d);
-        s.bar.setProgress(Math.max(0, boss.getHealth() / boss.getMaxHealth()));
+        if (group(d) > 1) {
+            float hp = 0, max = boss.getMaxHealth() * group(d);
+            for (CivBoss b : lvl.getEntitiesOfClass(CivBoss.class, new AABB(lairPos).inflate(d.lairR() + 60), b -> b.isAlive() && b.defId().equals(d.id()))) hp += b.getHealth();
+            s.bar.setProgress(Math.max(0, Math.min(1, hp / max)));
+        } else s.bar.setProgress(Math.max(0, boss.getHealth() / boss.getMaxHealth()));
         s.bar.setName(Component.literal(d.name() + " • ур. " + d.level() + (boss.enraged() ? "  — ЯРОСТЬ" : "")));
         for (ServerPlayer p : lvl.players()) {
             boolean near = p.position().distanceTo(c) < d.lairR() + 34;
@@ -179,6 +192,27 @@ public final class BossManager {
         b.setCustomName(Component.literal("☠ [" + d.level() + "] " + d.name()).withStyle(d.chat(), ChatFormatting.BOLD));
         b.setCustomNameVisible(true);
         b.setGlowingTag(false);
+        if (b instanceof com.pvpciv.entity.boss.KappaBoss k) {   // четверо братьев вокруг пруда
+            k.season(0); k.pond = c;
+            b.setCustomName(Component.literal("☠ [" + d.level() + "] " + com.pvpciv.entity.boss.KappaBoss.NAMES[0]).withStyle(d.chat(), ChatFormatting.BOLD));
+            b.moveTo(c.x + 5, c.y, c.z, 180, 0);
+            for (int i = 1; i < 4; i++) {
+                CivBoss bb = d.type().get().create(lvl);
+                if (!(bb instanceof com.pvpciv.entity.boss.KappaBoss kk)) continue;
+                double a = Math.PI / 2 * i;
+                Vec3 sp = new Vec3(c.x + Math.cos(a) * 5, c.y, c.z + Math.sin(a) * 5);
+                kk.moveTo(sp.x, sp.y, sp.z, 180, 0);
+                kk.setHome(c); kk.season(i); kk.pond = c;
+                Mobs.setup(kk, d.level(), false, d.name(), d.personal());
+                kk.getAttribute(Attributes.MAX_HEALTH).setBaseValue(hp);
+                kk.setHealth((float) hp);
+                kk.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(Mobs.dmg(d.level()) * d.dmgMul());
+                kk.setCustomName(Component.literal("☠ [" + d.level() + "] " + com.pvpciv.entity.boss.KappaBoss.NAMES[i]).withStyle(d.chat(), ChatFormatting.BOLD));
+                kk.setCustomNameVisible(true);
+                lvl.addFreshEntity(kk);
+                com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.PILLAR, sp, 0.8f, 20, 0x5AAAFF, 0xE0F4FF);
+            }
+        }
         lvl.addFreshEntity(b);
         s.id = b.getUUID();
         s.dmg.clear();
@@ -200,6 +234,15 @@ public final class BossManager {
         Def d = def(boss.defId());
         if (d == null) return;
         St s = st(d);
+        if (group(d) > 1) {   // каппы: награда — когда пал последний брат
+            List<CivBoss> rest = lvl.getEntitiesOfClass(CivBoss.class, boss.getBoundingBox().inflate(d.lairR() + 60), b -> b != boss && b.isAlive() && b.defId().equals(d.id()));
+            if (!rest.isEmpty()) {
+                for (CivBoss b : rest) if (b instanceof com.pvpciv.entity.boss.KappaBoss k) k.brotherDown(lvl);
+                broadcast(lvl.getServer(), boss.getCustomName() == null ? "Брат-каппа пал!" : boss.getCustomName().getString().replace("☠ ", "") + " пал! Осталось: " + rest.size(), ChatFormatting.GREEN);
+                if (s.id != null && s.id.equals(boss.getUUID())) s.id = rest.get(0).getUUID();
+                return;
+            }
+        }
         MinecraftServer server = lvl.getServer();
         float total = 0;
         for (float v : s.dmg.values()) total += v;
@@ -226,6 +269,8 @@ public final class BossManager {
             p.sendSystemMessage(Component.literal("Личная награда («" + d.name() + "»): " + loot.size() + " предметов (ты нанёс " + Math.round(share * 100) + "% урона)").withStyle(ChatFormatting.GOLD));
             Progress.addXp(p, Progress.xpFor(sd.level, d.level(), 12));
             com.pvpciv.game.Marks.onBossKill(p, d.id());
+            com.pvpciv.game.Library.onKillBoss(p, d.id());
+            com.pvpciv.game.Assassin.onKill(p, com.pvpciv.game.Assassin.BOSS);
         }
         for (ItemStack st : LootTables.roll(d.ground(), lvl.random, 1.0)) {
             ItemEntity ie = new ItemEntity(lvl, boss.getX(), boss.getY() + 1, boss.getZ(), st);

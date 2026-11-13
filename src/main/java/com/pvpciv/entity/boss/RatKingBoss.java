@@ -65,7 +65,7 @@ public class RatKingBoss extends CivBoss {
         for (int i = 0; i < Math.min(n, 8 - near); i++) {
             double a = random.nextDouble() * Math.PI * 2;
             var m = Mobs.spawn(lvl, Mobs.Kind.RAT, 12, false, c.add(Math.cos(a) * 8, 0, Math.sin(a) * 8), "floor2b_mob", "king_rat");
-            if (m != null) lvl.sendParticles(ParticleTypes.POOF, m.getX(), m.getY() + 0.3, m.getZ(), 8, 0.2, 0.2, 0.2, 0.02);
+            if (m != null) com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.PILLAR, new Vec3(m.getX(), m.getY(), m.getZ()), 0.5f, 14, 0x9AFF40, 0xD070FF);
         }
     }
 
@@ -106,7 +106,7 @@ public class RatKingBoss extends CivBoss {
                         triggerAnim("main", "emerge");
                         lvl.playSound(null, blockPosition(), SoundEvents.ZOMBIE_BREAK_WOODEN_DOOR, SoundSource.HOSTILE, 1.5f, 0.6f);
                         lvl.sendParticles(ParticleTypes.EXPLOSION, at.x, at.y + 0.3, at.z, 4, 1.2, 0.1, 1.2, 0);
-                        lvl.sendParticles(ParticleTypes.ITEM_SLIME, at.x, at.y + 0.3, at.z, 40, 2, 0.4, 2, 0.1);
+                        lvl.sendParticles(ParticleTypes.ITEM_SLIME, at.x, at.y + 0.3, at.z, 15, 2, 0.4, 2, 0.1);
                     });
         });
     }

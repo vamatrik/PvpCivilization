@@ -54,7 +54,7 @@ public class CivWeaponItem extends SwordItem {
     public String tierName() { return tier + (plus ? "+" : ""); }
 
     public static double damage(double tier, WClass cls, Rarity r, int stars) {
-        double starMul = stars >= 11 ? 2.6 : 1 + 0.1 * stars;   // +11 — ×1.3 от +10
+        double starMul = stars >= 11 ? 2.6 : stars == 10 ? 2.25 : 1 + 0.1 * stars;   // бета 0.8.7: скачок и на +10 (×1.18 от +9), +11 — ×1.16 от +10
         return 4 * Math.pow(1.45, tier - 1) * cls.dmg * r.mult * starMul;   // бета 12.11: шаг тира ×1.45 (был ×1.35)
     }
 
@@ -89,6 +89,8 @@ public class CivWeaponItem extends SwordItem {
 
     @Override
     public void appendHoverText(ItemStack st, TooltipContext ctx, List<Component> tip, TooltipFlag flag) {
+        int[] cr = com.pvpciv.registry.ModRegistry.crit(this);
+        if (cr != null) tip.add(Component.literal("Крит +" + cr[0] + "%, крит-урон +" + cr[1] + "%").withStyle(ChatFormatting.LIGHT_PURPLE));
         Rarity r = Gear.rarity(st);
         if (r.ordinal() < minRarity.ordinal()) r = minRarity;
         int rc = r.color;

@@ -141,6 +141,7 @@ public final class Story {
 
     // ------------------------------------------------------------------ onboarding
     public static void onLogin(ServerPlayer p) {
+        { StoryData bd = data(p); if (bd.bagRule < 1) { com.pvpciv.inv.Bag.migrate(bd); p.setData(com.pvpciv.registry.ModRegistry.STORY.get(), bd); } }
         Milestones.apply(p);
         CivData civ = CivData.get(p.server);
         StoryData d = data(p);

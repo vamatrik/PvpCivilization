@@ -30,13 +30,13 @@ public class GateScreen extends PlainScreen {
     private boolean home() { return from.equals("home"); }
     private int homeLvl() { return d.get("home").getAsInt(); }
     private List<Gates.Gate> list() { return Gates.ALL.stream().filter(g -> g.floor() == floor).toList(); }
-    private boolean floorOpen(int f) { return home() ? f <= homeLvl() && (f == 1 || d.get("lift").getAsBoolean()) : Gates.byId(from) != null && Gates.byId(from).floor() == f; }
+    private boolean floorOpen(int f) { return home() ? f <= homeLvl() && (f == 1 || d.get("lift").getAsBoolean()) && (f < 3 || (d.has("lift3") && d.get("lift3").getAsBoolean())) : Gates.byId(from) != null && Gates.byId(from).floor() == f; }
 
     @Override
     protected void drawContent(GuiGraphics g, int mx, int my, float pt) {
         // вкладки: мир → этажи
         g.drawString(font, "Мир 1", left + 14, top + 20, Skin.GOLD_L, false);
-        for (int f = 1; f <= 2; f++) {
+        for (int f = 1; f <= 3; f++) {
             int tx = left + 52 + (f - 1) * 64;
             boolean on = floor == f, ok = floorOpen(f);
             Skin.tab(g, font, tx, top + 17, 60, "Этаж " + f, on, mx, my);
@@ -89,7 +89,7 @@ public class GateScreen extends PlainScreen {
             String b = gt.id().equals(from) ? "Ты здесь" : s != 2 ? "Не работают" : !floorOpen(gt.floor()) ? "Не достают" : cd > 0 ? "Остывают " + cd + " с" : "Перенестись";
             Skin.button(g, font, cx + 6, ly + lh - 22, cw - 12, b, mx, my, can && cd <= 0, true);
         }
-        if (!home()) Skin.button(g, font, left + 186, top + 17, 162, "В общежитие", mx, my, d.get("cd").getAsInt() <= 0, false);
+        if (!home()) Skin.button(g, font, left + 248, top + 17, 100, "В общежитие", mx, my, d.get("cd").getAsInt() <= 0, false);
     }
 
     @Override
@@ -97,8 +97,8 @@ public class GateScreen extends PlainScreen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int b) {
-        for (int f = 1; f <= 2; f++) if (in(mx, my, 52 + (f - 1) * 64, 17, 60, 14)) { floor = f; sel = -1; ls.off = 0; return true; }
-        if (!home() && in(mx, my, 186, 17, 162, 16)) { cmd("gate:" + from + ":home"); onClose(); return true; }
+        for (int f = 1; f <= 3; f++) if (in(mx, my, 52 + (f - 1) * 64, 17, 60, 14)) { floor = f; sel = -1; ls.off = 0; return true; }
+        if (!home() && in(mx, my, 248, 17, 100, 16)) { cmd("gate:" + from + ":home"); onClose(); return true; }
         List<Gates.Gate> l = list();
         if (my >= top + 36 && my < top + 208)
             for (int i = 0; i < l.size(); i++) if (in(mx, my, 12, 39 + i * 24 - ls.off, 144, 22)) { sel = i; return true; }

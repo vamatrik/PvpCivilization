@@ -38,11 +38,11 @@ public class BoatSummonItem extends Item {
 
     /** Множитель скорости на льду (тир 1 — ваниль). */
     /** Скорость по льду и по земле — отдельные параметры (пока одинаковые, бета 12.11). */
-    public static double iceBonus(int tier) { return tier <= 1 ? 0 : 0.10 * (tier - 1); }
-    public static double landBonus(int tier) { return tier <= 1 ? 0 : 0.10 * (tier - 1); }
+    public static double iceBonus(int tier) { return tier <= 1 ? 0 : 0.10 * (Math.min(tier, 3) - 1); }   // лисья (т4) по льду — как такси
+    public static double landBonus(int tier) { return tier <= 1 ? 0 : tier >= 4 ? 0.45 : 0.10 * (tier - 1); }   // лисья — по земле вдвое быстрее такси
     /** Маневренность: доворот (°/тик) и «сцепление» — какая доля скорости поворачивается за носом лодки за тик. */
-    public static float turnBonus(int tier) { return tier <= 1 ? 0 : tier == 2 ? 2.5f : 4.5f; }
-    public static double grip(int tier) { return tier <= 1 ? 0 : tier == 2 ? 0.12 : 0.22; }
+    public static float turnBonus(int tier) { return tier <= 1 ? 0 : tier == 2 ? 2.5f : tier == 3 ? 4.5f : 5.5f; }
+    public static double grip(int tier) { return tier <= 1 ? 0.07 : tier == 2 ? 0.14 : tier == 3 ? 0.22 : 0.26; }   // бета 0.8.7: и базовая лодка меньше скользит боком
     public static double speedBonus(int tier) { return iceBonus(tier); }
 
     @Override

@@ -30,7 +30,13 @@ public final class Mobs {
         STREET_DOG(() -> com.pvpciv.registry.ModMobs.STREET_DOG.get(), "Бешеная дворняга", "floor2_mob", 6),
         RAT(() -> com.pvpciv.registry.ModMobs.RAT.get(), "Канализационная крыса", "floor2b_mob", 9),
         GHOUL(() -> com.pvpciv.registry.ModMobs.GHOUL.get(), "Сточный упырь", "floor2b_mob", 9),
-        GUNNER(() -> com.pvpciv.registry.ModMobs.GUNNER.get(), "Автоматчик", "floor2b_mob", 10);
+        GUNNER(() -> com.pvpciv.registry.ModMobs.GUNNER.get(), "Автоматчик", "floor2b_mob", 10),
+        SAMURAI(() -> com.pvpciv.registry.ModMobs.SAMURAI.get(), "Самурай-ронин", "floor3_mob", 11),
+        NINJA(() -> com.pvpciv.registry.ModMobs.NINJA.get(), "Ниндзя", "floor3_mob", 11),
+        ASHIGARU(() -> com.pvpciv.registry.ModMobs.ASHIGARU.get(), "Асигару-лучник", "floor3_mob", 10),
+        WEREWOLF(() -> com.pvpciv.registry.ModMobs.WEREWOLF.get(), "Оборотень", "floor3b_mob", 14),
+        FOX(() -> com.pvpciv.registry.ModMobs.FOX.get(), "Лиса-оборотень", "floor3b_mob", 13),
+        KITSUNE_ARCHER(() -> com.pvpciv.registry.ModMobs.KITSUNE_ARCHER.get(), "Лучница в маске кицунэ", "floor3b_mob", 14);
         private final java.util.function.Supplier<? extends EntityType<? extends Mob>> type;
         public final String title, loot; public final int defLevel;
         Kind(java.util.function.Supplier<? extends EntityType<? extends Mob>> t, String n, String loot, int lvl) { type = t; title = n; this.loot = loot; defLevel = lvl; }
@@ -64,6 +70,10 @@ public final class Mobs {
         if (kind == Kind.POLICE) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ModRegistry.POLICE_BATON.get()));
         if (kind == Kind.THUG && lvl.random.nextFloat() < 0.6f) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ModRegistry.NAIL_BAT.get()));
         if (kind == Kind.GHOUL && lvl.random.nextFloat() < 0.4f) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ModRegistry.PIPE_WRENCH.get()));
+        if (kind == Kind.SAMURAI) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ModRegistry.NODACHI.get()));
+        if (kind == Kind.NINJA) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ModRegistry.KUNAI.get()));
+        if (kind == Kind.ASHIGARU || kind == Kind.KITSUNE_ARCHER) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
+        if (kind == Kind.WEREWOLF) set(m, Attributes.SCALE, 1.15);
         for (EquipmentSlot s : EquipmentSlot.values()) m.setDropChance(s, 0f);
         if (!tag.isEmpty()) m.addTag(tag);
         lvl.addFreshEntity(m);

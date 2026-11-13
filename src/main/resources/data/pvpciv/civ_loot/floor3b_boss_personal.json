@@ -1,0 +1,67 @@
+{
+ "entries": [
+  {
+   "item": "pvpciv:sparks",
+   "chance": 1,
+   "min": 320,
+   "max": 500
+  },
+  {
+   "item": "pvpciv:kumiho_tail",
+   "chance": 0.5
+  },
+  {
+   "item": "pvpciv:foxfire",
+   "chance": 1,
+   "min": 1,
+   "max": 3
+  },
+  {
+   "item": "pvpciv:star_w1",
+   "chance": 1,
+   "min": 3,
+   "max": 5
+  },
+  {
+   "item": "pvpciv:blessed_star_w1",
+   "chance": 0.45
+  },
+  {
+   "weapons": [
+    "pvpciv:nine_tails"
+   ],
+   "chance": 0.15,
+   "min_rarity": "EPIC"
+  },
+  {
+   "weapons": [
+    "pvpciv:fox_fang",
+    "pvpciv:foxfire_blade"
+   ],
+   "chance": 0.5,
+   "min_rarity": "RARE"
+  },
+  {
+   "gear": [
+    "pvpciv:fox_helmet",
+    "pvpciv:fox_chestplate",
+    "pvpciv:fox_leggings",
+    "pvpciv:fox_boots"
+   ],
+   "chance": 0.35,
+   "min_rarity": "RARE"
+  },
+  {
+   "item": "pvpciv:temper_scroll",
+   "chance": 0.35
+  },
+  {
+   "item": "pvpciv:blood_star_w1",
+   "chance": 0.15
+  },
+  {
+   "item": "pvpciv:fox_boat_t4",
+   "chance": 0.2
+  }
+ ]
+}
