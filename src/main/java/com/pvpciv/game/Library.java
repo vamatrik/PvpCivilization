@@ -84,7 +84,8 @@ public final class Library {
     }
 
     private static BlockPos pos(MinecraftServer s, Tome t) {
-        if (t.floor == 1) { long v = com.pvpciv.data.CivData.get(s).bossNext("book1"); if (v > 0) return BlockPos.of(v); }
+        // BlockPos.asLong() бывает отрицательным (отрицательные X/Z) — проверяем наличие ключа, а не знак
+        if (t.floor == 1) { var m = com.pvpciv.data.CivData.get(s).bossNext; if (m.containsKey("book1")) return BlockPos.of(m.get("book1")); }
         return spot(s, t);
     }
 
@@ -131,9 +132,27 @@ public final class Library {
         for (Tome t : TOMES) {
             ServerLevel l = CivWorld.byFloor(s, t.floor);
             BlockPos b = pos(s, t);
-            if (t.floor == 1 && com.pvpciv.data.CivData.get(s).bossNext("book1") <= 0) {
+            var cd = com.pvpciv.data.CivData.get(s);
+            if (t.floor == 1 && !cd.bossNext.containsKey("book1")) {
                 if (!l.isLoaded(b)) continue;
-                com.pvpciv.data.CivData.get(s).bossNext.put("book1", b.asLong()); com.pvpciv.data.CivData.get(s).setDirty();
+                cd.bossNext.put("book1", b.asLong()); cd.setDirty();
+            }
+            if (t.floor == 1 && !cd.bossNext.containsKey("book1fix2")) {
+                // 0.9.7: пьедестал рос столбом вверх — сносим столб до самого нижнего блока
+                if (!l.isLoaded(b) || !l.areEntitiesLoaded(net.minecraft.world.level.ChunkPos.asLong(b))) continue;
+                BlockPos bot = b;
+                while (l.getBlockState(bot.below()).is(Blocks.CHISELED_STONE_BRICKS) && b.getY() - bot.getY() < 400) bot = bot.below();
+                for (BlockPos c = bot.above(); c.getY() <= b.getY() + 1; c = c.above())
+                    if (l.getBlockState(c).is(Blocks.CHISELED_STONE_BRICKS)) l.setBlock(c, Blocks.AIR.defaultBlockState(), 3);
+                for (var e : l.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class,
+                        new net.minecraft.world.phys.AABB(bot).inflate(2, 0, 2).expandTowards(0, b.getY() - bot.getY() + 4, 0), e -> e.getTags().contains("tome_" + t.bit)))
+                    e.discard();
+                if (bot.getY() < com.pvpciv.floor.Floor1.Y - 12) {   // мусорная координата (ниже руин) — ставим заново на землю
+                    if (l.getBlockState(bot).is(Blocks.CHISELED_STONE_BRICKS)) l.setBlock(bot, Blocks.AIR.defaultBlockState(), 3);
+                    bot = spot(s, t);
+                }
+                cd.bossNext.put("book1", bot.asLong()); cd.bossNext.put("book1fix2", 1L); cd.setDirty();
+                b = bot;
             }
             if (!l.isLoaded(b) || !l.areEntitiesLoaded(net.minecraft.world.level.ChunkPos.asLong(b))) continue;
             var st = l.getBlockState(b);
