@@ -39,7 +39,9 @@ public final class ArmorUp {
         if (st.isEmpty()) return 0;
         if (st.is(ModRegistry.FROZEN_LOCKET.get()) || st.is(ModRegistry.GAS_MASK_FILTER.get()) || st.is(ModRegistry.DON_RING.get()) || st.is(ModRegistry.RAT_CROWN_SHARD.get()) || st.is(ModRegistry.BRUTE_CRYSTAL.get()) || st.is(ModRegistry.KEEPER_CRYSTAL.get())
                 || st.is(ModRegistry.STAR_W1.get()) || st.is(ModRegistry.BLESSED_STAR_W1.get()) || st.is(ModRegistry.TEMPER_SCROLL.get())
-                || st.is(ModRegistry.BRUTE_TROPHY.get()) || st.is(ModRegistry.KEEPER_TROPHY.get())) return 0;
+                || st.is(ModRegistry.BRUTE_TROPHY.get()) || st.is(ModRegistry.KEEPER_TROPHY.get())
+                || st.is(ModRegistry.JADE_SEAL.get()) || st.is(ModRegistry.KAPPA_DISH.get()) || st.is(ModRegistry.FOXFIRE.get()) || st.is(ModRegistry.KUMIHO_TAIL.get())
+                || st.is(ModRegistry.KAPPA_TROPHY.get()) || st.is(ModRegistry.KUMIHO_TROPHY.get()) || st.is(ModRegistry.YUKI_REMAINS.get())) return 0;   // редкое не скармливаем
         if (st.getItem() instanceof SimpleCivItem s) return s.sellPrice;
         if (st.getItem() instanceof CivArmorItem && level(st) == 0) return 30 * (Gear.rarity(st).ordinal() + 1);
         return 0;

@@ -205,9 +205,16 @@ public final class Gates {
         }
         Channel c = CHANNEL.get(p.getUUID());
         if (c == null) return;
-        if (p.position().distanceToSqr(c.from) > 1.0 || p.getLastHurtByMobTimestamp() > p.tickCount - 60 || Vampire.jailed(p)) {
+        // бета 0.9.1: «сорвано, хотя стою на базе» — старая проверка боя срабатывала без всякого боя
+        // (метка «последний удар» = 0 у только что вошедшего/возрождённого игрока). Теперь — только реальный враг рядом.
+        String why = null;
+        double dx = p.getX() - c.from.x, dz = p.getZ() - c.from.z;
+        if (dx * dx + dz * dz > 2.25 || Math.abs(p.getY() - c.from.y) > 1.5) why = "ты сдвинулся с места";
+        else if (inCombat(p)) why = "тебя атакуют";
+        else if (Vampire.jailed(p)) why = "из темницы врата не работают";
+        if (why != null) {
             CHANNEL.remove(p.getUUID());
-            p.displayClientMessage(Component.literal("Перенос сорван: нужно стоять спокойно и вне боя.").withStyle(ChatFormatting.RED), true);
+            p.displayClientMessage(Component.literal("Перенос сорван: " + why + ".").withStyle(ChatFormatting.RED), true);
             return;
         }
         if (++c.sec < 3) {
@@ -217,6 +224,12 @@ public final class Gates {
         }
         CHANNEL.remove(p.getUUID());
         go(p, c.to);
+    }
+
+    /** Бой: живой враг ударил тебя меньше 3 с назад. */
+    public static boolean inCombat(ServerPlayer p) {
+        var by = p.getLastHurtByMob();
+        return by != null && by.isAlive() && by != p && p.getLastHurtByMobTimestamp() > 0 && p.tickCount - p.getLastHurtByMobTimestamp() < 60;
     }
 
     private static final class Channel { final Vec3 from; final String to; int sec; Channel(Vec3 f, String t) { from = f; to = t; } }

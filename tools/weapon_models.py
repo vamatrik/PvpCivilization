@@ -205,7 +205,7 @@ def build(m):
         for i, b in enumerate(bl): els.append(elem(b, glow=gi, inflate=infl, phase=i % 3))
         json.dump({"textures": tex, "gui_light": "front", "elements": els, "display": disp}, open(os.path.join(md, f"{m.name}_g{gi+1}.json"), 'w'), separators=(',', ':'))
         variants.append({"predicate": {"pvpciv:stars": stars/16}, "model": f"pvpciv:item/{m.name}_g{gi+1}"})
-    json.dump({"textures": tex, "gui_light": "front", "elements": base, "display": disp, "overrides": variants}, open(os.path.join(md, f"{m.name}.json"), 'w'), separators=(',', ':'))
+    json.dump({"textures": tex, "render_type": "minecraft:cutout", "gui_light": "front", "elements": base, "display": disp, "overrides": variants}, open(os.path.join(md, f"{m.name}.json"), 'w'), separators=(',', ':'))
     # анимированная палитра
     td = os.path.join(ROOT, 'textures/item/w3d'); os.makedirs(td, exist_ok=True)
     im = Image.new('RGBA', (16, 16*FRAMES), (0, 0, 0, 0)); px = im.load()

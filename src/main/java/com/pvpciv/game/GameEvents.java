@@ -73,7 +73,7 @@ public final class GameEvents {
             if (e.getEntity() instanceof ServerPlayer p && e.getAmount() <= 1.0001f) {
                 float a = p.getMaxHealth() > 20 ? e.getAmount() * p.getMaxHealth() / 20f : e.getAmount();
                 // бета 0.8.7: в бою (бил или получал урон за последние 6 с) реген вдвое слабее
-                if (p.getLastHurtByMobTimestamp() > p.tickCount - 120 || p.getLastHurtMobTimestamp() > p.tickCount - 120) a *= 0.5f;
+                if ((p.getLastHurtByMobTimestamp() > 0 && p.getLastHurtByMobTimestamp() > p.tickCount - 120) || (p.getLastHurtMobTimestamp() > 0 && p.getLastHurtMobTimestamp() > p.tickCount - 120)) a *= 0.5f;
                 e.setAmount(a);
             }
         });

@@ -103,4 +103,59 @@ public class ArmorBenchScreen extends CivScreen<ArmorBenchMenu> {
         if (in(mx, my, 88, 154, 74, 16)) { fx.burst(leftPos + 30, topPos + 48, 36, 0xFFE08A, 90); click(ArmorBenchMenu.BTN_UP); return true; }
         return super.mouseClicked(mx, my, b);
     }
+
+    /** 0.9.2: подсказки на пустых слотах стола. */
+    @Override
+    protected void renderTooltip(GuiGraphics g, int mx, int my) {
+        if (hoveredSlot != null && !hoveredSlot.hasItem() && menu.getCarried().isEmpty() && hoveredSlot.index < 3) {
+            java.util.List<net.minecraft.network.chat.Component> t = new java.util.ArrayList<>();
+            java.util.function.BiConsumer<String, net.minecraft.ChatFormatting> l = (x, c) -> t.add(net.minecraft.network.chat.Component.literal(x).withStyle(c));
+            switch (hoveredSlot.index) {
+                case 0 -> { l.accept("Броня", net.minecraft.ChatFormatting.GOLD); l.accept("Положи сюда шлем, нагрудник, поножи или ботинки.", net.minecraft.ChatFormatting.GRAY); }
+                case 1 -> {
+                    l.accept("Хлам — опыт брони", net.minecraft.ChatFormatting.GOLD);
+                    l.accept("Хлам с мобов (то, что продаётся за искры)", net.minecraft.ChatFormatting.GRAY);
+                    l.accept("и лишняя броня +0. Редкие материалы — нет.", net.minecraft.ChatFormatting.GRAY);
+                    l.accept("Родной хлам комплекта — ×1,5:", net.minecraft.ChatFormatting.GRAY);
+                    l.accept(" Инеевый — инеевый осколок", net.minecraft.ChatFormatting.DARK_AQUA);
+                    l.accept(" Ликвидатора — обрезки резины", net.minecraft.ChatFormatting.DARK_AQUA);
+                    l.accept(" Самурайский — обрезки шёлка", net.minecraft.ChatFormatting.DARK_AQUA);
+                    l.accept(" Лисий — лисий мех", net.minecraft.ChatFormatting.DARK_AQUA);
+                    l.accept("Полоска опыта заполнена → нужно ядро для +1.", net.minecraft.ChatFormatting.DARK_GRAY);
+                }
+                default -> {
+                    ItemStack ar = menu.box.getItem(0);
+                    if (ar.getItem() instanceof com.pvpciv.item.CivArmorItem ca) {   // 0.9.3: рецепт именно под эту броню
+                        int lv = ArmorUp.level(ar), tg = lv + 1;
+                        if (lv >= 10) {
+                            l.accept("Ядро не нужно", net.minecraft.ChatFormatting.GOLD);
+                            l.accept("+11 — благословенные и кровавые звёзды, 50%.", net.minecraft.ChatFormatting.GRAY);
+                        } else {
+                            String center = ca.tier < 2 ? "Медальон инея" : ca.tier < 3 ? "Фильтр противогаза" : "Нефритовая печать";
+                            l.accept("Нужно ядро +" + tg + " (или сильнее)", net.minecraft.ChatFormatting.GOLD);
+                            l.accept("для: " + ca.set + " +" + lv + " → +" + tg, net.minecraft.ChatFormatting.GRAY);
+                            l.accept("Алтарь инфузии (подвал Кармиллы):", net.minecraft.ChatFormatting.GRAY);
+                            l.accept(" центр — " + center, net.minecraft.ChatFormatting.DARK_AQUA);
+                            l.accept(tg <= 8 ? " по кругу — " + tg + " звёзд заточки"
+                                    : " по кругу — " + (16 - tg) + " обычных + " + (tg - 8) + " благословенных зв.", net.minecraft.ChatFormatting.DARK_AQUA);
+                            l.accept("(центр можно любой из трёх — этот родной для тира " + (int) Math.floor(ca.tier) + ")", net.minecraft.ChatFormatting.DARK_GRAY);
+                        }
+                        g.renderComponentTooltip(font, t, mx, my);
+                        return;
+                    }
+                    l.accept("Ядро брони", net.minecraft.ChatFormatting.GOLD);
+                    l.accept("Нужно ядро уровня цели (+N) или выше — тратится.", net.minecraft.ChatFormatting.GRAY);
+                    l.accept("Крафт — алтарь инфузии в подвале Кармиллы:", net.minecraft.ChatFormatting.GRAY);
+                    l.accept(" центр: медальон инея / фильтр противогаза /", net.minecraft.ChatFormatting.DARK_AQUA);
+                    l.accept("        нефритовая печать (любой подходит)", net.minecraft.ChatFormatting.DARK_AQUA);
+                    l.accept(" по кругу: звёзды заточки — ядро +N из N звёзд;", net.minecraft.ChatFormatting.DARK_AQUA);
+                    l.accept(" для +9…+10 часть звёзд — благословенные.", net.minecraft.ChatFormatting.DARK_AQUA);
+                    l.accept("Подробно — кнопка «Гайд» у алтаря.", net.minecraft.ChatFormatting.DARK_GRAY);
+                }
+            }
+            g.renderComponentTooltip(font, t, mx, my);
+            return;
+        }
+        super.renderTooltip(g, mx, my);
+    }
 }

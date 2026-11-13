@@ -214,7 +214,7 @@ public final class FoodApp {
     /** Почему курьер не идёт «ко мне»: бой, PvP-зона, логово босса, темница. null — можно. */
     private static String blocked(ServerPlayer p) {
         if (Vampire.jailed(p)) return "в темницу Кармиллы без пропуска не пускают";
-        if (p.getLastHurtByMobTimestamp() > p.tickCount - 100) return "ты в бою — «я тут постою»";
+        if (Gates.inCombat(p)) return "ты в бою — «я тут постою»";
         if (com.pvpciv.floor.Zones.at(p).type() == com.pvpciv.floor.Zones.Type.PVP) return "в PvP-зону курьеры не ходят";
         for (com.pvpciv.floor.BossManager.Def d : com.pvpciv.floor.BossManager.DEFS) {
             if (com.pvpciv.floor.BossManager.floor(d) != CivWorld.floor(p.level())) continue;

@@ -233,7 +233,16 @@ public abstract class CivBoss extends Monster implements GeoEntity {
         return Math.abs(s.y - center.y) <= 3 ? s : center;
     }
 
+    private static final java.util.Map<UUID, Long> KNOCKED = new java.util.HashMap<>();
+
+    /** Отбрасывание. 0.9.5: не чаще раза в 20 тиков на игрока — иначе цепочка шипов Королевы подбрасывала
+     *  прыгнувшего игрока каждые 2 тика всё выше («на сотню блоков»). Вверх — не сильнее, если уже летит вверх. */
     protected static void knock(ServerPlayer p, Vec3 from, double h, double up) {
+        long now = p.serverLevel().getGameTime();
+        Long last = KNOCKED.get(p.getUUID());
+        if (last != null && now - last < 20 && now >= last) return;
+        KNOCKED.put(p.getUUID(), now);
+        if (!p.onGround()) up = Math.min(up, Math.max(0.25, up - Math.max(0, p.getDeltaMovement().y)));
         Vec3 push = p.position().subtract(from).multiply(1, 0, 1);
         push = push.lengthSqr() < 1e-4 ? new Vec3(0, 0, 0) : push.normalize().scale(h);
         p.setDeltaMovement(push.x, up, push.z);

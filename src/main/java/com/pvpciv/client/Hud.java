@@ -276,6 +276,16 @@ public final class Hud {
                 }
             }
         }
+        // 0.9.4: перезарядка удара. Ванильный индикатор «в хотбаре» пропал вместе с ванильным хотбаром — рисуем свой
+        // полоской над выбранным слотом (режим «прицел» показывает ванильный индикатор как обычно).
+        if (mc.options.attackIndicator().get() == net.minecraft.client.AttackIndicatorStatus.HOTBAR) {
+            float as = mc.player.getAttackStrengthScale(0f);
+            if (as < 1f) {
+                int bx = hx + 7 + sel * 20 - 1, by = hy - 5;
+                g.fill(bx, by, bx + 18, by + 3, 0xC0101018);
+                g.fill(bx + 1, by + 1, bx + 1 + Math.round(16 * as), by + 2, as > 0.9f ? 0xFFFFE070 : 0xFFD9A441);
+            }
+        }
         ItemStack off = mc.player.getOffhandItem();
         if (!off.isEmpty()) {
             Skin.plate(g, hx - 32, hy, 28, 28);

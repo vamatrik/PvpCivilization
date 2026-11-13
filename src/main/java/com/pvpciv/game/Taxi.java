@@ -191,7 +191,7 @@ public final class Taxi {
         com.google.gson.JsonObject j = new com.google.gson.JsonObject();
         j.addProperty("name", fromName); j.addProperty("to", o.to < 0 ? "домой" : PTS[o.to].name); j.addProperty("sec", (o.until - now) / 20); j.addProperty("here", here);
         PacketDistributor.sendToPlayer(p, new Network.PhoneData(5, j.toString()));
-        if (!here || p.isPassenger() || Vampire.jailed(p) || p.getLastHurtByMobTimestamp() > p.tickCount - 100) return;
+        if (!here || p.isPassenger() || Vampire.jailed(p) || Gates.inCombat(p)) return;
         PENDING.remove(p.getUUID());
         PacketDistributor.sendToPlayer(p, new Network.PhoneData(5, "{}"));
         if (o.to == -2) rideHome(p); else ride(p, o.to);
