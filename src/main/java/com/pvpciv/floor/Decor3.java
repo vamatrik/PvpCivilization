@@ -34,9 +34,24 @@ public final class Decor3 {
                     : new Block[]{Blocks.AZURE_BLUET, Blocks.OXEYE_DAISY, Blocks.LILY_OF_THE_VALLEY, Blocks.PINK_TULIP, Blocks.CORNFLOWER}).defaultBlockState();
             else if (f < 0.150f) s = (autumn ? Blocks.MOSS_CARPET : Blocks.MOSSY_COBBLESTONE_SLAB).defaultBlockState();
             else if (f < 0.153f) s = Blocks.FLOWERING_AZALEA.defaultBlockState();
-            else if (autumn && f < 0.17f) s = Blocks.RED_MUSHROOM.defaultBlockState();
+            else if (autumn && f < 0.17f) s = Blocks.DEAD_BUSH.defaultBlockState();   // 0.9.9: грибы на свету осыпались
             if (s != null) l.setBlock(at, s, 2);
         }
+    }
+
+    /** 0.9.9: убрать растения, которым не на чем стоять (их потом «выбивало» в предметы), и грибы на свету. */
+    public static int fixPlants(ServerLevel l, int cx, int y, int cz, int r) {
+        int n = 0;
+        for (int x = cx - r; x <= cx + r; x++) for (int z = cz - r; z <= cz + r; z++) {
+            if ((x - cx) * (x - cx) + (z - cz) * (z - cz) > r * r) continue;
+            BlockPos at = new BlockPos(x, y, z);
+            BlockState s = l.getBlockState(at);
+            if (s.isAir()) continue;
+            if (s.is(Blocks.RED_MUSHROOM) || s.is(Blocks.BROWN_MUSHROOM)) { l.setBlock(at, Blocks.DEAD_BUSH.defaultBlockState(), 2); n++; s = l.getBlockState(at); }
+            if (!(s.getBlock() instanceof net.minecraft.world.level.block.BushBlock) && !s.is(Blocks.PINK_PETALS)) continue;
+            if (!s.canSurvive(l, at)) { l.setBlock(at, Blocks.AIR.defaultBlockState(), 2); n++; }
+        }
+        return n;
     }
 
     /** 1 — прямо под кроной сакуры, 2 — рядом, 0 — далеко. */

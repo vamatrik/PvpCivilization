@@ -33,9 +33,13 @@ public final class Monorail {
     public static Vec3 f3(double s) { return new Vec3(0.5, com.pvpciv.floor.Floor3.Y + s, 0.5 + 0.05 * Math.min(0, s)); }
     public static List<Vec3> f3Path(double from, double to) { List<Vec3> l = new ArrayList<>(); int n = 24; for (int i = 0; i <= n; i++) l.add(f3(from + (to - from) * i / n)); return l; }
     /** Отъезд: вверх — в небо, вниз — в бездну (бета 0.9.6: со 2 на 3 этаж кабина ехала вниз). */
-    public static List<Vec3> pathFrom(int floor, boolean up) { return floor == 1 ? roofPath(0, 110) : floor == 2 ? f2Path(0, up ? 60 : -60) : f3Path(0, -60); }
+    /** Этаж 4: кабина поднимается из бездны в стеклянную шахту вестибюля NaZa. */
+    public static final Vec3 S4 = new Vec3(0.5, com.pvpciv.floor.Floor4.Y, 0.5);
+    public static Vec3 f4(double s) { return new Vec3(0.5, com.pvpciv.floor.Floor4.Y + s, 0.5); }
+    public static List<Vec3> f4Path(double from, double to) { List<Vec3> l = new ArrayList<>(); int n = 24; for (int i = 0; i <= n; i++) l.add(f4(from + (to - from) * i / n)); return l; }
+    public static List<Vec3> pathFrom(int floor, boolean up) { return floor == 1 ? roofPath(0, 110) : floor == 2 ? f2Path(0, up ? 60 : -60) : floor == 3 ? f3Path(0, up ? 60 : -60) : f4Path(0, -60); }
     /** Прибытие: поднимаясь — из бездны снизу, спускаясь — с неба сверху. */
-    public static List<Vec3> pathTo(int floor, boolean up) { return floor == 1 ? roofPath(110, 0) : floor == 2 ? f2Path(up ? -60 : 60, 0) : f3Path(-60, 0); }
+    public static List<Vec3> pathTo(int floor, boolean up) { return floor == 1 ? roofPath(110, 0) : floor == 2 ? f2Path(up ? -60 : 60, 0) : floor == 3 ? f3Path(up ? -60 : 60, 0) : f4Path(-60, 0); }
 
     public static List<Vec3> roofPath(double from, double to) { List<Vec3> l = new ArrayList<>(); int n = 24; for (int i = 0; i <= n; i++) l.add(roof(from + (to - from) * i / n)); return l; }
     public static List<Vec3> f2Path(double from, double to) { List<Vec3> l = new ArrayList<>(); int n = 24; for (int i = 0; i <= n; i++) l.add(f2(from + (to - from) * i / n)); return l; }
@@ -70,6 +74,14 @@ public final class Monorail {
         station(l3, S3);
         if (l3.getEntitiesOfClass(Display.ItemDisplay.class, new AABB(S3.x - 8, S3.y - 12, S3.z - 8, S3.x + 8, S3.y, S3.z + 8), e -> e.getTags().contains(TAG)).isEmpty())
             for (double s = -80; s < -6; s += 6) segment(l3, f3(s).add(0, 1.4, -1.9), f3(s + 6).add(0, 1.4, -1.9));
+    }
+
+    public static void ensure4(MinecraftServer server) {
+        ServerLevel l4 = CivWorld.f4(server);
+        if (!CivWorld.isF4(l4) || !loaded(l4, S4)) return;
+        station(l4, S4);
+        if (l4.getEntitiesOfClass(Display.ItemDisplay.class, new AABB(S4.x - 8, S4.y - 12, S4.z - 8, S4.x + 8, S4.y, S4.z + 8), e -> e.getTags().contains(TAG)).isEmpty())
+            for (double s = -80; s < -6; s += 6) segment(l4, f4(s).add(0, 1.4, -1.9), f4(s + 6).add(0, 1.4, -1.9));
     }
 
     private static boolean loaded(ServerLevel l, Vec3 p) { return l.areEntitiesLoaded(net.minecraft.world.level.ChunkPos.asLong(net.minecraft.core.BlockPos.containing(p))); }

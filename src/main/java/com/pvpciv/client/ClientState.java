@@ -4,6 +4,13 @@ public final class ClientState {
     public static int stage = 0;
     public static String objective = "";
     public static int level = 1;
+    /** 0.9.9: стаки кровотечения и момент «разрыва» (кровь по краям экрана). */
+    public static int bleed = 0;
+    /** 0.10.5: навыки — выбранные id по слотам, готовность (мс), все навыки (json). */
+    public static final String[] skillSel = {"dash", "", ""};
+    public static final long[] skillReady = new long[3], skillCdMs = new long[3];
+    public static com.google.gson.JsonArray skillsAll = new com.google.gson.JsonArray();
+    public static long bleedBurst = 0;
     public static long xp = 0, xpNext = 60, money = 0;
     public static String zone = "";
     public static int zoneType = 0;
@@ -69,4 +76,7 @@ public final class ClientState {
         quest = ""; questSeconds = -1; jailSeconds = -1; cineKind = 0;
         stage = 0; objective = ""; level = 1; xp = 0; money = 0; zone = ""; zoneType = 0; bossSeconds = -1; keeperSeconds = -1; trophies = 0; dashReadyAt = 0;
     }
+    // 0.11
+    public static com.google.gson.JsonObject ench = new com.google.gson.JsonObject();
+    public static boolean grabOn; public static float grabBar; public static int grabT;
 }

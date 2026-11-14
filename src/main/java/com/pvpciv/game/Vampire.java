@@ -46,7 +46,14 @@ public final class Vampire {
         return switch (kind) {
             case "ASH_ZOMBIE" -> "пепельных зомби"; case "WITHERED" -> "иссохших"; case "ASH_ARCHER" -> "пепельных лучников";
             case "ASH_SPIDER" -> "пепельных пауков"; case "FROST_ZOMBIE" -> "обмороженных"; case "FROST_ARCHER" -> "инеевых стрелков";
-            case "FROST_SPIDER" -> "ледяных пауков"; case "ELITE" -> "элитных мобов (★)"; default -> kind;
+            case "FROST_SPIDER" -> "ледяных пауков"; case "ELITE" -> "элитных мобов (★)";
+            case "POLICE" -> "продажных копов"; case "THUG" -> "гопников"; case "STREET_DOG" -> "бешеных дворняг";
+            case "RAT" -> "канализационных крыс"; case "GHOUL" -> "сточных упырей"; case "GUNNER" -> "автоматчиков";
+            case "SAMURAI" -> "самураев-ронинов"; case "NINJA" -> "ниндзя"; case "ASHIGARU" -> "асигару-лучников";
+            case "WEREWOLF" -> "оборотней"; case "FOX" -> "лис-оборотней"; case "KITSUNE_ARCHER" -> "лучниц кицунэ";
+            case "BOTANIST" -> "обезумевших ботаников"; case "SPORELING" -> "споровых ползунов"; case "THAWED" -> "размороженных образцов";
+            case "SENTRY" -> "охранников NaZa"; case "ROBOT" -> "роботов-техников"; case "TURRET" -> "турелей"; case "CHIMERA" -> "химер"; case "LAB_TECH" -> "лаборантов";
+            default -> { try { yield com.pvpciv.combat.Mobs.Kind.valueOf(kind).title.toLowerCase(); } catch (Exception e) { yield kind; } }
         };
     }
 
@@ -244,7 +251,7 @@ public final class Vampire {
                 ? "Новенький? В подвал общежития студенты обычно не спускаются. А те, кто спускается… становятся моими должниками. Шучу. Наполовину."
                 : "Снова ты. Соскучился по подвалу? Или по мне?";
         List<DialogueManager.Opt> opts = new ArrayList<>();
-        opts.add(opt("Кто ты такая?", first ? "who" : "offer"));
+        opts.add(opt("Кто ты такая?", "who"));
         if (d.questCooldown <= now) opts.add(opt("Есть работа?", "offer"));
         if (eliteOpen) opts.add(opt("★ Элитный контракт", "elite"));
         opts.add(opt("[Уйти]", null));

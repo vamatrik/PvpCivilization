@@ -145,10 +145,13 @@ public final class GameEvents {
         if (ticks % 10 == 0) for (ServerPlayer p : server.getPlayerList().getPlayers()) com.pvpciv.inv.Bag.sweep(p);
         if (ticks % 5 == 0) for (ServerPlayer p : server.getPlayerList().getPlayers()) Falling.tick(p);
         Falling.follow(server);
+        if (server.getTickCount() % 5 == 0) com.pvpciv.combat.Melee.tick(server);
+        if (server.getTickCount() % 20 == 0) com.pvpciv.combat.Bleed.tick(server);
         if (ticks % 10 == 3) for (ServerPlayer p : server.getPlayerList().getPlayers()) { Marks.tick(p); Taxi.tick(p); }
         if (ticks % 20 == 7) for (ServerPlayer p : server.getPlayerList().getPlayers()) { FoodApp.tick(p); Gates.tick(p); }
         if (ticks % 40 == 11) for (ServerPlayer p : server.getPlayerList().getPlayers()) Library.tick(p);
         if (ticks % 20 == 13) for (ServerPlayer p : server.getPlayerList().getPlayers()) Assassin.setBonus(p);
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) Enchanting.tick(p);
         if (ticks % 100 == 41) Gates.ensure(server);
         if (ticks % 100 == 0) {
             LunaEntity.ensure(server); TraderEntity.ensure(server);
@@ -156,7 +159,10 @@ public final class GameEvents {
             com.pvpciv.floor.Floor2.ensureNpcs(server);
             com.pvpciv.world.Monorail.ensure(server);
             com.pvpciv.world.Monorail.ensure3(server);
+            com.pvpciv.world.Monorail.ensure4(server);
             Library.ensure(server);
+            com.pvpciv.floor.Floor4.ensureNpcs(server);
+            com.pvpciv.world.Signposts.ensure(server);   // 0.10: дорожные указатели
         }
         com.pvpciv.world.IceTrack.tick(server);
     }
@@ -205,6 +211,9 @@ public final class GameEvents {
         if (pos.equals(DormBuilder.LUNA_DIARY)) {
             e.setCanceled(true);
             if (!DialogueManager.inDialogue(p)) DialogueManager.open(p, null, Dialogues.lunaDiary(p));
+        } else if (com.pvpciv.world.CivWorld.isF4(p.level()) && pos.equals(com.pvpciv.floor.Floor4.ENCH_TABLE)) {   // 0.11: молекулярный стол
+            e.setCanceled(true);
+            Enchanting.open(p);
         } else if (pos.equals(DormBuilder.LUNA_BOX)) {
             e.setCanceled(true);
             Dialogues.lunaBox(p);
@@ -301,6 +310,23 @@ public final class GameEvents {
         e.getDispatcher().register(Commands.literal("beta")
                 .then(Commands.argument("text", com.mojang.brigadier.arguments.StringArgumentType.greedyString()).executes(GameEvents::beta)));
         e.getDispatcher().register(Commands.literal("civ")
+                // 0.10.3: тестовый «полный» аккаунт и возврат как было
+                .then(Commands.literal("admin").requires(s -> s.hasPermission(2))
+                        .then(Commands.literal("full").executes(c -> AdminKit.full(c.getSource().getPlayerOrException(), c.getSource())))
+                        .then(Commands.literal("weapons").executes(c -> {
+                            var rows = com.pvpciv.combat.Weapons.report();
+                            for (String r : rows) System.out.println("WEAPONS " + r);
+                            for (String r : rows) c.getSource().sendSuccess(() -> Component.literal(r).withStyle(ChatFormatting.GRAY), false);
+                            return rows.size(); }))
+                        .then(Commands.literal("dmglog").executes(c -> { com.pvpciv.combat.CombatEvents.DMGLOG = !com.pvpciv.combat.CombatEvents.DMGLOG; return 1; }))
+                        .then(Commands.literal("grab").executes(c -> {
+                            var pl = c.getSource().getPlayerOrException();
+                            var l = pl.serverLevel().getEntitiesOfClass(com.pvpciv.entity.boss.LianaBoss.class, pl.getBoundingBox().inflate(40));
+                            if (!l.isEmpty()) l.get(0).forceGrab(pl);
+                            return l.size(); }))
+                        .then(Commands.literal("full4").executes(c -> AdminKit.full4(c.getSource().getPlayerOrException(), c.getSource())))
+                        .then(Commands.literal("back").executes(c -> AdminKit.back(c.getSource().getPlayerOrException(), c.getSource())))
+                        .then(Commands.literal("resetgates").executes(c -> AdminKit.resetGates(c.getSource().getPlayerOrException(), c.getSource()))))
                 .then(Commands.literal("home").executes(c -> {
                     ServerPlayer p = c.getSource().getPlayerOrException();
                     if (Vampire.jailed(p)) { p.displayClientMessage(Component.literal("Ты в клетке у Кармиллы. Жди.").withStyle(ChatFormatting.RED), true); return 0; }
@@ -310,9 +336,14 @@ public final class GameEvents {
                 }))
                 .then(Commands.literal("reset").requires(s -> s.hasPermission(2)).executes(c -> {
                     ServerPlayer p = c.getSource().getPlayerOrException();
-                    StoryData d = Story.data(p);
-                    d.stage = Story.NEW; d.level = 1; d.xp = 0; d.money = 0;
+                    // 0.10.5: полный сброс — прогресс, сумка, инвентарь (квартира остаётся за игроком)
+                    StoryData old = Story.data(p);
+                    StoryData d = new StoryData();
+                    d.apartment = old.apartment;
+                    d.stage = Story.NEW;
                     p.setData(ModRegistry.STORY.get(), d);
+                    var bag = com.pvpciv.inv.Bag.get(p);
+                    for (int i = 0; i < bag.getSlots(); i++) bag.setStackInSlot(i, net.minecraft.world.item.ItemStack.EMPTY);
                     p.getInventory().clearContent();
                     CivData.Apartment a = CivData.get(p.server).byId(d.apartment);
                     if (a != null) { Story.toApartment(p, a); GuardEntity.ensureFor(p, a); }

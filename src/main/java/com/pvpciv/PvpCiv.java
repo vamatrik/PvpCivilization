@@ -18,6 +18,8 @@ public class PvpCiv {
         modBus.addListener(ModRegistry::onAttributes);
         modBus.addListener(com.pvpciv.registry.ModMobs::onAttributes);
         modBus.addListener(Network::register);
+        modBus.addListener((net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent e) -> e.enqueueWork(com.pvpciv.combat.Balance::liftCaps));
+        com.pvpciv.combat.Balance.liftCaps();
         GameEvents.register(NeoForge.EVENT_BUS);
         if (FMLEnvironment.dist.isClient()) {
             com.pvpciv.client.ClientInit.init(modBus);

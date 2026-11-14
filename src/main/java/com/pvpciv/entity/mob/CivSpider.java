@@ -24,4 +24,15 @@ public class CivSpider extends Spider {
         if (t != null && !(t instanceof net.minecraft.world.entity.player.Player)) return;
         super.setTarget(t);
     }
+
+    /** 0.11: споровый ползун — облачко спор и отравление при укусе. */
+    @Override public boolean doHurtTarget(net.minecraft.world.entity.Entity t) {
+        boolean r = super.doHurtTarget(t);
+        if (r && getType() == com.pvpciv.registry.ModMobs.SPORELING.get() && t instanceof net.minecraft.world.entity.LivingEntity le) {
+            le.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON, 60, 0));
+            if (level() instanceof net.minecraft.server.level.ServerLevel sl)
+                sl.sendParticles(net.minecraft.core.particles.ParticleTypes.SPORE_BLOSSOM_AIR, t.getX(), t.getY() + 1, t.getZ(), 20, 0.6, 0.6, 0.6, 0.01);
+        }
+        return r;
+    }
 }

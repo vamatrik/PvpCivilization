@@ -65,10 +65,10 @@ public class CivStationBlock extends Block implements net.minecraft.world.level.
         return kind == Kind.ALTAR || kind == Kind.PEDESTAL ? new PedestalBlockEntity(pos, st) : null;
     }
 
-    /** Что можно положить: на пьедестал — звёзды, на алтарь — оружие от +5 или Медальон инея. */
+    /** Что можно положить: на пьедестал — звёзды, на алтарь — оружие от +4, медальон инея, фильтр или нефритовая печать. */
     public static boolean accepts(Kind k, net.minecraft.world.item.ItemStack st) {
         if (k == Kind.PEDESTAL) return st.is(com.pvpciv.registry.ModRegistry.STAR_W1.get()) || st.is(com.pvpciv.registry.ModRegistry.BLESSED_STAR_W1.get());
-        return (st.getItem() instanceof com.pvpciv.item.CivWeaponItem && com.pvpciv.loot.Gear.stars(st) >= 5) || st.is(com.pvpciv.registry.ModRegistry.FROZEN_LOCKET.get()) || st.is(com.pvpciv.registry.ModRegistry.GAS_MASK_FILTER.get());
+        return (st.getItem() instanceof com.pvpciv.item.CivWeaponItem && com.pvpciv.loot.Gear.stars(st) >= 4) || st.is(com.pvpciv.registry.ModRegistry.FROZEN_LOCKET.get()) || st.is(com.pvpciv.registry.ModRegistry.GAS_MASK_FILTER.get()) || st.is(com.pvpciv.registry.ModRegistry.JADE_SEAL.get());
     }
 
     @Override

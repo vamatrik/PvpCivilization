@@ -37,15 +37,14 @@ public class CivArmorItem extends ArmorItem {
     }
 
     /** Броня (очки) и бонус к здоровью за предмет. Полный комплект тира 1+ обычной редкости ≈ 8 брони и +5 HP. */
-    public double armor(ItemStack st) { return 10 * Math.pow(1.25, tier - 1.5) * part() * Gear.rarity(st).mult * com.pvpciv.game.ArmorUp.mult(Gear.stars(st)); }
-    public double health(ItemStack st) { return 6.25 * Math.pow(1.3, tier - 1.5) * part() * Gear.rarity(st).mult * com.pvpciv.game.ArmorUp.mult(Gear.stars(st)); }
+    public double armor(ItemStack st) { return com.pvpciv.combat.Balance.armorDef(tier) * part() * Gear.rarity(st).mult * com.pvpciv.game.ArmorUp.mult(Gear.stars(st)); }
+    public double health(ItemStack st) { return com.pvpciv.combat.Balance.armorHp(tier) * part() * Gear.rarity(st).mult * com.pvpciv.game.ArmorUp.mult(Gear.stars(st)); }
 
     @Override
     public ItemAttributeModifiers getDefaultAttributeModifiers(ItemStack st) {
         EquipmentSlotGroup g = EquipmentSlotGroup.bySlot(type.getSlot());
         ResourceLocation id = PvpCiv.id("armor." + type.getName());
         return ItemAttributeModifiers.builder()
-                .add(Attributes.ARMOR, new AttributeModifier(id, armor(st), AttributeModifier.Operation.ADD_VALUE), g)
                 .add(Attributes.MAX_HEALTH, new AttributeModifier(id, health(st), AttributeModifier.Operation.ADD_VALUE), g)
                 .build();
     }
@@ -67,6 +66,7 @@ public class CivArmorItem extends ArmorItem {
         tip.add(Component.literal(r.title + " • " + set + " • Тир " + t).withStyle(x -> x.withColor(rc)));
         tip.add(Component.literal(String.format("Броня: +%.1f   Здоровье: +%.1f", armor(st), health(st))).withStyle(ChatFormatting.GRAY));
         if (set.startsWith("Самурай")) tip.add(Component.literal("Полный комплект: +5% шанс крита").withStyle(ChatFormatting.DARK_AQUA));
+        if (set.startsWith("Экзокостюм")) tip.add(Component.literal("Полный комплект: −10% урона от пуль и плазмы").withStyle(ChatFormatting.DARK_AQUA));
         if (set.startsWith("Лисий")) tip.add(Component.literal("Полный комплект: прыжок и скорость").withStyle(ChatFormatting.DARK_AQUA));
         int lv = Gear.stars(st);
         if (lv >= com.pvpciv.game.ArmorUp.MAX) tip.add(Component.literal("Улучшение: +11 (максимум)").withStyle(ChatFormatting.DARK_RED));
@@ -79,6 +79,7 @@ public class CivArmorItem extends ArmorItem {
                     .append(Component.literal("  " + xp + "/" + need).withStyle(ChatFormatting.GRAY)));
             tip.add(Component.literal("Стол брони в квартире: хлам → опыт, ядро → +1").withStyle(ChatFormatting.DARK_GRAY));
         }
+        com.pvpciv.game.Enchanting.tip(st, tip);
         if (!lore.isEmpty()) tip.add(Component.literal(lore).withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
     }
 

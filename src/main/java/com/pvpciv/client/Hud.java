@@ -21,6 +21,67 @@ public final class Hud {
     private static final String[] ZONE_SUB = {"Безопасная зона", "PvE-зона: монстры", "PvP-зона: игроки могут атаковать!"};
     private static final int[] SKILL_LEVELS = {1, 10, 35};   // 0.9.0
 
+    /** 0.10.7: в паре — шкала «следующего удара» под прицелом: заряд руки, чья очередь (стрелка — какая рука), вспышка в окно. */
+    private static void nextHitBar(GuiGraphics g, int w, int h) {
+        var mc = Minecraft.getInstance();
+        var p = mc.player;
+        if (p == null || !ClientCombat.isDual(p) || mc.screen != null) return;
+        boolean off = ClientCombat.nextIsOff(p);
+        float ch = ClientCombat.nextCharge(p), fl = ClientCombat.flash(off ? 1 : 0);
+        boolean leftHand = off == (p.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT);
+        int bw = 16, bx = w / 2 - 8, by = h / 2 + 9;   // ровно на месте ванильной шкалы «под прицелом» (её в паре скрываем)
+        g.fill(bx - 1, by - 1, bx + bw + 1, by + 3, 0xA0101018);
+        int col = fl > 0 ? 0xFFFFFFFF : ch >= 0.92f ? 0xFFFFE070 : off ? 0xFF4A9AC8 : 0xFFD9A441;
+        g.fill(bx, by, bx + Math.round(bw * Math.min(1, ch)), by + 2, col);
+        if (fl > 0) g.fill(bx - 2, by - 2, bx + bw + 2, by + 4, Skin.alpha(0xFFFFB040, fl * 0.5f));
+        Font font = mc.font;
+        String arrow = leftHand ? "◀" : "▶";
+        g.pose().pushPose();
+        g.pose().translate(leftHand ? bx - 7 : bx + bw + 2, by - 2.5f, 0);
+        g.pose().scale(0.6f, 0.6f, 1);
+        g.drawString(font, arrow, 0, 0, off ? 0xFF8FE3FF : 0xFFFFE08A, true);
+        g.pose().popPose();
+    }
+
+    /** 0.10.4: счётчик комбо под прицелом (оранжевый, «выстреливает» на точном ударе, гаснет). */
+    private static void comboLabel(GuiGraphics g, Font font, int w, int h) {
+        ClientCombat.trackReady();   // точнее, чем раз в тик
+        int c = ClientCombat.combo;
+        if (c <= 0) return;
+        long el = System.currentTimeMillis() - ClientCombat.comboAt;
+        if (el > 1500) return;
+        float a = el < 1100 ? 1f : 1f - (el - 1100) / 400f;
+        float pop = el < 120 ? 1.6f - 0.6f * el / 120f : 1f;
+        String s = "×" + c + (c >= com.pvpciv.combat.Melee.COMBO_MAX ? " МАКС" : "");
+        g.pose().pushPose();
+        g.pose().translate(w / 2f, h / 2f + 14, 0);
+        g.pose().scale(pop, pop, 1);
+        g.drawString(font, s, -font.width(s) / 2, 0, Skin.alpha(0xFF000000 | com.pvpciv.combat.CombatEvents.comboColor(c), a), true);
+        g.pose().popPose();
+    }
+
+    /** 0.9.9: кровь по краям экрана — от стаков кровотечения, вспышка при «разрыве». */
+    private static void blood(GuiGraphics g, int w, int h) {
+        float k = ClientState.bleed / 10f;
+        long since = System.currentTimeMillis() - ClientState.bleedBurst;
+        if (since < 1200) k = Math.max(k, 1f - since / 1200f);
+        if (k <= 0.01f) return;
+        float pulse = 0.85f + 0.15f * (float) Math.sin(System.currentTimeMillis() / 160.0);
+        int a = Math.min(220, (int) (200 * k * pulse));
+        int c = a << 24 | 0x8A0008, z = 0x008A0008;
+        int d = (int) (h * (0.10f + 0.18f * k));
+        g.fillGradient(0, 0, w, d, c, z);
+        g.fillGradient(0, h - d, w, h, z, c);
+        // бока — горизонтальным градиентом: тонкие полосы
+        int sw = (int) (w * (0.06f + 0.12f * k));
+        for (int i = 0; i < sw; i++) {
+            int ai = (int) (a * (1f - i / (float) sw));
+            int ci = ai << 24 | 0x8A0008;
+            g.fill(i, 0, i + 1, h, ci);
+            g.fill(w - i - 1, 0, w - i, h, ci);
+        }
+    }
+
     public static void render(GuiGraphics g, DeltaTracker dt) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.hideGui || mc.player == null || mc.level == null) return;
@@ -34,6 +95,10 @@ public final class Hud {
         phone(g, font, w, h);
 
         if (ClientState.zoneType == 2) pvpFrame(g, w, h);
+        blood(g, w, h);
+        grab(g, font, w, h);
+        comboLabel(g, font, w, h);
+        nextHitBar(g, w, h);
         if (!ClientState.zone.isEmpty()) {
             playerPlate(g, font, now);
             zoneBanner(g, font, w);
@@ -235,6 +300,8 @@ public final class Hud {
 
     /** 20 → «20», 20.5 → «20.5». */
     private static String num(float v) {
+        if (v >= 1000) return com.pvpciv.combat.Balance.fmt(v);
+        if (v >= 100) return String.valueOf(Math.round(v));
         float r = Math.round(v * 10) / 10f;
         return r == Math.floor(r) ? String.valueOf((int) r) : String.format(java.util.Locale.ROOT, "%.1f", r);
     }
@@ -288,11 +355,12 @@ public final class Hud {
         // 0.9.4: перезарядка удара. Ванильный индикатор «в хотбаре» пропал вместе с ванильным хотбаром — рисуем свой
         // полоской над выбранным слотом (режим «прицел» показывает ванильный индикатор как обычно).
         if (mc.options.attackIndicator().get() == net.minecraft.client.AttackIndicatorStatus.HOTBAR) {
-            float as = mc.player.getAttackStrengthScale(0f);
-            if (as < 1f) {
+            float as = mc.player.getAttackStrengthScale(0f), fl = ClientCombat.flash(0);
+            if (as < 1f || fl > 0) {
                 int bx = hx + 7 + sel * 20 - 1, by = hy - 5;
                 g.fill(bx, by, bx + 18, by + 3, 0xC0101018);
-                g.fill(bx + 1, by + 1, bx + 1 + Math.round(16 * as), by + 2, as > 0.9f ? 0xFFFFE070 : 0xFFD9A441);
+                g.fill(bx + 1, by + 1, bx + 1 + Math.round(16 * as), by + 2, fl > 0 ? 0xFFFFFFFF : as > 0.9f ? 0xFFFFE070 : 0xFFD9A441);
+                if (fl > 0) g.fill(bx - 1, by - 1, bx + 19, by + 4, Skin.alpha(0xFFFFB040, fl * 0.6f));   // 0.10.4: окно точного удара
             }
         }
         ItemStack off = mc.player.getOffhandItem();
@@ -301,6 +369,16 @@ public final class Hud {
             Skin.slot(g, hx - 26, hy + 6);
             g.renderItem(off, hx - 26, hy + 6);
             g.renderItemDecorations(font, off, hx - 26, hy + 6);
+        }
+        // 0.10.3: заряд второй руки (у каждой руки свой) — полоска над её слотом
+        if (!off.isEmpty() && off.getItem() instanceof CivWeaponItem && mc.player.getMainHandItem().getItem() instanceof CivWeaponItem) {
+            float oc = ClientCombat.offCharge(mc.player), fo = ClientCombat.flash(1);
+            if (oc < 1f || fo > 0) {
+                int bx = hx - 27, by = hy - 5;
+                g.fill(bx, by, bx + 18, by + 3, 0xC0101018);
+                g.fill(bx + 1, by + 1, bx + 1 + Math.round(16 * oc), by + 2, fo > 0 ? 0xFFFFFFFF : oc > 0.9f ? 0xFF8FE3FF : 0xFF4A9AC8);
+                if (fo > 0) g.fill(bx - 1, by - 1, bx + 19, by + 4, Skin.alpha(0xFFFFB040, fo * 0.6f));
+            }
         }
         // навыки
         int kx = hx + hw + 4;
@@ -330,14 +408,18 @@ public final class Hud {
             boolean open = ClientState.level >= SKILL_LEVELS[i];
             if (!open) { Skin.slotLocked(g, ix, iy); continue; }
             Skin.slot(g, ix, iy);
-            if (i == 0) {
-                g.drawString(font, "»", ix + 5, iy + 1, Skin.ICE, true);
-                long left = ClientState.dashReadyAt - now;
-                if (left > 0) {
-                    float cf = left / (float) com.pvpciv.game.DashSkill.COOLDOWN_TICKS;
+            // 0.10.5: значок выбранного навыка и его перезарядка
+            String sid = ClientState.skillSel[i], icon = "";
+            for (var el : ClientState.skillsAll) { var o = el.getAsJsonObject(); if (o.get("id").getAsString().equals(sid)) icon = o.get("icon").getAsString(); }
+            if (!icon.isEmpty()) {
+                int col = i == 0 ? Skin.ICE : i == 1 ? 0xFFE0405A : Skin.GOLD_L;
+                g.drawCenteredString(font, icon, ix + 8, iy + 2, col);
+                long left = ClientState.skillReady[i] - System.currentTimeMillis();
+                if (left > 0 && ClientState.skillCdMs[i] > 0) {
+                    float cf = left / (float) ClientState.skillCdMs[i];
                     g.fill(ix, iy + Math.round(16 * (1 - cf)), ix + 16, iy + 16, 0xC0000000);
-                    g.drawCenteredString(font, String.valueOf((left + 19) / 20), ix + 8, iy + 4, 0xFFFFFFFF);
-                } else Skin.glow(g, ix + 8, iy + 8, 11, 0x307FDBFF);
+                    g.drawCenteredString(font, String.valueOf((left + 999) / 1000), ix + 8, iy + 4, 0xFFFFFFFF);
+                } else Skin.glow(g, ix + 8, iy + 8, 11, (col & 0xFFFFFF) | 0x30000000);
             }
             g.pose().pushPose();
             g.pose().translate(ix + 11, iy + 10, 200);
@@ -358,10 +440,10 @@ public final class Hud {
         int food = mc.player.getFoodData().getFoodLevel();
         Skin.bar(g, hx + hw - 8 - bw, by, bw, food / 20f, food <= 6 ? 0xFFC87020 : 0xFFF0B040, food <= 6 ? 0xFF6A3008 : 0xFF9A5A10, "amber");
         g.drawCenteredString(font, food + "/20", hx + hw - 8 - bw / 2, by + 2, 0xFFFFFFFF);
-        int armor = mc.player.getArmorValue();
+        double armor = com.pvpciv.combat.Balance.armor(mc.player, ClientState.level);   // 0.10.2: броня числом
         if (armor > 0) {
             Skin.icon(g, "shield", hx + 4, by - 11);
-            g.drawString(font, String.valueOf(armor), hx + 16, by - 10, 0xFFA8C0E0, true);
+            g.drawString(font, com.pvpciv.combat.Balance.fmt(armor), hx + 16, by - 10, 0xFFA8C0E0, true);
         }
         int air = mc.player.getAirSupply(), maxAir = mc.player.getMaxAirSupply();
         if (air < maxAir) Skin.thinBar(g, hx + hw - 8 - bw, by - 6, bw, 2, Math.max(0, air) / (float) maxAir, 0xFFBFEFFF, 0xFF4090D0);
@@ -372,6 +454,7 @@ public final class Hud {
         Font font = Minecraft.getInstance().font;
         float p = ev.getProgress();
         int bw = 150, bx = x + 91 - bw / 2;
+        if (ev.getName().getString().startsWith("Ноэль ▌")) return linkedBar(g, ev, x, y, bx, bw, p);
         boolean rage = p < 0.5f;
         if (rage) Skin.glow(g, x + 91, y + 7, 60, (0x20 + (int) (0x18 * Math.sin(System.currentTimeMillis() / 180.0))) << 24 | 0xFF3010);
         g.drawCenteredString(font, ev.getName(), x + 91, y - 9, 0xFFFFFFFF);
@@ -379,6 +462,50 @@ public final class Hud {
         if (rage) Skin.spr(g, "crack", bx + 12, y, 40, 12, 0xB0FFFFFF);
         if (p < 0.25f) Skin.spr(g, "crack", bx + 92, y, 40, 12, 0xB0FFFFFF);
         Skin.icon(g, "skull", bx - 5, y); Skin.icon(g, "skull", bx + bw - 7, y);
+        // 0.10.5: HP на полосе босса — ищем ближайшего босса с тем же именем (полоса знает только долю)
+        String nm = ev.getName().getString();
+        int cut = nm.indexOf(" • ");
+        String core = cut > 0 ? nm.substring(0, cut) : nm;
+        var mc = Minecraft.getInstance();
+        net.minecraft.world.entity.LivingEntity best = null;
+        if (mc.level != null && mc.player != null) for (var en : mc.level.entitiesForRendering())
+            if (en instanceof com.pvpciv.entity.boss.CivBoss b && b.isAlive() && b.getCustomName() != null && b.getCustomName().getString().contains(core)
+                    && (best == null || b.distanceToSqr(mc.player) < best.distanceToSqr(mc.player))) best = b;
+        String hp = best != null ? com.pvpciv.combat.Balance.fmt(Math.ceil(best.getHealth())) + " / " + com.pvpciv.combat.Balance.fmt(best.getMaxHealth())
+                : Math.round(p * 100) + "%";
+        g.drawCenteredString(font, hp, x + 91, y + 2, 0xFFFFFFFF);
         return 28;
+    }
+
+    /** 0.11: связанные жизни Ноэля и Лианы — полоса из двух сегментов: слева Ноэль (фиолетовый), справа Лиана (зелёный). */
+    private static int linkedBar(GuiGraphics g, LerpingBossEvent ev, int x, int y, int bx, int bw, float p) {
+        Font font = Minecraft.getInstance().font;
+        g.drawCenteredString(font, ev.getName(), x + 91, y - 9, 0xFFFFFFFF);
+        int half = bw / 2 - 1;
+        float noel = Math.min(1f, p * 2f), liana = Math.max(0f, p * 2f - 1f);
+        Skin.bar(g, bx, y, half, noel, liana > 0 ? 0xFF8A50C0 : 0xFFC040FF, 0xFF3A1060, null);
+        Skin.bar(g, bx + half + 2, y, half, liana, 0xFF60D040, 0xFF1A4A10, null);
+        Skin.icon(g, "skull", bx - 5, y); Skin.icon(g, "skull", bx + bw - 7, y);
+        var mc = Minecraft.getInstance();
+        String nt = "", lt = "";
+        if (mc.level != null) for (var en : mc.level.entitiesForRendering()) {
+            if (en instanceof com.pvpciv.entity.boss.NoelBoss b && b.isAlive()) nt = com.pvpciv.combat.Balance.fmt(Math.ceil(b.getHealth())) + (liana > 0 ? " 🛡" : "");
+            if (en instanceof com.pvpciv.entity.boss.LianaBoss b && b.isAlive()) lt = com.pvpciv.combat.Balance.fmt(Math.ceil(b.getHealth()));
+        }
+        g.drawCenteredString(font, nt, bx + half / 2, y + 2, 0xFFFFFFFF);
+        g.drawCenteredString(font, lt.isEmpty() ? "✝" : lt, bx + half + 2 + half / 2, y + 2, 0xFFFFFFFF);
+        return 28;
+    }
+
+    /** 0.11: проглочен Лианой — зелёная пелена и полоса «жми пробел». */
+    private static void grab(GuiGraphics g, Font font, int w, int h) {
+        if (!ClientState.grabOn) return;
+        long t = System.currentTimeMillis();
+        g.fillGradient(0, 0, w, h, 0x9020400A, 0xC0300818);
+        int bw = 180, bx = w / 2 - bw / 2, by = h / 2 + 20;
+        float pulse = 0.5f + 0.5f * (float) Math.sin(t / 90.0);
+        g.drawCenteredString(font, "ЖМИ ПРОБЕЛ!", w / 2, by - 22, (0xFF << 24) | ((int) (200 + 55 * pulse) << 16) | 0x4040);
+        Skin.bar(g, bx, by, bw, Math.max(0, Math.min(1, ClientState.grabBar)), 0xFF8AF050, 0xFF2A6A10, null);
+        g.drawCenteredString(font, "Тебя проглотила Лиана · " + Math.max(0, 8 - ClientState.grabT / 20) + " с", w / 2, by + 16, 0xFFE0FFD0);
     }
 }

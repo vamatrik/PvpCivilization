@@ -32,8 +32,19 @@ public final class Progress {
         return Math.max(1, Math.round(base * k));
     }
 
+    /** Опыт за обычного моба. */
+    public static long xpForMob(int playerLevel, int mobLevel, double mult) {
+        double base = 6 * Math.pow(1.08, mobLevel - 1) * mult;
+        int below = playerLevel - mobLevel;
+        // бета 0.9.8: моб ниже на 1 → −50%, на 2 → −75%, на 3+ → опыта нет
+        double k = below <= 0 ? 1.0 : below == 1 ? 0.5 : below == 2 ? 0.25 : 0.0;
+        if (k <= 0) return 0;
+        return Math.max(1, Math.round(base * k));
+    }
+
     /** Потолок уровня, пока не открыт следующий этаж: «уровень этажа» (сильнейший босс) + 3. Этаж 1 → 11, этаж 2 → 16. */
-    public static int levelCap(StoryData d) { return d.liftOk ? 13 + 3 : 8 + 3; }
+    /** Потолок уровня: макс. уровень мобов открытого этажа + 3 (0.11: этаж 3 — 19, этаж 4 — 27). */
+    public static int levelCap(StoryData d) { return com.pvpciv.game.SkyLift.f4Ok(d) ? 24 + 3 : com.pvpciv.game.SkyLift.f3Ok(d) ? 16 + 3 : d.liftOk ? 13 + 3 : 8 + 3; }
 
     public static void addXp(ServerPlayer p, long amount) {
         StoryData d = d(p);
@@ -75,9 +86,7 @@ public final class Progress {
 
     /** Бонус HP за уровни: ур. 2 даёт +3, каждый следующий — на 0.2 больше (ур. 8 → +25, ур. 16 → +66). */
     public static double levelHp(int lvl) {
-        double s = 0;
-        for (int i = 2; i <= lvl; i++) s += 3 + 0.2 * (i - 2);
-        return Math.round(s);
+        return Math.round(com.pvpciv.combat.Balance.playerHp(lvl) - 20);   // 0.9.9: своя шкала (ур.1 — 30, ур.10 — 132, ур.16 — 360)
     }
 
     /** HP и урон от уровня. */
@@ -86,7 +95,7 @@ public final class Progress {
         if (hp == null) return;
         hp.removeModifier(HP_ID);
         int lvl = d(p).level;
-        if (lvl > 1) hp.addPermanentModifier(new AttributeModifier(HP_ID, levelHp(lvl), AttributeModifier.Operation.ADD_VALUE));
+        hp.addPermanentModifier(new AttributeModifier(HP_ID, levelHp(lvl), AttributeModifier.Operation.ADD_VALUE));
         Titles.apply(p);
         if (p.getHealth() > p.getMaxHealth()) p.setHealth(p.getMaxHealth());
     }

@@ -191,6 +191,7 @@ public final class Shop {
         if (st.is(ModRegistry.NOVICE_SWORD.get())) return 0;
         if (st.getItem() instanceof CivWeaponItem w) return (int) Math.round(8 * w.tierValue() * (Gear.rarity(st).ordinal() + 1) * (Gear.rarity(st).ordinal() + 1) * (1 + 0.3 * Gear.stars(st)));
         if (st.getItem() instanceof com.pvpciv.item.CivArmorItem a) return (int) Math.round(14 * (Gear.rarity(st).ordinal() + 1) * (Gear.rarity(st).ordinal() + 1));
+        if (st.getItem() instanceof com.pvpciv.item.PhaseAnchorItem && !com.pvpciv.item.PhaseAnchorItem.charged(st)) return 0;   // 0.11: незаряженный прибор Стеллы не продаётся
         if (st.getItem() instanceof SimpleCivItem s) return s.sellPrice;
         if (st.getItem() instanceof BagBuckleItem) return 200;
         if (st.is(ModRegistry.DORM_STEW.get())) return 3;

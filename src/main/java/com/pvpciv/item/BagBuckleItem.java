@@ -47,6 +47,7 @@ public class BagBuckleItem extends Item {
     @Override
     public void appendHoverText(ItemStack st, TooltipContext ctx, List<Component> tip, TooltipFlag flag) {
         tip.add(Component.literal("ПКМ — навсегда +" + slots + " слота сумки").withStyle(ChatFormatting.AQUA));
-        tip.add(Component.literal("Слоты также открываются на уровнях 4, 8, 12, 16, 20").withStyle(ChatFormatting.GRAY));
+        tip.add(Component.literal("Ещё по ряду (9 слотов) — на уровнях 10, 20, 30, 40, 50").withStyle(ChatFormatting.GRAY));
+        tip.add(Component.literal("Максимум сумки — " + Bag.MAX + " слота").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

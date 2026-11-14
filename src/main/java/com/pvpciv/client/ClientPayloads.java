@@ -84,6 +84,36 @@ public final class ClientPayloads {
             }
             case 7 -> mc.setScreen(new com.pvpciv.client.screen.GateScreen(j));
             case 9 -> mc.setScreen(new com.pvpciv.client.screen.AlmanacScreen(j));
+            case 19 -> {   // 0.11: молекулярный стол
+                ClientState.ench = j;
+                if (!(mc.screen instanceof com.pvpciv.client.screen.EnchantScreen)) mc.setScreen(new com.pvpciv.client.screen.EnchantScreen());
+            }
+            case 20 -> {   // 0.11: проглочен Лианой
+                ClientState.grabOn = j.get("on").getAsBoolean();
+                if (ClientState.grabOn) { ClientState.grabBar = j.get("bar").getAsFloat(); ClientState.grabT = j.get("t").getAsInt(); }
+            }
+            case 18 -> {   // навыки
+                var sel = j.getAsJsonArray("sel");
+                for (int i = 0; i < 3 && i < sel.size(); i++) ClientState.skillSel[i] = sel.get(i).getAsString();
+                ClientState.skillsAll = j.getAsJsonArray("all");
+            }
+            case 11 -> {   // перезарядка слота
+                int sl = j.has("slot") ? j.get("slot").getAsInt() : 2;
+                long ms = j.get("cd").getAsLong() * 1000;
+                ClientState.skillReady[sl - 1] = System.currentTimeMillis() + ms; ClientState.skillCdMs[sl - 1] = ms;
+            }
+            case 17 -> {   // взмах другого игрока
+                var en = mc.level == null ? null : mc.level.getEntity(j.get("e").getAsInt());
+                if (en instanceof net.minecraft.world.entity.LivingEntity le && le != mc.player) Lines.slash(le, j.get("k").getAsInt(), j.get("o").getAsBoolean(), j.get("c").getAsInt());
+            }
+            case 16 -> {   // линии: a/b — концы, c — цвет, w — толщина, l — жизнь (мс), z — лазер
+                var a = j.getAsJsonArray("a"); var b = j.getAsJsonArray("b");
+                Lines.add(new net.minecraft.world.phys.Vec3(a.get(0).getAsDouble(), a.get(1).getAsDouble(), a.get(2).getAsDouble()),
+                        new net.minecraft.world.phys.Vec3(b.get(0).getAsDouble(), b.get(1).getAsDouble(), b.get(2).getAsDouble()),
+                        j.get("c").getAsInt(), j.get("w").getAsFloat(), j.get("l").getAsInt(), j.get("z").getAsBoolean());
+            }
+            case 15 -> Nums.add(j.get("e").getAsInt(), j.get("t").getAsString(), j.get("c").getAsInt(), j.get("b").getAsBoolean(), j.get("s").getAsFloat());
+            case 14 -> { ClientState.bleed = j.get("n").getAsInt(); if (j.get("burst").getAsBoolean()) ClientState.bleedBurst = System.currentTimeMillis(); }
             case 13 -> { if (mc.screen instanceof com.pvpciv.client.screen.WordScreen) mc.setScreen(null); }
             case 12 -> { if (mc.screen instanceof com.pvpciv.client.screen.WordScreen ws) ws.reject(); }
             case 10 -> { if (mc.screen instanceof com.pvpciv.client.screen.WordScreen ws) ws.data(j); else mc.setScreen(new com.pvpciv.client.screen.WordScreen(j)); }

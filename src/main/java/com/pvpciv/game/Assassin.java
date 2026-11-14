@@ -68,8 +68,7 @@ public final class Assassin {
     public static double critChance(ServerPlayer p) {
         StoryData d = Progress.d(p);
         double c = d.critChance;
-        ItemStack w = p.getMainHandItem();
-        if (w.is(ModRegistry.YUKI_KATANA.get())) c += 10;
+        ItemStack w = com.pvpciv.combat.Melee.striking(p);   // 0.11: крит — от оружия той руки, что бьёт
         c += weaponCrit(w)[0];
         if (TOUCH.getOrDefault(p.getUUID(), 0L) > System.currentTimeMillis()) c += 40;
         if (fullSet(p, "Самурай")) c += 5;   // полный самурайский доспех
@@ -80,8 +79,7 @@ public final class Assassin {
     public static double critMult(ServerPlayer p) {
         StoryData d = Progress.d(p);
         double m = BASE_CRIT_DMG + d.critDmg;
-        ItemStack w = p.getMainHandItem();
-        if (w.is(ModRegistry.YUKI_KATANA.get())) m += 25;
+        ItemStack w = com.pvpciv.combat.Melee.striking(p);
         m += weaponCrit(w)[1];
         if (TOUCH.getOrDefault(p.getUUID(), 0L) > System.currentTimeMillis()) m += 50;
         return 1 + m / 100.0;
@@ -110,7 +108,7 @@ public final class Assassin {
         p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.ENDER_DRAGON_FLAP, SoundSource.PLAYERS, 0.7f, 1.6f);
         com.pvpciv.entity.FxEntity.spawn(p.serverLevel(), com.pvpciv.entity.FxEntity.PILLAR, p.position(), 0.8f, 20, 0xE0405A, 0xFFD0E0);
         Story.title(p, "", "Касание убийцы", C);
-        PacketDistributor.sendToPlayer(p, new Network.PhoneData(11, "{\"cd\":45,\"dur\":6}"));
+        PacketDistributor.sendToPlayer(p, new Network.PhoneData(11, "{\"slot\":2,\"cd\":45,\"dur\":6}"));
     }
 
     /** Полный комплект брони (по началу названия сета). */
@@ -412,6 +410,9 @@ public final class Assassin {
 
     public static void particlesCrit(ServerPlayer p, net.minecraft.world.entity.Entity target) {
         p.serverLevel().sendParticles(ParticleTypes.CRIT, target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ(), 14, 0.3, 0.3, 0.3, 0.3);
-        p.serverLevel().playSound(null, target.blockPosition(), ModRegistry.FX_CRIT.get(), SoundSource.PLAYERS, 0.9f, 0.95f + p.getRandom().nextFloat() * 0.1f);
+        // бета 0.9.8: без «звона» — глухой удар + рассечение
+        p.serverLevel().playSound(null, target.blockPosition(), net.minecraft.sounds.SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, 1f, 0.75f + p.getRandom().nextFloat() * 0.1f);
+        p.serverLevel().playSound(null, target.blockPosition(), ModRegistry.FX_IMPACT.get(), SoundSource.PLAYERS, 0.7f, 0.7f);
+        p.serverLevel().playSound(null, target.blockPosition(), net.minecraft.sounds.SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 0.6f, 1.3f);
     }
 }

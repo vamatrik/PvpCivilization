@@ -1,0 +1,32 @@
+{
+ "entries": [
+  {
+   "item": "pvpciv:sparks",
+   "chance": 1,
+   "min": 120,
+   "max": 200
+  },
+  {
+   "item": "pvpciv:lazuratron",
+   "chance": 1,
+   "min": 3,
+   "max": 6
+  },
+  {
+   "item": "pvpciv:nano_scrap",
+   "chance": 1,
+   "min": 3,
+   "max": 6
+  },
+  {
+   "weapons": [
+    "pvpciv:plasma_cutter",
+    "pvpciv:ion_dagger",
+    "pvpciv:cryo_saber",
+    "pvpciv:gravity_hammer"
+   ],
+   "chance": 0.4,
+   "min_rarity": "UNCOMMON"
+  }
+ ]
+}

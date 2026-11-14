@@ -19,8 +19,10 @@ import java.util.List;
 /** Оружие цивилизации: урон = база тира × редкость × заточка. */
 public class CivWeaponItem extends SwordItem {
     public enum WClass {
-        SWORD("Меч", 1.0, -2.4), SABER("Сабля", 0.85, -2.0), DAGGER("Кинжал", 0.65, -1.5),
-        AXE("Топор", 1.3, -3.0), HAMMER("Молот", 1.5, -3.2);
+        // 0.10: урон в секунду в «своём» режиме ≈ равный: меч и топор/молот — одной рукой, кинжал и сабля — в паре
+        // 0.10.3: у рук свой заряд, обе бьют полным уроном → кинжал/сабля в паре = меч/топор/молот одной рукой (≈1.6 × урон тира в секунду)
+        SWORD("Меч", 1.0, -2.4), SABER("Сабля", 0.42, -2.0), DAGGER("Кинжал", 0.32, -1.5),
+        AXE("Топор", 1.6, -3.0), HAMMER("Молот", 2.0, -3.2);
         public final String title; public final double dmg; public final double speed;
         WClass(String t, double d, double s) { title = t; dmg = d; speed = s; }
     }
@@ -55,7 +57,7 @@ public class CivWeaponItem extends SwordItem {
 
     public static double damage(double tier, WClass cls, Rarity r, int stars) {
         double starMul = stars >= 11 ? 2.6 : stars == 10 ? 2.25 : 1 + 0.1 * stars;   // бета 0.8.7: скачок и на +10 (×1.18 от +9), +11 — ×1.16 от +10
-        return 4 * Math.pow(1.45, tier - 1) * cls.dmg * r.mult * starMul;   // бета 12.11: шаг тира ×1.45 (был ×1.35)
+        return com.pvpciv.combat.Balance.weaponDmg(tier) * cls.dmg * r.mult * starMul;   // 0.9.9: 7·2.4^(тир−1) (было 4·1.45^…)
     }
 
     public double damage(ItemStack st) {
@@ -106,6 +108,7 @@ public class CivWeaponItem extends SwordItem {
             tip.add(Component.literal("Навык (ПКМ): " + skill.title + " • КД " + skill.cd + " с").withStyle(ChatFormatting.GOLD));
             tip.add(Component.literal(skill.desc).withStyle(ChatFormatting.YELLOW));
         }
+        com.pvpciv.game.Enchanting.tip(st, tip);
         if (!lore.isEmpty()) tip.add(Component.literal(lore).withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
         if (s < Gear.MAX_STARS) tip.add(Component.literal(String.format("Заточка до +%d: %d%%", s + 1, (int) Math.round(Gear.chance(s) * 100))).withStyle(ChatFormatting.DARK_AQUA));
     }

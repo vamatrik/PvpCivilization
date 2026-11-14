@@ -71,11 +71,16 @@ public final class BossManager {
             () -> Floor3Areas.KUMIHO_SHRINE, 13, new Vec3(0, 0, -4), () -> com.pvpciv.registry.ModMobs.KUMIHO_BOSS.get(),
             "floor3b_boss_personal", "floor3b_boss_ground", 32, ModRegistry.KUMIHO_TROPHY, BossEvent.BossBarColor.PINK, ChatFormatting.LIGHT_PURPLE,
             "КУМИХО ПРОБУДИЛАСЬ! Девять хвостов над деревней лис, этаж 3.", false);
-    public static final List<Def> DEFS = List.of(BRUTE, KEEPER, DON, RAT_KING, KAPPA, KUMIHO);
-    /** Сколько тел у босса (каппы — четверо братьев, урон и лут общие). */
-    public static int group(Def d) { return d == KAPPA ? 4 : 1; }
+    public static final Def NOEL = new Def("noel", "Доктор Ноэль и Лиана", "Биокупол «Ковчег», запад НТЦ NaZa (этаж 4)", 24, 45 * MIN, 9, 1.6,
+            () -> Floor4.ARK_ARENA, 13, new Vec3(-7, 0, 0), () -> com.pvpciv.registry.ModMobs.NOEL_BOSS.get(),
+            "floor4_boss_personal", "floor4_boss_ground", 64, com.pvpciv.registry.ModF4.NAZA_TROPHY, BossEvent.BossBarColor.GREEN, ChatFormatting.GREEN,
+            "ДОКТОР НОЭЛЬ ВЫПУСТИЛ ЛИАНУ! Биокупол «Ковчег», этаж 4.", false);
+    public static final List<Def> DEFS = List.of(BRUTE, KEEPER, DON, RAT_KING, KAPPA, KUMIHO, NOEL);
+    /** Сколько тел у босса (каппы — четверо братьев, Ноэль + Лиана; урон и лут общие). */
+    public static int group(Def d) { return d == KAPPA ? 4 : d == NOEL ? 2 : 1; }
     public static boolean f3(Def d) { return d == KAPPA || d == KUMIHO; }
-    public static int floor(Def d) { return f3(d) ? 3 : d.f2() ? 2 : 1; }
+    public static boolean f4(Def d) { return d == NOEL; }
+    public static int floor(Def d) { return f4(d) ? 4 : f3(d) ? 3 : d.f2() ? 2 : 1; }
 
     private static final class St {
         UUID id; ServerBossEvent bar; int alive; boolean w5, w1, scanned;
@@ -112,7 +117,7 @@ public final class BossManager {
     /** Реальное время в тиках: таймеры боссов идут, даже когда сервер выключен (бета 12.11). */
     public static long now() { return System.currentTimeMillis() / 50; }
 
-    private static ServerLevel lvl(MinecraftServer server, Def d) { if (f3(d)) return com.pvpciv.world.CivWorld.f3(server); return d.f2() ? com.pvpciv.world.CivWorld.f2(server) : com.pvpciv.world.CivWorld.level(server); }
+    private static ServerLevel lvl(MinecraftServer server, Def d) { if (f4(d)) return com.pvpciv.world.CivWorld.f4(server); if (f3(d)) return com.pvpciv.world.CivWorld.f3(server); return d.f2() ? com.pvpciv.world.CivWorld.f2(server) : com.pvpciv.world.CivWorld.level(server); }
 
     private static void tick(MinecraftServer server, Def d) {
         ServerLevel lvl = lvl(server, d);
@@ -160,12 +165,24 @@ public final class BossManager {
             boss.teleportTo(sp.x, sp.y, sp.z);
         }
         if (s.bar == null) s.bar = bar(d);
-        if (group(d) > 1) {
+        if (d == NOEL) {   // 0.11: общая полоса из двух половин — справа Лиана (уходит первой), слева Ноэль
+            float noel = 0, liana = 0;
+            for (CivBoss b : lvl.getEntitiesOfClass(CivBoss.class, new AABB(lairPos).inflate(d.lairR() + 120), b -> b.isAlive() && b.defId().equals(d.id()))) {
+                if (b != boss && (b.position().distanceTo(c) > d.lairR() + 6 || b.getY() < c.y - 5)) {   // оба держатся арены
+                    Vec3 sp = b instanceof com.pvpciv.entity.boss.LianaBoss ? c : c.add(d.spawnOffset());
+                    b.teleportTo(sp.x, sp.y, sp.z);
+                }
+                if (b instanceof com.pvpciv.entity.boss.LianaBoss) liana = b.getHealth() / b.getMaxHealth(); else noel = b.getHealth() / b.getMaxHealth();
+            }
+            s.bar.setProgress(Math.max(0, Math.min(1, 0.5f * noel + 0.5f * liana)));
+        } else if (group(d) > 1) {
             float hp = 0, max = boss.getMaxHealth() * group(d);
             for (CivBoss b : lvl.getEntitiesOfClass(CivBoss.class, new AABB(lairPos).inflate(d.lairR() + 60), b -> b.isAlive() && b.defId().equals(d.id()))) hp += b.getHealth();
             s.bar.setProgress(Math.max(0, Math.min(1, hp / max)));
         } else s.bar.setProgress(Math.max(0, boss.getHealth() / boss.getMaxHealth()));
         s.bar.setName(Component.literal(d.name() + " • ур. " + d.level() + (boss.enraged() ? "  — ЯРОСТЬ" : "")));
+        if (d == NOEL) s.bar.setName(Component.literal("Ноэль ▌ Лиана • ур. " + d.level() + (boss instanceof com.pvpciv.entity.boss.NoelBoss nb && nb.enraged() ? "  — ЯРОСТЬ" : "")));
+        for (ServerPlayer p : new ArrayList<>(s.bar.getPlayers())) if (p.level() != lvl || p.isRemoved()) s.bar.removePlayer(p);   // 0.11: ушёл на другой этаж — полоса не висит
         for (ServerPlayer p : lvl.players()) {
             boolean near = p.position().distanceTo(c) < d.lairR() + 34;
             if (near && !s.bar.getPlayers().contains(p)) s.bar.addPlayer(p);
@@ -213,6 +230,22 @@ public final class BossManager {
                 com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.PILLAR, sp, 0.8f, 20, 0x5AAAFF, 0xE0F4FF);
             }
         }
+        if (d == NOEL) {   // Лиана растёт в центре арены, Ноэль — сбоку
+            CivBoss li = com.pvpciv.registry.ModMobs.LIANA_BOSS.get().create(lvl);
+            if (li != null) {
+                li.moveTo(c.x, c.y, c.z, 90, 0);
+                li.setHome(c);
+                Mobs.setup(li, d.level(), false, "Лиана", d.personal());
+                double lhp = hp * 1.1;
+                li.getAttribute(Attributes.MAX_HEALTH).setBaseValue(lhp);
+                li.setHealth((float) lhp);
+                li.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(Mobs.dmg(d.level()) * d.dmgMul());
+                li.setCustomName(Component.literal("☠ [" + d.level() + "] Лиана").withStyle(ChatFormatting.DARK_GREEN, ChatFormatting.BOLD));
+                li.setCustomNameVisible(true);
+                lvl.addFreshEntity(li);
+            }
+            b.setCustomName(Component.literal("☠ [" + d.level() + "] Доктор Ноэль").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD));
+        }
         lvl.addFreshEntity(b);
         s.id = b.getUUID();
         s.dmg.clear();
@@ -238,6 +271,7 @@ public final class BossManager {
             List<CivBoss> rest = lvl.getEntitiesOfClass(CivBoss.class, boss.getBoundingBox().inflate(d.lairR() + 60), b -> b != boss && b.isAlive() && b.defId().equals(d.id()));
             if (!rest.isEmpty()) {
                 for (CivBoss b : rest) if (b instanceof com.pvpciv.entity.boss.KappaBoss k) k.brotherDown(lvl);
+ if (d == NOEL) broadcast(lvl.getServer(), "Лиана срезана! Щит доктора Ноэля пал.", ChatFormatting.GREEN); else
                 broadcast(lvl.getServer(), boss.getCustomName() == null ? "Брат-каппа пал!" : boss.getCustomName().getString().replace("☠ ", "") + " пал! Осталось: " + rest.size(), ChatFormatting.GREEN);
                 if (s.id != null && s.id.equals(boss.getUUID())) s.id = rest.get(0).getUUID();
                 return;
@@ -271,6 +305,7 @@ public final class BossManager {
             com.pvpciv.game.Marks.onBossKill(p, d.id());
             com.pvpciv.game.Library.onKillBoss(p, d.id());
             com.pvpciv.game.Assassin.onKill(p, com.pvpciv.game.Assassin.BOSS);
+            if (d == NOEL) { com.pvpciv.game.Enchanter.onBoss(p); com.pvpciv.progress.Titles.grant(p, "gardener"); }
         }
         for (ItemStack st : LootTables.roll(d.ground(), lvl.random, 1.0)) {
             ItemEntity ie = new ItemEntity(lvl, boss.getX(), boss.getY() + 1, boss.getZ(), st);

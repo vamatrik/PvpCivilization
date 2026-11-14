@@ -77,6 +77,24 @@ public class Floor2 extends Builder {
         com.mojang.logging.LogUtils.getLogger().info("[pvpciv] канализация: заделано дыр в потолке — {}", n);
     }
 
+    /** 0.9.9: над потолком канализации (YS+6 … Y-3) была пустая прослойка — по «крыше» туннелей можно было ходить. Заливаем кирпичом. */
+    public static void fillAboveSewer(ServerLevel l) {
+        int n = 0;
+        for (int x = -R_EDGE - 12; x <= R_EDGE + 12; x++) for (int z = -R_EDGE - 12; z <= R_EDGE + 12; z++) {
+            if (Math.abs(x) <= 3 && Math.abs(z) <= 4) continue;   // колодец кабины лифта
+            if (dist(x, z, RAT_THRONE.getX(), RAT_THRONE.getZ()) < RAT_R + 0.5) continue;   // высокий свод тронного зала
+            if (l.getBlockState(new BlockPos(x, Y - 2, z)).isAir() || l.getBlockState(new BlockPos(x, YS + 5, z)).isAir()) continue;   // только под городом и над туннелем/землёй
+            for (int y = YS + 6; y <= Y - 3; y++) {
+                BlockPos b = new BlockPos(x, y, z);
+                var st = l.getBlockState(b);
+                if (!st.isAir() && !(st.getFluidState().isEmpty() == false && !st.isSolid())) continue;
+                l.setBlock(b, ((x + y + z) % 5 == 0 ? Blocks.MOSSY_STONE_BRICKS : Blocks.STONE_BRICKS).defaultBlockState(), 2);
+                n++;
+            }
+        }
+        com.mojang.logging.LogUtils.getLogger().info("[pvpciv] канализация: залита прослойка над туннелями — {}", n);
+    }
+
     public static BlockPos den() { return polar(DEN_DEG, denEnd() - 3, YS); }
     public static final BlockPos TOWER = polar(15, 62, Y);    // небоскрёб «Альтаир» с парашютистом на крыше
     public static final int TOWER_H = 58;

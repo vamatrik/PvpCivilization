@@ -15,6 +15,7 @@ public final class StubScreens {
     public static class Titles extends PlainScreen {
         private final java.util.List<com.pvpciv.progress.Titles.Def> list = new java.util.ArrayList<>(com.pvpciv.progress.Titles.DEFS.values());
         public Titles() { super("Титулы", 300, 196, true); }
+        private com.pvpciv.progress.Titles.Def tipTitle;
         @Override protected void drawContent(GuiGraphics g, int mx, int my, float pt) {
             g.drawString(font, "Активен один титул: он виден над ником и даёт бонус", left + 14, top + 20, Skin.DIM, false);
             scroll.view(132).content(list.size() * 22);
@@ -28,8 +29,8 @@ public final class StubScreens {
                 if (act) g.fill(left + 13, y + 1, left + 287, y + 19, 0x30FFD166);
                 else if (hover) g.fill(left + 13, y + 1, left + 287, y + 19, 0x18FFFFFF);
                 Skin.icon(g, open ? (act ? "spark" : "arrow") : "lock", left + 17, y + 5);
-                g.drawString(font, d.name(), left + 32, y + 2, open ? (0xFF000000 | d.color()) : Skin.GOLD_D, false);
-                g.drawString(font, Skin.fit(font, d.how(), 150), left + 32, y + 11, Skin.FAINT, false);
+                g.drawString(font, open ? d.name() : "???", left + 32, y + 6, open ? (0xFF000000 | d.color()) : Skin.GOLD_D, false);
+                if (in(mx, my, 12, 34 + i * 22 - scroll.off, 276, 20) && my >= top + 34 && my < top + 166) tipTitle = d;   // 0.10.2: условия — в подсказке
                 String b = act ? "активен • " + d.bonusText() : d.bonusText();
                 g.drawString(font, Skin.fit(font, b, 110), left + 284 - Math.min(110, font.width(b)), y + 6, act ? Skin.GOOD : Skin.DIM, false);
             }
@@ -37,6 +38,14 @@ public final class StubScreens {
             scroll.bar(g, left + 292, top + 34, 132);
             Skin.divider(g, left + w / 2, top + 170);
             g.drawCenteredString(font, "Щёлкни по открытому титулу, чтобы надеть или снять", left + w / 2, top + 180, Skin.FAINT);
+            if (tipTitle != null) {
+                var tl = new java.util.ArrayList<net.minecraft.network.chat.Component>();
+                tl.add(net.minecraft.network.chat.Component.literal(tipTitle.name()).withStyle(s -> s.withColor(tipTitle.color())));
+                tl.add(net.minecraft.network.chat.Component.literal("Как получить: " + tipTitle.how()).withStyle(net.minecraft.ChatFormatting.GRAY));
+                tl.add(net.minecraft.network.chat.Component.literal("Бонус: " + tipTitle.bonusText()).withStyle(net.minecraft.ChatFormatting.GREEN));
+                g.renderComponentTooltip(font, tl, mx, my);
+                tipTitle = null;
+            }
         }
         @Override public boolean mouseClicked(double mx, double my, int b) {
             for (int i = 0; i < list.size(); i++) {

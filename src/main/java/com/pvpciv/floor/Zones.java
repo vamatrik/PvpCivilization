@@ -24,6 +24,7 @@ public final class Zones {
     /** С учётом измерения (этаж 2 — своё небо). */
     public static Zone at(net.minecraft.world.entity.Entity e) {
         if (com.pvpciv.world.CivWorld.isF2(e.level())) return Floor2.zone(e.position());
+        if (com.pvpciv.world.CivWorld.isF4(e.level())) return Floor4.zone(e.position());
         if (com.pvpciv.world.CivWorld.isF3(e.level())) return Floor3.zone(e.position());
         return at(e.position());
     }

@@ -37,12 +37,13 @@ public final class Floor3Areas extends Builder {
     public static final List<EliteSpots.Spot> ELITES = new ArrayList<>();
 
     static {
-        ZONES.add(new SpawnZones.Zone("f3_sv_street", SV, 34, 7, 10, 12, 0f, Y, false, Mobs.Kind.SAMURAI, Mobs.Kind.NINJA, Mobs.Kind.ASHIGARU));
-        ZONES.add(new SpawnZones.Zone("f3_sv_north", SV.offset(-6, 0, -42), 14, 4, 11, 12, 0f, Y, false, Mobs.Kind.NINJA, Mobs.Kind.NINJA, Mobs.Kind.SAMURAI));
-        ZONES.add(new SpawnZones.Zone("f3_sv_east", SV.offset(40, 0, -14), 14, 4, 11, 12, 0f, Y, false, Mobs.Kind.SAMURAI, Mobs.Kind.ASHIGARU));
-        ZONES.add(new SpawnZones.Zone("f3_kv_street", KV, 34, 7, 13, 15, 0f, Y, false, Mobs.Kind.WEREWOLF, Mobs.Kind.FOX, Mobs.Kind.KITSUNE_ARCHER));
-        ZONES.add(new SpawnZones.Zone("f3_kv_grove", KV.offset(10, 0, -44), 14, 5, 14, 15, 0f, Y, false, Mobs.Kind.FOX, Mobs.Kind.FOX, Mobs.Kind.WEREWOLF));
-        ZONES.add(new SpawnZones.Zone("f3_kv_south", KV.offset(18, 0, 42), 14, 4, 14, 15, 0f, Y, false, Mobs.Kind.KITSUNE_ARCHER, Mobs.Kind.WEREWOLF));
+        // 0.10: мобы реже и шире (было 15–16 на деревню в тесных кругах — «огромная плотность»)
+        ZONES.add(new SpawnZones.Zone("f3_sv_street", SV, 46, 5, 10, 12, 0f, Y, false, Mobs.Kind.SAMURAI, Mobs.Kind.NINJA, Mobs.Kind.ASHIGARU));
+        ZONES.add(new SpawnZones.Zone("f3_sv_north", SV.offset(-6, 0, -42), 18, 3, 11, 12, 0f, Y, false, Mobs.Kind.NINJA, Mobs.Kind.NINJA, Mobs.Kind.SAMURAI));
+        ZONES.add(new SpawnZones.Zone("f3_sv_east", SV.offset(40, 0, -14), 18, 3, 11, 12, 0f, Y, false, Mobs.Kind.SAMURAI, Mobs.Kind.ASHIGARU));
+        ZONES.add(new SpawnZones.Zone("f3_kv_street", KV, 46, 5, 13, 15, 0f, Y, false, Mobs.Kind.WEREWOLF, Mobs.Kind.FOX, Mobs.Kind.KITSUNE_ARCHER));
+        ZONES.add(new SpawnZones.Zone("f3_kv_grove", KV.offset(10, 0, -44), 18, 3, 14, 15, 0f, Y, false, Mobs.Kind.FOX, Mobs.Kind.FOX, Mobs.Kind.WEREWOLF));
+        ZONES.add(new SpawnZones.Zone("f3_kv_south", KV.offset(18, 0, 42), 18, 3, 14, 15, 0f, Y, false, Mobs.Kind.KITSUNE_ARCHER, Mobs.Kind.WEREWOLF));
         ELITES.addAll(EliteSpots.twins(List.of(
                 new EliteSpots.Spot("f3e_dojo", SV.offset(0, 0, -30), Mobs.Kind.SAMURAI, 12, "Мастер додзё", "floor3_mob", true),
                 new EliteSpots.Spot("f3e_roof", SV.offset(-30, 0, -18), Mobs.Kind.NINJA, 12, "Тень на крыше", "floor3_mob", true),
@@ -51,6 +52,13 @@ public final class Floor3Areas extends Builder {
     }
 
     private Floor3Areas(ServerLevel level, long seed) { super(level, seed); }
+
+    /** 0.9.9: подчистить «висящие» цветы и грибы во всех деревнях этажа 3. */
+    public static void fixPlants(ServerLevel l) {
+        int n = Decor3.fixPlants(l, KV.getX(), Y, KV.getZ(), KV_R + 4) + Decor3.fixPlants(l, SV.getX(), Y, SV.getZ(), SV_R + 4)
+                + Decor3.fixPlants(l, 0, Y, 0, Floor3.ISLAND + 4);
+        com.mojang.logging.LogUtils.getLogger().info("[pvpciv] этаж 3: убрано неустойчивых растений — {}", n);
+    }
 
     public static void build(ServerLevel level, RandomSource r) {
         Floor3Areas b = new Floor3Areas(level, 909);

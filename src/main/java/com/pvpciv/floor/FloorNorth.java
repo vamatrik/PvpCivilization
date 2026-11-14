@@ -137,9 +137,7 @@ public final class FloorNorth extends Builder {
         set(cx - 6, Y, cz + 3, Blocks.STONE_BRICKS);
         set(cx - 6, Y + 1, cz + 3, Blocks.STONE_BRICKS);
         sign(new BlockPos(cx - 5, Y + 1, cz + 3), Direction.EAST, DyeColor.LIGHT_BLUE, "ЭТАЖ 1 • тир 1+", "Инеевый Кряж", "ур. мобов 5–7", "Броня! Лодка т.2");
-        set(cx + 6, Y, cz + 3, Blocks.STONE_BRICKS);
-        set(cx + 6, Y + 1, cz + 3, Blocks.STONE_BRICKS);
-        sign(new BlockPos(cx + 5, Y + 1, cz + 3), Direction.WEST, DyeColor.WHITE, "← Озеро, кладбище", "Шпили, руины →", "↑ Ледяной Склеп", "(PvP, элита)");
+        // 0.10.5: табличка-«куда идти» убрана — рядом 3D-указатели (Signposts)
         stash(cx + 3, Y, cz - 5, STASHES);
     }
 

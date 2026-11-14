@@ -115,6 +115,11 @@ public final class ArmorUp {
             msg(p, (coreSlot.isEmpty() ? "Положи в слот ядро брони +" : "Ядро слабовато — нужно +") + target + " или сильнее (алтарь инфузии в подвале: медальон и " + (target <= 8 ? target + " зв." : (16 - target) + " обычных + " + (target - 8) + " благословенных зв.") + ").", ChatFormatting.RED);
             return;
         }
+        if (!ArmorCoreItem.fits(coreSlot, ((CivArmorItem) armor.getItem()).tier)) {
+            int need = ArmorCoreItem.tierFor(((CivArmorItem) armor.getItem()).tier);
+            msg(p, "Это ядро из другого материала. Для этой брони нужно ядро, где в центре алтаря — " + (need == 1 ? "Медальон инея" : need == 2 ? "Фильтр противогаза" : "Нефритовая печать") + ".", ChatFormatting.RED);
+            return;
+        }
         boolean scroll = scrollNeed(target);
         if (scroll && Bag.count(p, s -> s.is(ModRegistry.TEMPER_SCROLL.get())) < 1) { msg(p, "На +" + target + " нужен Свиток закалки.", ChatFormatting.RED); return; }
         coreSlot.shrink(1);

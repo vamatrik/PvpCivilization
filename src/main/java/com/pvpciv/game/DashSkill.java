@@ -14,7 +14,7 @@ import java.util.UUID;
 
 /** Скилл слота R: «Рывок». */
 public final class DashSkill {
-    public static final int COOLDOWN_TICKS = 140;   // 7 с
+    public static final int COOLDOWN_TICKS = 160;   // 0.10.2: 8 с (Рывок II на этаже 4 — 6 с)
     private static final Map<UUID, Long> LAST = new HashMap<>();
 
     public static void tryDash(ServerPlayer p) {
@@ -26,12 +26,14 @@ public final class DashSkill {
         perform(p);
     }
 
-    public static void perform(ServerPlayer p) {
+    public static void perform(ServerPlayer p) { perform(p, 1.35); }
+
+    public static void perform(ServerPlayer p, double power) {
         Vec3 look = p.getLookAngle();
         Vec3 flat = new Vec3(look.x, 0, look.z);
         if (flat.lengthSqr() < 1.0E-4) flat = Vec3.directionFromRotation(0, p.getYRot());
         flat = flat.normalize();
-        Vec3 v = flat.scale(1.35).add(0, p.onGround() ? 0.32 : 0.15, 0);
+        Vec3 v = flat.scale(power).add(0, p.onGround() ? 0.32 : 0.15, 0);
         p.setDeltaMovement(v);
         p.hurtMarked = true;
         p.connection.send(new ClientboundSetEntityMotionPacket(p));

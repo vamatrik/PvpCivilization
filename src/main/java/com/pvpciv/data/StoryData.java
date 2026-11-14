@@ -32,6 +32,8 @@ public class StoryData implements INBTSerializable<CompoundTag> {
     public net.minecraft.nbt.CompoundTag bestiary = new net.minecraft.nbt.CompoundTag();   // элитки (_e) и боссы (boss_)
     /** Убийца: очки охоты, ступень цепочки, крит, дружба, загадка дня, навык. */
     public double huntPts = 0; public int huntStage = 0, critChance = 0, critDmg = 0, yukiFriend = 0, yukiTalk = 0; public long wordDay = -1; public int wordTries = 0; public boolean wordSolved = false, yukiKatana = false, touchSkill = false;
+    /** 0.10.5: выбранные навыки слотов 1–3 (id из Skills). */
+    public String skill1 = "dash", skill2 = "", skill3 = "";
     public String wordGuesses = "";
     public int homeGate = 1;
     public int eleTokens = 0;
@@ -89,6 +91,7 @@ public class StoryData implements INBTSerializable<CompoundTag> {
         t.putInt("forgeLvl", forgeLvl);
         t.putInt("dismLvl", dismLvl);
         t.putInt("extraSlots", extraSlots);
+        t.putString("skill1", skill1); t.putString("skill2", skill2); t.putString("skill3", skill3);
         t.putInt("bagRule", bagRule);
         t.putBoolean("starterFood", starterFood);
         t.put("shop", shop);
@@ -126,6 +129,7 @@ public class StoryData implements INBTSerializable<CompoundTag> {
         forgeLvl = Math.max(1, t.getInt("forgeLvl"));
         dismLvl = Math.max(1, t.getInt("dismLvl"));
         extraSlots = t.getInt("extraSlots");
+        if (t.contains("skill1")) { skill1 = t.getString("skill1"); skill2 = t.getString("skill2"); skill3 = t.getString("skill3"); }
         bagRule = t.getInt("bagRule");
         starterFood = t.getBoolean("starterFood");
         shop = t.getCompound("shop");

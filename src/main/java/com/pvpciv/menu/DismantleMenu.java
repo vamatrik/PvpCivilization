@@ -66,10 +66,18 @@ public class DismantleMenu extends CivMenu {
             for (int i = 0; i < s; i++) if (r.nextDouble() < 0.3 * mult) stars++;
             if (w.plus) shards = 1 + rr;
         } else if (st.getItem() instanceof com.pvpciv.item.CivArmorItem a) {
-            int rr = Gear.rarity(st).ordinal();
-            shards = 2 + rr * 2;
-            sparks = 12 * (rr + 1);
+            // бета 0.9.8: выход зависит от этажа брони и её плюса; «родной» материал этажа
+            int rr = Gear.rarity(st).ordinal(), s = Math.min(10, Gear.stars(st));
+            int ft = com.pvpciv.item.ArmorCoreItem.tierFor(a.tier);
+            double tm = Math.pow(1.7, ft - 1);
+            int mat = (int) Math.round((2 + rr * 2 + s) * mult);
+            sparks = (int) Math.round(12 * (rr + 1) * tm * (1 + 0.15 * s));
             if (r.nextDouble() < 0.06 * (rr + 1) * mult) stars++;
+            for (int i = 0; i < s; i++) if (r.nextDouble() < 0.25 * mult) stars++;
+            net.minecraft.world.item.Item m = ft == 1 ? ModRegistry.RIME_SHARD.get() : ft == 2 ? ModRegistry.RUBBER_SCRAP.get()
+                    : (a.set.toLowerCase().contains("лис") ? ModRegistry.FOX_FUR.get() : ModRegistry.SILK_SCRAP.get());
+            if (mat > 0) out.add(new ItemStack(m, mat));
+            if (s >= 5 && r.nextDouble() < 0.1 * (s - 4) * mult) out.add(new ItemStack(ModRegistry.TEMPER_SCROLL.get()));
         }
         dust = (int) Math.round(dust * mult);
         sparks = (int) Math.round(sparks * mult);

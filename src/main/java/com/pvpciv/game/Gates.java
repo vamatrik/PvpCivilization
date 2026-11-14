@@ -104,7 +104,7 @@ public final class Gates {
 
     public static final int[] HOME_UP_MONEY = {0, 0, 800, 2000};
     public static final Cost[][] HOME_UP = {{}, {}, {new Cost(() -> ModRegistry.NEON_TUBE.get(), 6), new Cost(() -> ModRegistry.GOLD_CHAIN.get(), 3), new Cost(() -> ModRegistry.RUBBER_SCRAP.get(), 3)},
-            {new Cost(() -> ModRegistry.DON_RING.get(), 2), new Cost(() -> ModRegistry.RAT_CROWN_SHARD.get(), 2), new Cost(() -> ModRegistry.GOLD_CHAIN.get(), 4)}};
+            {new Cost(() -> ModRegistry.SILK_SCRAP.get(), 8), new Cost(() -> ModRegistry.FOX_FUR.get(), 8), new Cost(() -> ModRegistry.JADE_SEAL.get(), 1)}};   // бета 0.9.8: ур.3 — ресурсами этажа 3
 
     // ------------------------------------------------------------------ мир
     private static ServerLevel lvl(MinecraftServer s, int floor) { return CivWorld.byFloor(s, floor); }
@@ -278,6 +278,10 @@ public final class Gates {
         p.serverLevel().sendParticles(ParticleTypes.END_ROD, at.x, at.y + 1.3, at.z, 60, 0.4, 0.6, 0.4, 0.08);
         p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1f, 1.2f);
         Story.title(p, "Врата починены", g.name + " — перенос бесплатный", 0x8FE3FF);
+        // 0.10.2: все врата этажа починены — титул
+        boolean all = true;
+        for (Gate o : ALL) if (o.floor == g.floor && d.gates.getInt(o.id) < 2) { all = false; break; }
+        if (all) com.pvpciv.progress.Titles.grant(p, "gates_" + g.floor);
     }
 
     /** Окно врат: from = id врат или "home". */
@@ -299,6 +303,11 @@ public final class Gates {
     /** Список починенных — клиенту для анимации врат. */
     public static void sync(ServerPlayer p) {
         StoryData d = Progress.d(p);
+        for (int f = 1; f <= 3; f++) {   // 0.10.2: титул за все врата этажа — и тем, кто починил раньше
+            boolean all = true, any = false;
+            for (Gate o : ALL) if (o.floor == f) { any = true; if (!fixed(d, o.id)) { all = false; break; } }
+            if (any && all && !d.titles.contains("gates_" + f)) com.pvpciv.progress.Titles.grant(p, "gates_" + f);
+        }
         com.google.gson.JsonArray a = new com.google.gson.JsonArray();
         for (Gate g : ALL) if (fixed(d, g.id)) a.add(g.id);
         com.google.gson.JsonObject j = new com.google.gson.JsonObject();

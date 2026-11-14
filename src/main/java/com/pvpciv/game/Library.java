@@ -291,6 +291,8 @@ public final class Library {
         TABLE_NAMES.put("floor2b_boss_personal", "Крысиный король"); TABLE_NAMES.put("floor2b_boss_ground", "Король (на земле)");
         TABLE_NAMES.put("floor3_mob", "мобы деревни самураев"); TABLE_NAMES.put("floor3_elite", "элитки деревни"); TABLE_NAMES.put("floor3_stash", "тайники деревни самураев");
         TABLE_NAMES.put("floor3_boss_personal", "Братья-каппы"); TABLE_NAMES.put("floor3b_mob", "мобы деревни Кумихо"); TABLE_NAMES.put("floor3b_elite", "элитки Кумихо");
+        TABLE_NAMES.put("floor4_mob", "мобы НТЦ NaZa"); TABLE_NAMES.put("floor4_elite", "элитки NaZa"); TABLE_NAMES.put("floor4b_mob", "мобы «Ковчега»"); TABLE_NAMES.put("floor4b_elite", "элитки «Ковчега»");
+        TABLE_NAMES.put("floor4_stash", "тайники NaZa"); TABLE_NAMES.put("floor4_boss_personal", "Ноэль и Лиана"); TABLE_NAMES.put("floor4_boss_ground", "Ноэль (на земле)");
         TABLE_NAMES.put("floor3b_stash", "тайники деревни Кумихо"); TABLE_NAMES.put("floor3b_boss_personal", "Кумихо");
     }
     private static String tableName(String t) { return TABLE_NAMES.getOrDefault(t, t); }
@@ -309,10 +311,13 @@ public final class Library {
             if (e.has("weapons") || e.has("gear")) {
                 JsonArray ws = e.getAsJsonArray(e.has("weapons") ? "weapons" : "gear");
                 o.addProperty("n", (e.has("weapons") ? "Оружие" : "Броня") + " (одно из " + ws.size() + ")" + (e.has("min_rarity") ? ", от «" + Rarity.valueOf(e.get("min_rarity").getAsString()).title + "»" : ""));
+                o.add("ids", ws.deepCopy());   // 0.10.5: иконки (по очереди)
             } else {
                 Item it = BuiltInRegistries.ITEM.get(ResourceLocation.parse(e.get("item").getAsString()));
                 int mn = e.has("min") ? e.get("min").getAsInt() : 1, mx = e.has("max") ? e.get("max").getAsInt() : mn;
                 o.addProperty("n", Ru.name(it) + (mx > 1 ? " ×" + (mn == mx ? mn + "" : mn + "–" + mx) : ""));
+                o.addProperty("id", e.get("item").getAsString());
+                if (mx > 1) o.addProperty("cnt", mn == mx ? mn + "" : mn + "–" + mx);
             }
             o.addProperty("c", pct(ch));
             out.add(o);
@@ -349,6 +354,15 @@ public final class Library {
         return s.isEmpty() ? "призыв/особые места" : String.join(", ", s);
     }
 
+    /** Кнопка «Альманах» в герое: открыта после квеста Сёдо (Альманах получен). */
+    public static void almanacFromHero(ServerPlayer p) {
+        if (Progress.d(p).libQuest < 2) {
+            p.displayClientMessage(Component.literal("Альманах откроется, когда Хранитель Сёдо вручит его тебе (этаж 3, квест «Тихая библиотека»).").withStyle(ChatFormatting.GRAY), true);
+            return;
+        }
+        openAlmanac(p);
+    }
+
     public static void openAlmanac(ServerPlayer p) {
         StoryData d = Progress.d(p);
         JsonObject j = new JsonObject();
@@ -360,6 +374,10 @@ public final class Library {
             o.addProperty("name", n > 0 ? k.title : "???");
             o.addProperty("kills", n);
             o.addProperty("elite", d.bestiary.getInt(k.name() + "_e"));
+            o.addProperty("id", BuiltInRegistries.ENTITY_TYPE.getKey(k.type()).toString());
+            o.addProperty("loc", k.loot.startsWith("floor1b") ? "Этаж 1 · Ледяной кряж" : k.loot.startsWith("floor1") ? "Этаж 1 · Пепельная пустошь"
+                    : k.loot.startsWith("floor2b") ? "Этаж 2 · Канализация" : k.loot.startsWith("floor2") ? "Этаж 2 · Неоновый город"
+                    : k.loot.startsWith("floor3b") ? "Этаж 3 · Деревня Кумихо" : "Этаж 3 · Деревня самураев");
             if (n > 0) {
                 o.addProperty("lvl", k.defLevel);
                 o.addProperty("where", where(k));
@@ -375,6 +393,8 @@ public final class Library {
             int n = d.bestiary.getInt("boss_" + b.id());
             o.addProperty("known", n > 0);
             o.addProperty("boss", true);
+            o.addProperty("id", BuiltInRegistries.ENTITY_TYPE.getKey(b.type().get()).toString());
+            o.addProperty("loc", "Боссы");
             o.addProperty("name", n > 0 ? "☠ " + b.name() : "☠ ???");
             o.addProperty("kills", n);
             if (n > 0) {
@@ -395,6 +415,8 @@ public final class Library {
             if (it instanceof CivWeaponItem w) {
                 JsonObject o = new JsonObject();
                 o.addProperty("name", Ru.name(it));
+                o.addProperty("id", id.toString());
+                o.addProperty("rar", w.minRarity.ordinal());
                 o.addProperty("tier", w.tier);
                 o.addProperty("cls", w.cls.title);
                 o.addProperty("min", w.minRarity.title);
@@ -409,11 +431,13 @@ public final class Library {
                 JsonObject o = new JsonObject();
                 ItemStack st = new ItemStack(it);
                 o.addProperty("name", Ru.name(it));
+                o.addProperty("id", id.toString());
+                o.addProperty("rar", 0);
                 o.addProperty("set", a.set);
                 o.addProperty("tier", a.tier);
                 o.addProperty("armor", String.format("%.1f", a.armor(st)));
                 o.addProperty("hp", String.format("%.1f", a.health(st)));
-                o.addProperty("core", "в центре алтаря — " + (a.tier < 2 ? "Медальон инея" : a.tier < 3 ? "Фильтр противогаза" : "Нефритовая печать") + ", по краям — звёзды (любое ядро подходит к любой броне)");
+                o.addProperty("core", "в центре алтаря — " + (a.tier < 2 ? "Медальон инея" : a.tier < 3 ? "Фильтр противогаза" : "Нефритовая печать") + ", по краям — звёзды (ядро подходит только к броне своего этажа и ниже)");
                 o.addProperty("junk", "любой хлам, родной ×1,5 — " + (a.set.startsWith("Инеевый") ? "Инеевый осколок" : a.set.contains("ликвидатора") ? "Обрезки резины" : a.set.startsWith("Самурай") ? "Обрезки шёлка" : a.set.startsWith("Лисий") ? "Лисий мех" : "—"));
                 o.add("src", sources(id.toString()));
                 arms.add(o);

@@ -55,6 +55,7 @@ public final class Story {
 
     public static void sync(ServerPlayer p) {
         StoryData d = data(p);
+        Skills.sync(p);   // 0.10.5
         Zones.Zone z = Zones.at(p);
         int boss = BossManager.secondsLeft(p.server);
         PacketDistributor.sendToPlayer(p, new Network.SyncState(d.stage, objective(d.stage), d.level, d.xp, Progress.xpToNext(d.level),
@@ -77,6 +78,11 @@ public final class Story {
             boolean done = d.wordDay == day && (d.wordSolved || d.wordTries >= 6);
             if (!done) l.add("q_word\u0001Загадка Юки: слово дня ждёт");
         }
+        int eq = d.gates.getInt("ench_q"), ek = d.gates.getInt("ench_k");
+        if (eq == 1) l.add("q_ench\u0001Аурелий «Образцы»: " + Math.min(ek, 20) + "/20 мобов Оранжереи и Криолаборатории" + (ek >= 20 ? " — вернись!" : ""));
+        if (eq == 2) l.add("q_ench\u0001Аурелий «Отказ систем»: " + Math.min(ek, 12) + "/12 турелей, роботов, охранников" + (ek >= 12 ? " — вернись!" : ""));
+        if (eq == 3) l.add("q_ench\u0001Аурелий «Ковчег»: " + (ek >= 1 ? "Ноэль повержен — вернись!" : "одолей доктора Ноэля и Лиану"));
+        if (d.gates.getInt("stella_q") == 1) l.add("q_stella\u0001Стелла: зарядить Фазовый якорь рывками (1000)");
         if (!d.eleMark.isEmpty()) l.add("q_mark\u0001Метка Элеоноры: " + d.eleMark.replace(":", " — "));
         return String.join("\n", l);
     }

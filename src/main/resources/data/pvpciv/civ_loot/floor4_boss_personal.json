@@ -1,0 +1,87 @@
+{
+ "entries": [
+  {
+   "item": "pvpciv:sparks",
+   "chance": 1,
+   "min": 450,
+   "max": 700
+  },
+  {
+   "item": "pvpciv:vine_heart",
+   "chance": 0.5
+  },
+  {
+   "item": "pvpciv:plasma_cell",
+   "chance": 1,
+   "min": 1,
+   "max": 3
+  },
+  {
+   "item": "pvpciv:quantum_chip",
+   "chance": 1,
+   "min": 1,
+   "max": 2
+  },
+  {
+   "item": "pvpciv:lazuratron",
+   "chance": 1,
+   "min": 10,
+   "max": 20
+  },
+  {
+   "item": "pvpciv:star_w1",
+   "chance": 1,
+   "min": 3,
+   "max": 5
+  },
+  {
+   "item": "pvpciv:blessed_star_w1",
+   "chance": 0.5
+  },
+  {
+   "item": "pvpciv:cat_resonator",
+   "chance": 0.6,
+   "min": 1,
+   "max": 2
+  },
+  {
+   "item": "pvpciv:module_improved",
+   "chance": 0.35
+  },
+  {
+   "weapons": [
+    "pvpciv:vine_axe"
+   ],
+   "chance": 0.15,
+   "min_rarity": "EPIC"
+  },
+  {
+   "weapons": [
+    "pvpciv:plasma_cutter",
+    "pvpciv:ion_dagger",
+    "pvpciv:cryo_saber",
+    "pvpciv:gravity_hammer"
+   ],
+   "chance": 0.5,
+   "min_rarity": "RARE"
+  },
+  {
+   "gear": [
+    "pvpciv:exo_helmet",
+    "pvpciv:exo_chestplate",
+    "pvpciv:exo_leggings",
+    "pvpciv:exo_boots"
+   ],
+   "chance": 0.35,
+   "min_rarity": "RARE"
+  },
+  {
+   "item": "pvpciv:temper_scroll",
+   "chance": 0.35
+  },
+  {
+   "item": "pvpciv:blood_star_w1",
+   "chance": 0.18
+  }
+ ]
+}

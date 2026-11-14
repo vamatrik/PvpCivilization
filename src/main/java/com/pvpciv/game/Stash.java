@@ -76,7 +76,7 @@ public final class Stash {
         com.pvpciv.progress.Progress.d(p).stashesOpened++;
         data.setDirty();
         sync(p);
-        String table = com.pvpciv.world.CivWorld.isF3(lvl) ? (pos.getX() < 0 ? "floor3b_stash" : "floor3_stash") : f2 ? com.pvpciv.floor.Floor2.stashTable(pos) : com.pvpciv.floor.FloorNorth.CRYPT_STASHES.contains(pos) || (pos.getZ() < -560 && Math.abs(pos.getX() - 3) < 10) ? "floor1b_crypt"
+        String table = com.pvpciv.world.CivWorld.isF4(lvl) ? com.pvpciv.floor.Floor4.stashTable(pos) : com.pvpciv.world.CivWorld.isF3(lvl) ? (pos.getX() < 0 ? "floor3b_stash" : "floor3_stash") : f2 ? com.pvpciv.floor.Floor2.stashTable(pos) : com.pvpciv.floor.FloorNorth.CRYPT_STASHES.contains(pos) || (pos.getZ() < -560 && Math.abs(pos.getX() - 3) < 10) ? "floor1b_crypt"
                 : pos.getZ() < 0 ? "floor1b_stash" : "floor1_stash";
         List<ItemStack> loot = LootTables.roll(table, lvl.random, 1.0);
         MutableComponent msg = Component.literal("Тайник: ").withStyle(ChatFormatting.GOLD);

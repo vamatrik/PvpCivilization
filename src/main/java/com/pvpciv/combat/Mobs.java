@@ -36,7 +36,15 @@ public final class Mobs {
         ASHIGARU(() -> com.pvpciv.registry.ModMobs.ASHIGARU.get(), "Асигару-лучник", "floor3_mob", 10),
         WEREWOLF(() -> com.pvpciv.registry.ModMobs.WEREWOLF.get(), "Оборотень", "floor3b_mob", 14),
         FOX(() -> com.pvpciv.registry.ModMobs.FOX.get(), "Лиса-оборотень", "floor3b_mob", 13),
-        KITSUNE_ARCHER(() -> com.pvpciv.registry.ModMobs.KITSUNE_ARCHER.get(), "Лучница в маске кицунэ", "floor3b_mob", 14);
+        KITSUNE_ARCHER(() -> com.pvpciv.registry.ModMobs.KITSUNE_ARCHER.get(), "Лучница в маске кицунэ", "floor3b_mob", 14),
+        BOTANIST(() -> com.pvpciv.registry.ModMobs.BOTANIST.get(), "Обезумевший ботаник", "floor4_mob", 16),
+        SPORELING(() -> com.pvpciv.registry.ModMobs.SPORELING.get(), "Споровый ползун", "floor4_mob", 17),
+        THAWED(() -> com.pvpciv.registry.ModMobs.THAWED.get(), "Размороженный образец", "floor4_mob", 18),
+        SENTRY(() -> com.pvpciv.registry.ModMobs.SENTRY.get(), "Охранник NaZa", "floor4_mob", 19),
+        ROBOT(() -> com.pvpciv.registry.ModMobs.ROBOT.get(), "Робот-техник", "floor4_mob", 20),
+        TURRET(() -> com.pvpciv.registry.ModMobs.TURRET.get(), "Турель", "floor4_mob", 21),
+        CHIMERA(() -> com.pvpciv.registry.ModMobs.CHIMERA.get(), "Химера", "floor4b_mob", 23),
+        LAB_TECH(() -> com.pvpciv.registry.ModMobs.LAB_TECH.get(), "Лаборант с плазмаганом", "floor4b_mob", 22);
         private final java.util.function.Supplier<? extends EntityType<? extends Mob>> type;
         public final String title, loot; public final int defLevel;
         Kind(java.util.function.Supplier<? extends EntityType<? extends Mob>> t, String n, String loot, int lvl) { type = t; title = n; this.loot = loot; defLevel = lvl; }
@@ -50,8 +58,8 @@ public final class Mobs {
     public static int level(LivingEntity e) { return e.getData(ModRegistry.MOB_LEVEL.get()); }
     public static String lootKind(LivingEntity e) { return e.getData(ModRegistry.MOB_KIND.get()); }
 
-    public static double hp(int lvl) { return 20 * Math.pow(1.065, lvl - 1); }
-    public static double dmg(int lvl) { return 3 * Math.pow(1.07, lvl - 1); }   // бета 12.11: 1.05 → 1.07 (игрок теперь растёт сильнее)
+    public static double hp(int lvl) { return Balance.mobHp(lvl); }     // 0.9.9: своя шкала (было 20·1.065^л)
+    public static double dmg(int lvl) { return Balance.mobDmg(lvl); }   // 0.9.9: (было 3·1.07^л)
 
     public static int levelColor(int lvl) {
         if (lvl <= 3) return 0xCFCFCF;
@@ -65,7 +73,8 @@ public final class Mobs {
         m.moveTo(pos.x, pos.y, pos.z, lvl.random.nextFloat() * 360, 0);
         setup(m, level, elite, (elite ? "★ " : "") + kind.title, lootTable);
         if (m instanceof Zombie z) z.getAttribute(Attributes.SPAWN_REINFORCEMENTS_CHANCE).setBaseValue(0);
-        if (kind == Kind.ASH_ARCHER || kind == Kind.FROST_ARCHER || kind == Kind.GUNNER) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
+        if (kind == Kind.ASH_ARCHER || kind == Kind.FROST_ARCHER) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
+        if (kind == Kind.GUNNER) m.setItemSlot(EquipmentSlot.MAINHAND, prop(com.pvpciv.registry.ModRegistry.RIFLE.get()));
         if ((kind == Kind.ASH_ZOMBIE || kind == Kind.FROST_ZOMBIE) && lvl.random.nextFloat() < 0.3f) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.STONE_SHOVEL));
         if (kind == Kind.POLICE) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ModRegistry.POLICE_BATON.get()));
         if (kind == Kind.THUG && lvl.random.nextFloat() < 0.6f) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ModRegistry.NAIL_BAT.get()));
@@ -74,6 +83,7 @@ public final class Mobs {
         if (kind == Kind.NINJA) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ModRegistry.KUNAI.get()));
         if (kind == Kind.ASHIGARU || kind == Kind.KITSUNE_ARCHER) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
         if (kind == Kind.WEREWOLF) set(m, Attributes.SCALE, 1.15);
+        f4(m, kind);
         for (EquipmentSlot s : EquipmentSlot.values()) m.setDropChance(s, 0f);
         if (!tag.isEmpty()) m.addTag(tag);
         lvl.addFreshEntity(m);
@@ -87,8 +97,34 @@ public final class Mobs {
         if (k == null) return;
         setup(m, k.defLevel, false, k.title, k.loot);
         if (m instanceof Zombie z) z.getAttribute(Attributes.SPAWN_REINFORCEMENTS_CHANCE).setBaseValue(0);
-        if (k == Kind.ASH_ARCHER || k == Kind.FROST_ARCHER || k == Kind.GUNNER) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
+        if (k == Kind.ASH_ARCHER || k == Kind.FROST_ARCHER) m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
+        if (k == Kind.GUNNER) m.setItemSlot(EquipmentSlot.MAINHAND, prop(com.pvpciv.registry.ModRegistry.RIFLE.get()));   // 0.10: АК
+        if (k == Kind.SAMURAI) m.setItemSlot(EquipmentSlot.MAINHAND, prop(com.pvpciv.registry.ModRegistry.NODACHI.get()));   // 0.9.9: оружие в руках
+        if (k == Kind.NINJA) m.setItemSlot(EquipmentSlot.MAINHAND, prop(com.pvpciv.registry.ModRegistry.KUNAI.get()));
+        f4(m, k);
         for (EquipmentSlot s : EquipmentSlot.values()) m.setDropChance(s, 0f);
+    }
+
+    /** 0.11: снаряжение и размеры мобов этажа 4. */
+    private static void f4(Mob m, Kind k) {
+        switch (k) {
+            case SENTRY -> m.setItemSlot(EquipmentSlot.MAINHAND, prop(ModRegistry.RIFLE.get()));
+            case LAB_TECH -> m.setItemSlot(EquipmentSlot.MAINHAND, prop(com.pvpciv.registry.ModF4.PLASMA_CELL.get()));
+            case BOTANIST -> m.setItemSlot(EquipmentSlot.MAINHAND, prop(Items.IRON_HOE));
+            case ROBOT -> { m.setItemSlot(EquipmentSlot.MAINHAND, prop(com.pvpciv.registry.ModF4.GRAVITY_HAMMER.get())); set(m, Attributes.SCALE, 1.1); }
+            case CHIMERA -> set(m, Attributes.SCALE, 1.2);
+            case TURRET -> m.setNoGravity(false);
+            default -> {}
+        }
+    }
+
+    /** Оружие «для вида»: без бонусов к урону (иначе модификатор меча прибавлялся к урону моба). */
+    private static ItemStack prop(net.minecraft.world.item.Item it) {
+        ItemStack st = new ItemStack(it);
+        st.set(net.minecraft.core.component.DataComponents.ATTRIBUTE_MODIFIERS, net.minecraft.world.item.component.ItemAttributeModifiers.builder()
+                .add(Attributes.LUCK, new net.minecraft.world.entity.ai.attributes.AttributeModifier(com.pvpciv.PvpCiv.id("prop"), 0, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE),
+                        net.minecraft.world.entity.EquipmentSlotGroup.MAINHAND).build().withTooltip(false));
+        return st;
     }
 
     public static void setup(Mob m, int level, boolean elite, String name, String lootTable) {
@@ -100,6 +136,7 @@ public final class Mobs {
         set(m, Attributes.FOLLOW_RANGE, m instanceof net.minecraft.world.entity.monster.AbstractSkeleton ? 20 : 28);   // бета 12.11: лучники не тянутся за тобой через пол-карты
         m.setHealth((float) hp);
         m.setPersistenceRequired();
+        m.addTag("bal99");
         if (elite) {
             m.setGlowingTag(true);
             set(m, Attributes.SCALE, 1.25);

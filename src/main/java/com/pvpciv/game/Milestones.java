@@ -21,9 +21,9 @@ public final class Milestones {
     public enum Track {
         HITS("Удары", new long[]{100, 500, 2000, 5000, 10000, 25000}, "+0.5% к урону", "hammer_hands"),
         KM("Пройдено, км", new long[]{1, 5, 15, 50, 100}, "+0.5% к скорости", "marathon"),
-        KILLS("Убито мобов", new long[]{50, 250, 1000, 5000}, "+1 к здоровью", "exterminator"),
-        STASH("Тайников открыто", new long[]{10, 50, 150}, "+1 к здоровью", null),
-        BITES("Укусов Кармиллы", new long[]{1, 5, 20}, "+1 к здоровью", "donor");
+        KILLS("Убито мобов", new long[]{50, 250, 1000, 5000}, "+1% к здоровью", "exterminator"),
+        STASH("Тайников открыто", new long[]{10, 50, 150}, "+1% к здоровью", null),
+        BITES("Укусов Кармиллы", new long[]{1, 5, 20}, "+1% к здоровью", "donor");
         public final String title, bonus, titleId; public final long[] steps;
         Track(String t, long[] s, String b, String tid) { title = t; steps = s; bonus = b; titleId = tid; }
     }
@@ -108,7 +108,7 @@ public final class Milestones {
         StoryData d = Progress.d(p);
         mod(p, Attributes.ATTACK_DAMAGE, "ms_dmg", 0.005 * claimed(d, Track.HITS), AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
         mod(p, Attributes.MOVEMENT_SPEED, "ms_speed", 0.005 * claimed(d, Track.KM), AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
-        mod(p, Attributes.MAX_HEALTH, "ms_hp", claimed(d, Track.KILLS) + claimed(d, Track.STASH) + claimed(d, Track.BITES), AttributeModifier.Operation.ADD_VALUE);
+        mod(p, Attributes.MAX_HEALTH, "ms_hp", 0.01 * (claimed(d, Track.KILLS) + claimed(d, Track.STASH) + claimed(d, Track.BITES)), AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);   // 0.9.9: +1% за веху (было +1 HP)
     }
 
     private static void mod(ServerPlayer p, net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> a, String id, double v, AttributeModifier.Operation op) {

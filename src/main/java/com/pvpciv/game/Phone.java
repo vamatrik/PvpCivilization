@@ -50,7 +50,7 @@ public final class Phone {
         if (a[0].equals("gate") && a.length == 3) { Gates.request(p, a[1], a[2]); return; }
         if (a[0].equals("gate_up")) { Gates.upgradeHome(p); return; }
         if (a[0].equals("word") && a.length == 2) { Assassin.guess(p, a[1]); return; }
-        if (a[0].equals("skill") && a.length == 2) { if (a[1].equals("2")) Assassin.touch(p); return; }
+        if (a[0].equals("skill") && a.length == 2) { if (a[1].equals("2")) Skills.use(p, 2); else if (a[1].equals("3")) Skills.use(p, 3); return; }
         if (a[0].equals("opt")) { option(p, a.length > 1 ? a[1] : "", a.length > 2 && a[2].equals("1")); return; }
         if (!has(p)) return;
         try {

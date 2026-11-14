@@ -41,4 +41,31 @@ public class CivZombie extends Zombie {
         if (t != null && !(t instanceof net.minecraft.world.entity.player.Player)) return;
         super.setTarget(t);
     }
+
+    // ---- 0.11: особенности мобов этажа 4
+    private int lunge;
+    @Override public boolean doHurtTarget(net.minecraft.world.entity.Entity t) {
+        boolean r = super.doHurtTarget(t);
+        if (!r || !(t instanceof net.minecraft.world.entity.LivingEntity le)) return r;
+        var ty = getType();
+        if (ty == com.pvpciv.registry.ModMobs.THAWED.get()) le.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 50, 1));
+        else if (ty == com.pvpciv.registry.ModMobs.BOTANIST.get()) le.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON, 50, 0));
+        else if (ty == com.pvpciv.registry.ModMobs.ROBOT.get()) le.knockback(0.9, getX() - le.getX(), getZ() - le.getZ());
+        return r;
+    }
+    @Override public void aiStep() {
+        super.aiStep();
+        if (level().isClientSide || getType() != com.pvpciv.registry.ModMobs.CHIMERA.get()) return;
+        var t = getTarget();
+        if (lunge > 0) { lunge--; return; }
+        if (t != null && onGround()) {
+            double d = distanceTo(t);
+            if (d > 4 && d < 10 && hasLineOfSight(t)) {   // химера прыгает на цель
+                var v = t.position().subtract(position()).normalize().scale(1.1);
+                setDeltaMovement(v.x, 0.45, v.z);
+                lunge = 70 + random.nextInt(40);
+                playSound(net.minecraft.sounds.SoundEvents.RAVAGER_ROAR, 0.8f, 1.4f);
+            }
+        }
+    }
 }

@@ -338,9 +338,7 @@ public final class Floor1 extends Builder {
         set(cx - 6, Y, cz - 4, Blocks.STONE_BRICKS);
         set(cx - 6, Y + 1, cz - 4, Blocks.STONE_BRICKS);
         sign(new BlockPos(cx - 5, Y + 1, cz - 4), Direction.EAST, DyeColor.ORANGE, "ЭТАЖ 1", "Пепельная", "пустошь", "ур. мобов 1–4");
-        set(cx + 6, Y, cz - 4, Blocks.STONE_BRICKS);
-        set(cx + 6, Y + 1, cz - 4, Blocks.STONE_BRICKS);
-        sign(new BlockPos(cx + 5, Y + 1, cz - 4), Direction.WEST, DyeColor.LIGHT_BLUE, "← Руины  Арена →", "↓ Разлом, роща,", "столпы, Логово", "Громилы (PvP)");
+        // 0.10.5: табличка-«куда идти» убрана — рядом 3D-указатели (Signposts)
         for (int[] o : new int[][]{{-7, -7}, {7, -7}, {-7, 7}, {7, 7}}) {
             set(cx + o[0], Y, cz + o[1], Blocks.DARK_OAK_FENCE);
             set(cx + o[0], Y + 1, cz + o[1], Blocks.LANTERN);

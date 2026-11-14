@@ -14,16 +14,18 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import java.util.List;
 
 public final class Network {
+    /** Строки до 256К символов (ванильный STRING_UTF8 — 32767, альманах больше → кик при кодировании). */
+    public static final net.minecraft.network.codec.StreamCodec<io.netty.buffer.ByteBuf, String> STR = ByteBufCodecs.stringUtf8(262144);
 
     /** Сервер → клиент: показать реплику диалога. */
     public record DialogueOpen(int entityId, String speaker, int color, String text, List<String> options) implements CustomPacketPayload {
         public static final Type<DialogueOpen> TYPE = new Type<>(PvpCiv.id("dialogue_open"));
         public static final StreamCodec<ByteBuf, DialogueOpen> CODEC = StreamCodec.composite(
                 ByteBufCodecs.VAR_INT, DialogueOpen::entityId,
-                ByteBufCodecs.STRING_UTF8, DialogueOpen::speaker,
+                Network.STR, DialogueOpen::speaker,
                 ByteBufCodecs.INT, DialogueOpen::color,
-                ByteBufCodecs.STRING_UTF8, DialogueOpen::text,
-                ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), DialogueOpen::options,
+                Network.STR, DialogueOpen::text,
+                Network.STR.apply(ByteBufCodecs.list()), DialogueOpen::options,
                 DialogueOpen::new);
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
@@ -41,19 +43,19 @@ public final class Network {
         public static final Type<SyncState> TYPE = new Type<>(PvpCiv.id("sync_state"));
         public static final StreamCodec<ByteBuf, SyncState> CODEC = new StreamCodec<>() {
             @Override public SyncState decode(ByteBuf b) {
-                return new SyncState(ByteBufCodecs.VAR_INT.decode(b), ByteBufCodecs.STRING_UTF8.decode(b), ByteBufCodecs.VAR_INT.decode(b),
+                return new SyncState(ByteBufCodecs.VAR_INT.decode(b), Network.STR.decode(b), ByteBufCodecs.VAR_INT.decode(b),
                         ByteBufCodecs.VAR_LONG.decode(b), ByteBufCodecs.VAR_LONG.decode(b), ByteBufCodecs.VAR_LONG.decode(b),
-                        ByteBufCodecs.STRING_UTF8.decode(b), ByteBufCodecs.VAR_INT.decode(b), ByteBufCodecs.INT.decode(b),
-                        ByteBufCodecs.STRING_UTF8.decode(b), ByteBufCodecs.INT.decode(b), ByteBufCodecs.INT.decode(b), ByteBufCodecs.STRING_UTF8.decode(b), ByteBufCodecs.STRING_UTF8.decode(b),
-                        ByteBufCodecs.INT.decode(b), ByteBufCodecs.VAR_INT.decode(b), ByteBufCodecs.STRING_UTF8.decode(b), ByteBufCodecs.STRING_UTF8.decode(b));
+                        Network.STR.decode(b), ByteBufCodecs.VAR_INT.decode(b), ByteBufCodecs.INT.decode(b),
+                        Network.STR.decode(b), ByteBufCodecs.INT.decode(b), ByteBufCodecs.INT.decode(b), Network.STR.decode(b), Network.STR.decode(b),
+                        ByteBufCodecs.INT.decode(b), ByteBufCodecs.VAR_INT.decode(b), Network.STR.decode(b), Network.STR.decode(b));
             }
             @Override public void encode(ByteBuf b, SyncState s) {
-                ByteBufCodecs.VAR_INT.encode(b, s.stage); ByteBufCodecs.STRING_UTF8.encode(b, s.objective); ByteBufCodecs.VAR_INT.encode(b, s.level);
+                ByteBufCodecs.VAR_INT.encode(b, s.stage); Network.STR.encode(b, s.objective); ByteBufCodecs.VAR_INT.encode(b, s.level);
                 ByteBufCodecs.VAR_LONG.encode(b, s.xp); ByteBufCodecs.VAR_LONG.encode(b, s.xpNext); ByteBufCodecs.VAR_LONG.encode(b, s.money);
-                ByteBufCodecs.STRING_UTF8.encode(b, s.zone); ByteBufCodecs.VAR_INT.encode(b, s.zoneType); ByteBufCodecs.INT.encode(b, s.bossSeconds);
-                ByteBufCodecs.STRING_UTF8.encode(b, s.quest); ByteBufCodecs.INT.encode(b, s.questSeconds); ByteBufCodecs.INT.encode(b, s.jailSeconds);
-                ByteBufCodecs.STRING_UTF8.encode(b, s.titles); ByteBufCodecs.STRING_UTF8.encode(b, s.activeTitle);
-                ByteBufCodecs.INT.encode(b, s.keeperSeconds); ByteBufCodecs.VAR_INT.encode(b, s.trophies); ByteBufCodecs.STRING_UTF8.encode(b, s.boats); ByteBufCodecs.STRING_UTF8.encode(b, s.bosses);
+                Network.STR.encode(b, s.zone); ByteBufCodecs.VAR_INT.encode(b, s.zoneType); ByteBufCodecs.INT.encode(b, s.bossSeconds);
+                Network.STR.encode(b, s.quest); ByteBufCodecs.INT.encode(b, s.questSeconds); ByteBufCodecs.INT.encode(b, s.jailSeconds);
+                Network.STR.encode(b, s.titles); Network.STR.encode(b, s.activeTitle);
+                ByteBufCodecs.INT.encode(b, s.keeperSeconds); ByteBufCodecs.VAR_INT.encode(b, s.trophies); Network.STR.encode(b, s.boats); Network.STR.encode(b, s.bosses);
             }
         };
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
@@ -63,7 +65,7 @@ public final class Network {
     public record Cinematic(int kind, int ticks, String text) implements CustomPacketPayload {
         public static final Type<Cinematic> TYPE = new Type<>(PvpCiv.id("cinematic"));
         public static final StreamCodec<ByteBuf, Cinematic> CODEC = StreamCodec.composite(
-                ByteBufCodecs.VAR_INT, Cinematic::kind, ByteBufCodecs.VAR_INT, Cinematic::ticks, ByteBufCodecs.STRING_UTF8, Cinematic::text, Cinematic::new);
+                ByteBufCodecs.VAR_INT, Cinematic::kind, ByteBufCodecs.VAR_INT, Cinematic::ticks, Network.STR, Cinematic::text, Cinematic::new);
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
@@ -99,13 +101,13 @@ public final class Network {
     /** Сервер → клиент: данные телефона. kind: 0 — главный экран, 1 — «Шпиль.Еда», 2 — такси, 3 — входящий звонок, 4 — звонок окончен, 5 — такси ждёт. */
     public record PhoneData(int kind, String json) implements CustomPacketPayload {
         public static final Type<PhoneData> TYPE = new Type<>(PvpCiv.id("phone_data"));
-        public static final StreamCodec<ByteBuf, PhoneData> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, PhoneData::kind, ByteBufCodecs.STRING_UTF8, PhoneData::json, PhoneData::new);
+        public static final StreamCodec<ByteBuf, PhoneData> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, PhoneData::kind, Network.STR, PhoneData::json, PhoneData::new);
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
     /** Клиент → сервер: команда приложения телефона (см. Phone.cmd); "open" — открыть телефон. */
     public record PhoneCmd(String cmd) implements CustomPacketPayload {
         public static final Type<PhoneCmd> TYPE = new Type<>(PvpCiv.id("phone_cmd"));
-        public static final StreamCodec<ByteBuf, PhoneCmd> CODEC = StreamCodec.composite(ByteBufCodecs.STRING_UTF8, PhoneCmd::cmd, PhoneCmd::new);
+        public static final StreamCodec<ByteBuf, PhoneCmd> CODEC = StreamCodec.composite(Network.STR, PhoneCmd::cmd, PhoneCmd::new);
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
@@ -119,13 +121,13 @@ public final class Network {
     /** Клиент → сервер: выбрать лодку в гараже. */
     public record SelectBoat(String id) implements CustomPacketPayload {
         public static final Type<SelectBoat> TYPE = new Type<>(PvpCiv.id("select_boat"));
-        public static final StreamCodec<ByteBuf, SelectBoat> CODEC = StreamCodec.composite(ByteBufCodecs.STRING_UTF8, SelectBoat::id, SelectBoat::new);
+        public static final StreamCodec<ByteBuf, SelectBoat> CODEC = StreamCodec.composite(Network.STR, SelectBoat::id, SelectBoat::new);
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
     public record SelectTitle(String id) implements CustomPacketPayload {
         public static final Type<SelectTitle> TYPE = new Type<>(PvpCiv.id("select_title"));
-        public static final StreamCodec<ByteBuf, SelectTitle> CODEC = StreamCodec.composite(ByteBufCodecs.STRING_UTF8, SelectTitle::id, SelectTitle::new);
+        public static final StreamCodec<ByteBuf, SelectTitle> CODEC = StreamCodec.composite(Network.STR, SelectTitle::id, SelectTitle::new);
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
@@ -166,7 +168,7 @@ public final class Network {
         public static final Type<DeathInfo> TYPE = new Type<>(PvpCiv.id("death_info"));
         public static final StreamCodec<ByteBuf, DeathInfo> CODEC = StreamCodec.composite(
                 ByteBufCodecs.VAR_LONG, DeathInfo::lostMoney, ByteBufCodecs.VAR_LONG, DeathInfo::lostXp,
-                ByteBufCodecs.BOOL, DeathInfo::pvp, ByteBufCodecs.STRING_UTF8, DeathInfo::killer, DeathInfo::new);
+                ByteBufCodecs.BOOL, DeathInfo::pvp, Network.STR, DeathInfo::killer, DeathInfo::new);
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
@@ -202,7 +204,15 @@ public final class Network {
         r.playToClient(PhoneData.TYPE, PhoneData.CODEC, (p, ctx) -> com.pvpciv.client.ClientPayloads.phone(p));
         r.playToServer(PhoneCmd.TYPE, PhoneCmd.CODEC, (p, ctx) -> {
             if (ctx.player() instanceof ServerPlayer sp) {
-                if (p.cmd().equals("open")) com.pvpciv.game.Phone.open(sp); else com.pvpciv.game.Phone.cmd(sp, p.cmd());
+                if (p.cmd().equals("open")) com.pvpciv.game.Phone.open(sp);
+                else if (p.cmd().equals("almanac")) com.pvpciv.game.Library.almanacFromHero(sp);   // 0.10: вкладка «Альманах» в герое
+                else if (p.cmd().startsWith("off:")) { try { com.pvpciv.combat.Melee.offHit(sp, Integer.parseInt(p.cmd().substring(4))); } catch (NumberFormatException ignored) {} }   // 0.10.3: удар второй рукой
+                else if (p.cmd().equals("swing")) com.pvpciv.combat.Melee.airSwing(sp);
+                else if (p.cmd().startsWith("ench:")) com.pvpciv.game.Enchanting.cmd(sp, p.cmd());
+                else if (p.cmd().equals("mash")) com.pvpciv.entity.boss.LianaBoss.mash(sp);
+                else if (p.cmd().startsWith("setskill:")) { String[] a = p.cmd().split(":"); if (a.length == 3) try { com.pvpciv.game.Skills.choose(sp, Integer.parseInt(a[1]), a[2]); } catch (NumberFormatException ignored) {} }
+                else if (p.cmd().startsWith("combo:")) { try { com.pvpciv.combat.Melee.setCombo(sp, Integer.parseInt(p.cmd().substring(6))); } catch (NumberFormatException ignored) {} }
+                else com.pvpciv.game.Phone.cmd(sp, p.cmd());
             }
         });
         r.playToServer(SelectBoat.TYPE, SelectBoat.CODEC, (p, ctx) -> {
@@ -215,7 +225,7 @@ public final class Network {
                         net.minecraft.network.chat.Component.literal("Сумка")));
         });
         r.playToServer(Dash.TYPE, Dash.CODEC, (p, ctx) -> {
-            if (ctx.player() instanceof ServerPlayer sp) DashSkill.tryDash(sp);
+            if (ctx.player() instanceof ServerPlayer sp) com.pvpciv.game.Skills.use(sp, 1);   // 0.10.5: слот 1 — выбранный навык
         });
     }
 }

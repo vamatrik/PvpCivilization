@@ -46,6 +46,8 @@ public final class ClientInit {
             e.registerEntityRenderer(ModRegistry.FX.get(), FxRenderer::new);
             e.registerEntityRenderer(ModRegistry.LIBRARIAN.get(), GeoNpcRenderer::new);
             e.registerEntityRenderer(ModRegistry.CHEF.get(), GeoNpcRenderer::new);
+            e.registerEntityRenderer(ModRegistry.ENCHANTER.get(), GeoNpcRenderer::new);
+            e.registerEntityRenderer(ModRegistry.STELLA.get(), GeoNpcRenderer::new);
             e.registerEntityRenderer(ModRegistry.ASSASSIN.get(), GeoNpcRenderer::new);
             e.registerEntityRenderer(ModRegistry.SMUGGLER.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/smuggler.png")));
             e.registerEntityRenderer(ModRegistry.CARMILLA.get(), GeoNpcRenderer::new);
@@ -63,7 +65,19 @@ public final class ClientInit {
         modBus.addListener((net.neoforged.neoforge.client.event.EntityRenderersEvent.AddLayers e) -> {
             for (var skin : e.getSkins()) {
                 var r = e.getSkin(skin);
-                if (r instanceof net.minecraft.client.renderer.entity.player.PlayerRenderer pr) pr.addLayer(new GasMaskLayer(pr));
+                if (r instanceof net.minecraft.client.renderer.entity.player.PlayerRenderer pr) {
+                    pr.addLayer(new GasMaskLayer(pr));
+                    // 0.9.9: объёмные доспехи этажа 3 на игроке
+                    var H = Mob3DLayer.Bone.HEAD; var B = Mob3DLayer.Bone.BODY; var RA = Mob3DLayer.Bone.RARM; var LA = Mob3DLayer.Bone.LARM;
+                    pr.addLayer(new Mob3DLayer<>(pr, "samurai", Mob3DParts.forArmor(Mob3DParts.samurai(), 1.2f, H))
+                            .when(pl -> pl.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).is(ModRegistry.SAMURAI_HELMET.get())));
+                    pr.addLayer(new Mob3DLayer<>(pr, "samurai", Mob3DParts.forArmor(Mob3DParts.samurai(), 1.12f, B, RA, LA))
+                            .when(pl -> pl.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST).is(ModRegistry.SAMURAI_CHEST.get())));
+                    pr.addLayer(new Mob3DLayer<>(pr, "kitsune", Mob3DParts.forArmor(Mob3DParts.kitsune(), 1.2f, H))
+                            .when(pl -> pl.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).is(ModRegistry.FOX_HELMET.get())));
+                    pr.addLayer(new Mob3DLayer<>(pr, "kitsune", Mob3DParts.forArmor(Mob3DParts.kitsune(), 1.0f, B).stream().filter(c -> c.wob() == 1).toList())
+                            .when(pl -> pl.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST).is(ModRegistry.FOX_CHEST.get())));
+                }
             }
         });
         modBus.addListener((RegisterGuiLayersEvent e) -> e.registerAbove(VanillaGuiLayers.HOTBAR, PvpCiv.id("hud"), Hud::render));
@@ -76,6 +90,28 @@ public final class ClientInit {
             e.register(ModRegistry.HOME_CHEST_MENU.get(), com.pvpciv.client.screen.HomeChestScreen::new);
             e.register(ModRegistry.TRADER_MENU.get(), com.pvpciv.client.screen.TraderScreen::new);
         });
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.RenderLivingEvent.Post<?, ?> e) -> MobBars.onRender(e));
+        NeoForge.EVENT_BUS.addListener(Lines::render);   // 0.10: лазеры и трассеры
+        // 0.10.7: в паре ванильная шкала удара под прицелом скрыта — вместо неё своя (Hud.nextHitBar), прицел рисуем сами
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.RenderGuiLayerEvent.Pre e) -> {
+            if (!e.getName().equals(net.neoforged.neoforge.client.gui.VanillaGuiLayers.CROSSHAIR)) return;
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player == null || !ClientCombat.isDual(mc.player) || mc.options.attackIndicator().get() != net.minecraft.client.AttackIndicatorStatus.CROSSHAIR) return;
+            if (!mc.options.getCameraType().isFirstPerson() || mc.options.hideGui) return;
+            e.setCanceled(true);
+            var g = e.getGuiGraphics();
+            com.mojang.blaze3d.systems.RenderSystem.blendFuncSeparate(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE_MINUS_DST_COLOR,
+                    com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE_MINUS_SRC_COLOR, com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE,
+                    com.mojang.blaze3d.platform.GlStateManager.DestFactor.ZERO);
+            com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+            g.blitSprite(net.minecraft.resources.ResourceLocation.withDefaultNamespace("hud/crosshair"), (g.guiWidth() - 15) / 2, (g.guiHeight() - 15) / 2, 15, 15);
+            com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
+        });
+        NeoForge.EVENT_BUS.addListener(MobBars::onLevel);   // 0.10.5: полоски и цифры для моделей GeckoLib (боссы, звери)
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.RenderNameTagEvent e) -> {   // имя «[N] …» — уже на полоске
+            if (e.getEntity() instanceof net.minecraft.world.entity.Mob && e.getOriginalContent().getString().startsWith("[")) e.setCanRender(net.neoforged.neoforge.common.util.TriState.FALSE);
+        });
+        NeoForge.EVENT_BUS.addListener(ClientInit::onAttackKey);   // 0.10: своя боёвка (пара, взмах по воздуху)   // 0.10: полоски HP над мобами
         NeoForge.EVENT_BUS.addListener((ScreenEvent.Opening e) -> {
             Minecraft mc = Minecraft.getInstance();
             if (e.getNewScreen() instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen && mc.player != null && !mc.player.isCreative()) {
@@ -124,6 +160,15 @@ public final class ClientInit {
                 e.setCanceled(true);
         });
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> onTick());
+        NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> ClientCombat.tick());
+        NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> {   // 0.11: во рту Лианы — каждый пробел на сервер
+            var mc = net.minecraft.client.Minecraft.getInstance();
+            if (mc.player == null) { ClientState.grabOn = false; return; }
+            if (!ClientState.grabOn) { while (mc.options.keyJump.consumeClick()) {} return; }
+            while (mc.options.keyJump.consumeClick())
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd("mash"));
+        });   // 0.10.3: буфер клика
+        NeoForge.EVENT_BUS.addListener(ClientCombat::onRenderHand);                       // 0.10.3: взмахи без рук
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> ClientState.reset());
     }
 
@@ -148,6 +193,13 @@ public final class ClientInit {
             float d = in.left ? -turn : turn;
             b.setYRot(b.getYRot() + d);
             mc.player.setYRot(mc.player.getYRot() + d);
+        }
+        // бета 0.9.8: S — тормоз (ванильный задний ход на льду почти не тормозит)
+        if (in.down && !in.up) {
+            var bv = b.getDeltaMovement();
+            double yw = Math.toRadians(b.getYRot());
+            double fwd = -Math.sin(yw) * bv.x + Math.cos(yw) * bv.z;
+            if (fwd > 0.03) { b.setDeltaMovement(bv.x * 0.86, bv.y, bv.z * 0.86); return; }
         }
         if (!b.onGround()) return;
         var below = mc.level.getBlockState(b.blockPosition().below());
@@ -206,7 +258,8 @@ public final class ClientInit {
         while (PHONE.consumeClick()) if (mc.player != null && mc.screen == null) PacketDistributor.sendToServer(new Network.PhoneCmd("open"));
         for (int k = 1; k <= 2; k++) while (SKILL_KEYS[k].consumeClick()) {
             if (mc.player == null) continue;
-            if (k == 1) { PacketDistributor.sendToServer(new Network.PhoneCmd("skill:2")); continue; }
+            PacketDistributor.sendToServer(new Network.PhoneCmd("skill:" + (k + 1)));   // 0.10.5: слоты 2 и 3 — выбранный навык
+            if (true) continue;
             int need = k == 1 ? 10 : 35;
             mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal(ClientState.level < need
                     ? "Слот навыка " + (k + 1) + " откроется на " + need + " уровне."
@@ -215,9 +268,10 @@ public final class ClientInit {
         while (DASH.consumeClick()) {
             if (mc.player == null || mc.level == null) continue;
             long now = mc.level.getGameTime();
-            if (mc.player.isPassenger() || now < ClientState.dashReadyAt) continue;
-            ClientState.dashReadyAt = now + com.pvpciv.game.DashSkill.COOLDOWN_TICKS;
+            if (mc.player.isPassenger() || System.currentTimeMillis() < ClientState.skillReady[0]) continue;
             PacketDistributor.sendToServer(new Network.Dash());
         }
     }
+
+    private static void onAttackKey(net.neoforged.neoforge.client.event.InputEvent.InteractionKeyMappingTriggered e) { ClientCombat.onAttackKey(e); }
 }

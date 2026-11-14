@@ -30,6 +30,30 @@ public class ArmorCoreItem extends Item {
         return st;
     }
 
+    public static ItemStack of(int level, int tier) {
+        ItemStack st = of(level);
+        if (tier > 0) st.set(ModRegistry.CORE_TIER.get(), tier);
+        return st;
+    }
+
+    /** Материал ядра: 1–3; 0 — старое ядро без материала (подходит ко всему). */
+    public static int tier(ItemStack st) { return st.getOrDefault(ModRegistry.CORE_TIER.get(), 0); }
+
+    /** Какой материал нужен броне: этаж 1 — медальон, этаж 2 — фильтр, этаж 3 — печать. */
+    public static int tierFor(double armorTier) { return armorTier < 2 ? 1 : armorTier < 3 ? 2 : 3; }
+
+    public static int tierOfCenter(ItemStack c) {
+        if (c.is(ModRegistry.FROZEN_LOCKET.get())) return 1;
+        if (c.is(ModRegistry.GAS_MASK_FILTER.get())) return 2;
+        if (c.is(ModRegistry.JADE_SEAL.get())) return 3;
+        return 0;
+    }
+
+    public static String tierName(int t) { return t == 1 ? "медальон инея — броня этажа 1" : t == 2 ? "фильтр — броня этажа 2" : t == 3 ? "нефритовая печать — броня этажа 3" : "универсальное (старое)"; }
+
+    /** Подходит ли ядро к броне: материал не ниже нужного. */
+    public static boolean fits(ItemStack core, double armorTier) { int t = tier(core); return t == 0 || t >= tierFor(armorTier); }
+
     @Override
     public Component getName(ItemStack st) {
         int l = level(st);
@@ -41,6 +65,7 @@ public class ArmorCoreItem extends Item {
         int l = level(st);
         tip.add(Component.literal("Стол брони: полная полоска опыта + ядро → +1").withStyle(ChatFormatting.GRAY));
         tip.add(Component.literal("Подходит для улучшения до +" + l + " включительно").withStyle(ChatFormatting.DARK_AQUA));
+        tip.add(Component.literal("Материал: " + tierName(tier(st)) + (tier(st) > 0 && tier(st) < 3 ? " и ниже" : "")).withStyle(ChatFormatting.GRAY));
     }
 
     @Override public boolean isFoil(ItemStack st) { return level(st) >= 9; }

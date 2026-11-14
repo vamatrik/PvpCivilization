@@ -75,14 +75,23 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
         statBlock(g, x + 18, y + 44, 110);
         Skin.inset(g, x + 138, y + 38, 130, 126);
         g.drawString(font, "Навыки", x + 144, y + 43, Skin.GOLD_L, false);
-        skill(g, x + 144, y + 55, key(0), "Рывок", 1);
-        skill(g, x + 144, y + 76, key(1), "Второй навык", 8);
-        skill(g, x + 144, y + 97, key(2), "Третий навык", 18);
+        skill(g, x + 144, y + 55, key(0), skillName(0), 1);
+        skill(g, x + 144, y + 76, key(1), skillName(1), 10);
+        skill(g, x + 144, y + 97, key(2), skillName(2), 35);
+        if (in(mx, my, 142, 53, 126, 64)) g.drawString(font, "выбрать →", x + 268 - font.width("выбрать →") - 4, y + 43, Skin.GOLD_L, false);
         Skin.button(g, font, x + 142, y + 122, 41, "Титулы", mx, my, true, false);
         Skin.button(g, font, x + 184, y + 122, 41, "Трофеи", mx, my, true, false);
         Skin.button(g, font, x + 226, y + 122, 41, "Лодки", mx, my, true, false);
         Skin.button(g, font, x + 142, y + 142, 41, "Боссы", mx, my, true, false);
-        Skin.button(g, font, x + 184, y + 142, 83, "Настройки", mx, my, true, false);
+        Skin.button(g, font, x + 184, y + 142, 41, "Альманах", mx, my, true, false);
+        Skin.button(g, font, x + 226, y + 142, 41, "Настройки", mx, my, true, false);
+    }
+
+    /** 0.10.5: название навыка в слоте (выбирается в меню «Навыки»). */
+    private static String skillName(int i) {
+        String id = ClientState.skillSel[i];
+        for (var el : ClientState.skillsAll) { var o = el.getAsJsonObject(); if (o.get("id").getAsString().equals(id)) return o.get("name").getAsString(); }
+        return "— пусто —";
     }
 
     private static String key(int i) { return com.pvpciv.client.ClientInit.SKILL_KEYS[i].getTranslatedKeyMessage().getString().toUpperCase(); }
@@ -102,9 +111,10 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
         g.drawString(font, ClientState.xp + " / " + ClientState.xpNext, x, y + 20, Skin.DIM, false);
         Skin.divider(g, x + w / 2, y + 31);
         int ly = y + 42;
-        ly = stat(g, x, ly, w, "heart", "Здоровье", (int) Math.ceil(p.getHealth()) + "/" + (int) p.getMaxHealth());
-        ly = stat(g, x, ly, w, "arrow", "Урон", String.format("%.1f", p.getAttributeValue(Attributes.ATTACK_DAMAGE)));
-        ly = stat(g, x, ly, w, "shield", "Броня", String.valueOf((int) p.getAttributeValue(Attributes.ARMOR)));
+        ly = stat(g, x, ly, w, "heart", "Здоровье", com.pvpciv.combat.Balance.fmt(Math.ceil(p.getHealth())) + "/" + com.pvpciv.combat.Balance.fmt(p.getMaxHealth()));
+        ly = stat(g, x, ly, w, "arrow", "Урон", com.pvpciv.combat.Balance.fmt(p.getAttributeValue(Attributes.ATTACK_DAMAGE)));
+        double def = com.pvpciv.combat.Balance.armor(p, ClientState.level), prot = com.pvpciv.combat.Balance.protection(p);
+        ly = stat(g, x, ly, w, "shield", "Броня", com.pvpciv.combat.Balance.fmt(def) + (prot > 0 ? " · " + Math.round(prot * 100) + "%" : ""));
         ly = stat(g, x, ly, w, "food", "Сытость", p.getFoodData().getFoodLevel() + "/20");
         ly = stat(g, x, ly, w, "spark", "Искры", String.valueOf(ClientState.money));
         g.drawString(font, String.format("Бонус: +%.1f%% урона", 1.5 * (ClientState.level - 1)), x, ly + 2, Skin.FAINT, false);
@@ -146,11 +156,13 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
             if (in(mx, my, 184, 144, 80, 16)) { click(CivInventoryMenu.BTN_SORT); return true; }
         }
         if (menu.tab() == CivInventoryMenu.TAB_STATS) {
+            if (in(mx, my, 142, 53, 126, 64)) { minecraft.setScreen(new SkillsScreen()); return true; }   // 0.10.5: меню навыков
             if (in(mx, my, 142, 122, 41, 16)) { minecraft.setScreen(new StubScreens.Titles()); return true; }
             if (in(mx, my, 184, 122, 41, 16)) { minecraft.setScreen(new StubScreens.Trophies()); return true; }
             if (in(mx, my, 226, 122, 41, 16)) { minecraft.setScreen(new StubScreens.Boats()); return true; }
             if (in(mx, my, 142, 142, 41, 16)) { minecraft.setScreen(new StubScreens.Bosses()); return true; }
-            if (in(mx, my, 184, 142, 83, 16)) { minecraft.setScreen(new StubScreens.Settings()); return true; }
+            if (in(mx, my, 184, 142, 41, 16)) { net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd("almanac")); return true; }
+            if (in(mx, my, 226, 142, 41, 16)) { minecraft.setScreen(new StubScreens.Settings()); return true; }
         }
         return super.mouseClicked(mx, my, b);
     }

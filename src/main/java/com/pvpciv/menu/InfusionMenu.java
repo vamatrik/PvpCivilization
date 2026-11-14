@@ -31,7 +31,7 @@ import java.util.List;
 
 /**
  * Алтарь инфузии: предметы кладутся руками на алтарь (центр) и 8 пьедесталов вокруг; окно только показывает круг и запускает ритуал. Рецепты:
- *  • Благословенная звезда — в центре оружие +5 и выше (сгорает), по краям 8 обычных звёзд. Шанс 50% на +5, +15% за каждый плюс (с +9 — 100%).
+ *  • Благословенная звезда — в центре оружие +4 и выше (сгорает), по краям 4 обычные звезды. Шанс 35% на +4, +15% за каждый плюс (с +9 — 100%).
  *  • Ядро брони +N — в центре Медальон инея (или фильтр), по краям N звёзд (1–8); +9 — 7 обычных + 1 благословенная, +10 — 6 + 2.
  * Ритуал длится 2.5 с: предметы всплывают над пьедесталами и стягиваются к алтарю.
  */
@@ -79,7 +79,7 @@ public class InfusionMenu extends CivMenu {
 
     public static Kind kind(ItemStack c, List<ItemStack> e) {
         int normal = edges(e, ModRegistry.STAR_W1.get()), blessed = edges(e, ModRegistry.BLESSED_STAR_W1.get());
-        if (c.getItem() instanceof CivWeaponItem && Gear.stars(c) >= 5 && normal == 8) return Kind.BLESSED;
+        if (c.getItem() instanceof CivWeaponItem && Gear.stars(c) >= 4 && normal == 4 && blessed == 0 && e.stream().filter(s -> !s.isEmpty()).count() == 4) return Kind.BLESSED;   // бета 0.9.8: +4 и 4 звезды (было +5 и 8)
         if ((c.is(ModRegistry.FROZEN_LOCKET.get()) || c.is(ModRegistry.GAS_MASK_FILTER.get()) || c.is(ModRegistry.JADE_SEAL.get())) && coreLevel(e) > 0) return Kind.CORE;
         return Kind.NONE;
     }
@@ -91,7 +91,7 @@ public class InfusionMenu extends CivMenu {
     }
 
     /** Шанс благословенной звезды от заточки оружия. */
-    public static double chance(int stars) { return Math.min(1.0, 0.5 + 0.15 * (stars - 5)); }
+    public static double chance(int stars) { return Math.min(1.0, 0.5 + 0.15 * (stars - 5)); }   // +4 — 35%, +5 — 50%, … +9 — 100%
 
     @Override
     public boolean clickMenuButton(Player p, int id) {
@@ -122,7 +122,7 @@ public class InfusionMenu extends CivMenu {
             result = ok ? new ItemStack(ModRegistry.BLESSED_STAR_W1.get()) : ItemStack.EMPTY;
         } else {
             ok = true;
-            result = ArmorCoreItem.of(coreLvl);
+            result = ArmorCoreItem.of(coreLvl, ArmorCoreItem.tierOfCenter(center));
         }
         sp.closeContainer();
         ritual(sp, center, copies, result, ok, k);

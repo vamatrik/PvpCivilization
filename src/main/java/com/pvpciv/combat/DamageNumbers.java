@@ -11,28 +11,19 @@ import net.minecraft.world.entity.EntityType;
 
 /** Всплывающие цифры урона на базе text_display. */
 public final class DamageNumbers {
-    public static void show(ServerLevel lvl, Entity target, Component text) {
-        double x = target.getX() + (lvl.random.nextDouble() - 0.5) * 0.8;
-        double y = target.getY() + target.getBbHeight() + 0.2;
-        double z = target.getZ() + (lvl.random.nextDouble() - 0.5) * 0.8;
-        CompoundTag t = new CompoundTag();
-        t.putString("id", "minecraft:text_display");
-        ListTag pos = new ListTag();
-        pos.add(DoubleTag.valueOf(x)); pos.add(DoubleTag.valueOf(y)); pos.add(DoubleTag.valueOf(z));
-        t.put("Pos", pos);
-        t.putString("text", Component.Serializer.toJson(text, lvl.registryAccess()));
-        t.putString("billboard", "center");
-        t.putString("alignment", "center");
-        t.putInt("background", 0);
-        t.putBoolean("shadow", true);
-        t.putBoolean("see_through", true);
-        t.putInt("teleport_duration", 14);
-        Entity e = EntityType.loadEntityRecursive(t, lvl, en -> en);
-        if (e == null) return;
-        e.addTag("pvpciv_dmgnum");
-        CombatEvents.LIVE_NUMBERS.add(e.getUUID());
-        lvl.addFreshEntity(e);
-        GameEvents.later(lvl.getServer(), 1, () -> { if (e.isAlive()) e.teleportTo(x, y + 0.9, z); });
-        GameEvents.later(lvl.getServer(), 18, () -> { e.discard(); CombatEvents.LIVE_NUMBERS.remove(e.getUUID()); });
+    public static void show(ServerLevel lvl, Entity target, Component text) { show(lvl, target, text, 1f); }
+
+    public static void show(ServerLevel lvl, Entity target, Component text, float scale) {
+        // 0.10: цифры рисует клиент (вылетают над полоской здоровья) — сервер только сообщает, что и где
+        com.google.gson.JsonObject j = new com.google.gson.JsonObject();
+        j.addProperty("e", target.getId());
+        j.addProperty("t", text.getString());
+        var col = text.getStyle().getColor();
+        j.addProperty("c", col == null ? 0xFFFFFF : col.getValue());
+        j.addProperty("b", text.getStyle().isBold());
+        j.addProperty("s", scale);
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(target, new com.pvpciv.net.Network.PhoneData(15, j.toString()));
     }
+
+    private static ListTag fl(float... v) { ListTag l = new ListTag(); for (float f : v) l.add(net.minecraft.nbt.FloatTag.valueOf(f)); return l; }
 }

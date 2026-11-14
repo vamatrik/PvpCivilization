@@ -66,7 +66,15 @@ public final class Skin {
         boolean hv = enabled && hover(mx, my, x, y, w, 16);
         String s = !enabled ? "button_off" : ember ? (hv ? "button_ember_hover" : "button_ember") : (hv ? "button_hover" : "button");
         spr(g, s, x, y, w, 16);
-        g.drawCenteredString(f, label, x + w / 2, y + 4, enabled ? (hv ? 0xFFFFFFFF : 0xFFF4EAD8) : 0xFF6E6880);
+        int col = enabled ? (hv ? 0xFFFFFFFF : 0xFFF4EAD8) : 0xFF6E6880, tw = f.width(label);
+        if (tw > w - 4) {   // 0.10: длинная подпись — ужимаем, чтобы не вылезала за кнопку
+            float k = (w - 4) / (float) tw;
+            g.pose().pushPose();
+            g.pose().translate(x + w / 2f - tw * k / 2f, y + 4 + (1 - k) * 4, 0);
+            g.pose().scale(k, k, 1f);
+            g.drawString(f, label, 0, 0, col, true);
+            g.pose().popPose();
+        } else g.drawCenteredString(f, label, x + w / 2, y + 4, col);
         return hv;
     }
 

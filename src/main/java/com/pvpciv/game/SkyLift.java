@@ -4,6 +4,7 @@ import com.pvpciv.data.StoryData;
 import com.pvpciv.entity.CarmillaEntity;
 import com.pvpciv.entity.LunaGuideEntity;
 import com.pvpciv.entity.LiftCabin;
+import net.minecraft.core.BlockPos;
 import com.pvpciv.net.Network;
 import com.pvpciv.progress.Progress;
 import com.pvpciv.registry.ModRegistry;
@@ -33,11 +34,13 @@ import static com.pvpciv.game.DialogueManager.opt;
 public final class SkyLift {
     public static final int C = 0x9A5AE0;
     private static final Set<UUID> RIDING = new HashSet<>();
-    public static final String[] FLOORS = {"Нижний Шпиль", "Неоновый город", "Тихая библиотека", "???", "Луна"};
+    public static final String[] FLOORS = {"Нижний Шпиль", "Неоновый город", "Тихая библиотека", "НТЦ «NaZa»", "???"};
 
     /** Этаж 3 — когда пали оба босса этажа 2 (Дон и Крысиный король, их трофеи). */
     public static boolean f3Ok(StoryData d) { return d.liftOk && (d.trophies & 12) == 12 && (d.showcase & 12) == 12; }   // бета 0.9.6: и трофеи на витрине
-    public static int unlocked(StoryData d) { return !d.liftOk ? 0b1 : f3Ok(d) ? 0b111 : 0b11; }
+    /** 0.11: этаж 4 — когда пали братья-каппы и Кумихо (трофеи на витрине). */
+    public static boolean f4Ok(StoryData d) { return f3Ok(d) && (d.trophies & 48) == 48 && (d.showcase & 48) == 48; }
+    public static int unlocked(StoryData d) { return !d.liftOk ? 0b1 : f4Ok(d) ? 0b1111 : f3Ok(d) ? 0b111 : 0b11; }
 
     /** ПКМ по табло лифта. */
     private static final java.util.Map<UUID, Long> LAST = new java.util.HashMap<>();
@@ -50,6 +53,7 @@ public final class SkyLift {
         StoryData d = Progress.d(p);
         if (!d.liftOk && CivWorld.is(p.level()) && !CivWorld.isF2(p.level())) { summonLuna(p); return; }
         int cur = Math.max(1, CivWorld.floor(p.level()));
+        if (cur == 3 && !f4Ok(d)) p.displayClientMessage(Component.literal((d.trophies & 48) != 48 ? "Этаж 4 откроется, когда падут братья-каппы и Кумихо." : "Этаж 4: поставь трофеи капп и Кумихо на витрину в квартире.").withStyle(ChatFormatting.GRAY), true);
         if (cur == 2 && !f3Ok(d)) p.displayClientMessage(Component.literal((d.trophies & 12) != 12 ? "Этаж 3 откроется, когда падут Дон Витторио и Крысиный король." : "Этаж 3: поставь трофеи Дона и Крысиного короля на витрину в квартире.").withStyle(ChatFormatting.GRAY), true);
         PacketDistributor.sendToPlayer(p, new Network.OpenLift(unlocked(d), cur));
     }
@@ -137,9 +141,10 @@ public final class SkyLift {
             p.resetFallDistance();
             LiftCabin c2 = cabin(to, s);
             PacketDistributor.sendToPlayer(p, new Network.Cinematic(8, 120, title));   // 0.9.7: прибытие тоже от 3 лица
-            if (c2 == null) { arrive(p, floor); return; }
+            if (c2 == null) { arrive(p, floor, null); return; }
             p.startRiding(c2, true);
-            c2.start(path2, 110, false, true, cc -> arrive(p, floor));
+            Vec3 end = path2.get(path2.size() - 1);
+            c2.start(path2, 110, false, true, cc -> arrive(p, floor, end));
         });
     }
 
@@ -151,16 +156,29 @@ public final class SkyLift {
         return c;
     }
 
-    private static void arrive(ServerPlayer p, int floor) {
+    private static void arrive(ServerPlayer p, int floor, Vec3 cabinEnd) {
         RIDING.remove(p.getUUID());
         p.stopRiding();
         p.resetFallDistance();
-        Vec3 a = floor == 3 ? com.pvpciv.floor.Floor3.LIFT_ARRIVE : floor == 2 ? com.pvpciv.floor.Floor2.LIFT_ARRIVE : com.pvpciv.world.DormBuilder.LIFT_ARRIVE;
-        p.teleportTo(CivWorld.byFloor(p.server, floor), a.x, a.y, a.z, 0, 0);
+        Vec3 a = floor == 4 ? com.pvpciv.floor.Floor4.LIFT_ARRIVE : floor == 3 ? com.pvpciv.floor.Floor3.LIFT_ARRIVE : floor == 2 ? com.pvpciv.floor.Floor2.LIFT_ARRIVE : com.pvpciv.world.DormBuilder.LIFT_ARRIVE;
+        // бета 0.9.8: остаёмся там, где остановилась кабина (а не телепорт «перед лифтом», где могло зажать в блоках)
+        if (cabinEnd != null) {
+            ServerLevel tl = CivWorld.byFloor(p.server, floor);
+            Vec3 c = cabinEnd;
+            for (int i = 0; i < 4; i++) {
+                BlockPos fb = BlockPos.containing(c);
+                if (tl.getBlockState(fb).getCollisionShape(tl, fb).isEmpty() && tl.getBlockState(fb.above()).getCollisionShape(tl, fb.above()).isEmpty()) break;
+                c = c.add(0, 1, 0);
+            }
+            a = c;
+        }
+        p.teleportTo(CivWorld.byFloor(p.server, floor), a.x, a.y, a.z, p.getYRot(), 0);
         // бета 0.9.6: после схода с кабины игрока иногда сносило «под фонарь» — через 2 тика ставим на точку ещё раз
         final var lvl = CivWorld.byFloor(p.server, floor);
-        GameEvents.later(p.server, 2, () -> { if (p.level() == lvl && p.position().distanceTo(a) > 0.8 && p.position().distanceTo(a) < 6) p.teleportTo(lvl, a.x, a.y, a.z, 0, 0); });
+        final Vec3 fa = a;
+        GameEvents.later(p.server, 2, () -> { if (p.level() == lvl && p.position().distanceTo(fa) > 0.8 && p.position().distanceTo(fa) < 6) p.teleportTo(lvl, fa.x, fa.y, fa.z, p.getYRot(), 0); });
         if (floor == 3) com.pvpciv.game.Library.onArrive(p);
+        if (floor == 4) com.pvpciv.floor.Floor4.onArrive(p);
         p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1f, 1.4f);
     }
 }
