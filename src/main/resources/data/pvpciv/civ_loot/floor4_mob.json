@@ -67,6 +67,10 @@
   {
    "item": "pvpciv:blood_star_w1",
    "chance": 0.006
+  },
+  {
+   "item": "pvpciv:nano_pocket",
+   "chance": 0.003
   }
  ]
 }

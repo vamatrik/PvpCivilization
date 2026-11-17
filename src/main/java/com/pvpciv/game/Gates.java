@@ -87,7 +87,20 @@ public final class Gates {
             new Gate("g_kumiho", "Деревня Кумихо", "Конец Каменного пути. Лисы чинят врата только за мех.", 3, "neon",
                     () -> com.pvpciv.floor.Floor3Areas.KV.offset(com.pvpciv.floor.Floor3Areas.KV_R - 10, 0, -6), 140, new Cost(() -> ModRegistry.FOX_FUR.get(), 8), new Cost(() -> ModRegistry.FOXFIRE.get(), 1)),
             new Gate("g_shrine", "Святилище", "У алых колонн святилища девяти хвостов.", 3, "neon",
-                    () -> com.pvpciv.floor.Floor3Areas.KUMIHO_SHRINE.offset(17, 0, 0), 180, new Cost(() -> ModRegistry.FOXFIRE.get(), 2), new Cost(() -> ModRegistry.FOX_FUR.get(), 10))
+                    () -> com.pvpciv.floor.Floor3Areas.KUMIHO_SHRINE.offset(17, 0, 0), 180, new Cost(() -> ModRegistry.FOXFIRE.get(), 2), new Cost(() -> ModRegistry.FOX_FUR.get(), 10)),
+            // 0.11.1: этаж 4 — НТЦ «NaZa»
+            new Gate("g_naza", "Вестибюль NaZa", "Хаб корпорации: лифт, Чарователь Аурелий, Стелла.", 4, "neon",
+                    () -> new BlockPos(-8, com.pvpciv.floor.Floor4.Y, 8), 120, new Cost(() -> com.pvpciv.registry.ModF4.NANO_SCRAP.get(), 6), new Cost(() -> com.pvpciv.registry.ModF4.BIOGEL.get(), 4)),
+            new Gate("g_green", "Оранжерея", "Северный купол. Ботаники не любят гостей.", 4, "ash",
+                    () -> com.pvpciv.floor.Floor4.GREEN.offset(0, 0, 24), 150, new Cost(() -> com.pvpciv.registry.ModF4.BIOGEL.get(), 8), new Cost(() -> com.pvpciv.registry.ModF4.LAZURATRON.get(), 4)),
+            new Gate("g_cryo", "Криолаборатория", "Восточный купол. Образцы оттаивают.", 4, "ice",
+                    () -> com.pvpciv.floor.Floor4.CRYO.offset(-24, 0, 0), 180, new Cost(() -> com.pvpciv.registry.ModF4.CRYO_SHARD.get(), 8), new Cost(() -> com.pvpciv.registry.ModF4.NANO_SCRAP.get(), 6)),
+            new Gate("g_reactor", "Реактор", "Южный купол. Турели, роботы и очень тёплый пол.", 4, "ash",
+                    () -> com.pvpciv.floor.Floor4.REACTOR.offset(0, 0, -24), 220, new Cost(() -> com.pvpciv.registry.ModF4.NANO_SCRAP.get(), 10), new Cost(() -> com.pvpciv.registry.ModF4.QUANTUM_CHIP.get(), 1)),
+            new Gate("g_ark", "«Ковчег»", "Западный купол. Арена доктора Ноэля.", 4, "neon",
+                    () -> com.pvpciv.floor.Floor4.ARK.offset(24, 0, 0), 260, new Cost(() -> com.pvpciv.registry.ModF4.PLASMA_CELL.get(), 1), new Cost(() -> com.pvpciv.registry.ModF4.LAZURATRON.get(), 10)),
+            new Gate("g_cosmo", "Космодром", "Площадка с ракетой «Заря-5». Ракета сломана… пока.", 4, "neon",
+                    () -> com.pvpciv.floor.Floor4.COSMO.offset(-8, 0, -24), 200, new Cost(() -> com.pvpciv.registry.ModF4.NANO_SCRAP.get(), 8), new Cost(() -> com.pvpciv.registry.ModF4.CRYO_SHARD.get(), 6))
     );
 
     public static Gate byId(String id) { for (Gate g : ALL) if (g.id.equals(id)) return g; return null; }
@@ -102,9 +115,10 @@ public final class Gates {
     /** Уровень домашних врат: 1 — только этаж 1; +1 этаж за улучшение. */
     public static int home(StoryData d) { return Math.max(1, d.homeGate); }
 
-    public static final int[] HOME_UP_MONEY = {0, 0, 800, 2000};
+    public static final int[] HOME_UP_MONEY = {0, 0, 800, 2000, 4500};
     public static final Cost[][] HOME_UP = {{}, {}, {new Cost(() -> ModRegistry.NEON_TUBE.get(), 6), new Cost(() -> ModRegistry.GOLD_CHAIN.get(), 3), new Cost(() -> ModRegistry.RUBBER_SCRAP.get(), 3)},
-            {new Cost(() -> ModRegistry.SILK_SCRAP.get(), 8), new Cost(() -> ModRegistry.FOX_FUR.get(), 8), new Cost(() -> ModRegistry.JADE_SEAL.get(), 1)}};   // бета 0.9.8: ур.3 — ресурсами этажа 3
+            {new Cost(() -> ModRegistry.SILK_SCRAP.get(), 8), new Cost(() -> ModRegistry.FOX_FUR.get(), 8), new Cost(() -> ModRegistry.JADE_SEAL.get(), 1)},
+            {new Cost(() -> com.pvpciv.registry.ModF4.NANO_SCRAP.get(), 12), new Cost(() -> com.pvpciv.registry.ModF4.LAZURATRON.get(), 12), new Cost(() -> com.pvpciv.registry.ModF4.QUANTUM_CHIP.get(), 1)}};   // 0.11.1: ур.4   // бета 0.9.8: ур.3 — ресурсами этажа 3
 
     // ------------------------------------------------------------------ мир
     private static ServerLevel lvl(MinecraftServer s, int floor) { return CivWorld.byFloor(s, floor); }
@@ -292,6 +306,7 @@ public final class Gates {
         j.addProperty("home", home(d));
         j.addProperty("lift", d.liftOk);
         j.addProperty("lift3", SkyLift.f3Ok(d));
+        j.addProperty("lift4", SkyLift.f4Ok(d));
         j.addProperty("money", d.money);
         j.addProperty("cd", Math.max(0, (CD.getOrDefault(p.getUUID(), 0L) - System.currentTimeMillis()) / 1000));
         com.google.gson.JsonObject st = new com.google.gson.JsonObject();
@@ -303,7 +318,7 @@ public final class Gates {
     /** Список починенных — клиенту для анимации врат. */
     public static void sync(ServerPlayer p) {
         StoryData d = Progress.d(p);
-        for (int f = 1; f <= 3; f++) {   // 0.10.2: титул за все врата этажа — и тем, кто починил раньше
+        for (int f = 1; f <= 4; f++) {   // 0.10.2: титул за все врата этажа — и тем, кто починил раньше
             boolean all = true, any = false;
             for (Gate o : ALL) if (o.floor == f) { any = true; if (!fixed(d, o.id)) { all = false; break; } }
             if (any && all && !d.titles.contains("gates_" + f)) com.pvpciv.progress.Titles.grant(p, "gates_" + f);
@@ -324,7 +339,7 @@ public final class Gates {
         if (!to.equals("home")) {
             Gate g = byId(to);
             if (g == null || !fixed(d, to)) { msg(p, "Эти врата ещё не починены.", ChatFormatting.RED); return; }
-            if (from.equals("home") ? g.floor > home(d) || (g.floor == 2 && !d.liftOk) || (g.floor == 3 && !SkyLift.f3Ok(d)) : byId(from) == null || byId(from).floor != g.floor) {
+            if (from.equals("home") ? g.floor > home(d) || (g.floor == 2 && !d.liftOk) || (g.floor == 3 && !SkyLift.f3Ok(d)) || (g.floor == 4 && !SkyLift.f4Ok(d)) : byId(from) == null || byId(from).floor != g.floor) {
                 msg(p, from.equals("home") ? "Врата общежития пока не достают до этого этажа — улучши их." : "С этих врат — только по своему этажу и домой.", ChatFormatting.RED);
                 return;
             }

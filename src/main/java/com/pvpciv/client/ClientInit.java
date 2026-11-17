@@ -26,6 +26,21 @@ public final class ClientInit {
     public static void init(IEventBus modBus) {
         modBus.addListener((RegisterKeyMappingsEvent e) -> { e.register(DASH); e.register(SKILL2); e.register(SKILL3); e.register(PHONE); });
         modBus.addListener((net.neoforged.neoforge.client.event.ModelEvent.RegisterAdditional e) -> e.register(StashRenderer.LID));
+        // 0.12: космическое небо этажа 5
+        modBus.addListener((net.neoforged.neoforge.client.event.RegisterDimensionSpecialEffectsEvent e) -> e.register(SpaceSky.ID, new SpaceSky()));
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.ViewportEvent.ComputeFogColor e) -> {
+            var l = net.minecraft.client.Minecraft.getInstance().level;
+            if (l != null && l.dimensionType().effectsLocation().equals(SpaceSky.ID)) { e.setRed(0.01f); e.setGreen(0.01f); e.setBlue(0.03f); }
+        });
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.ViewportEvent.RenderFog e) -> {
+            var l = net.minecraft.client.Minecraft.getInstance().level;
+            if (l != null && l.dimensionType().effectsLocation().equals(SpaceSky.ID) && e.getMode() == net.minecraft.client.renderer.FogRenderer.FogMode.FOG_TERRAIN) {
+                e.setNearPlaneDistance(e.getFarPlaneDistance() * 0.9f); e.setCanceled(true);
+            }
+        });
+        // 0.11.1: ванильные «тёмные сердечки» урона (их число растёт с уроном — при тысячах урона экран тонул в сердцах) отключены: урон и так видно цифрами
+        modBus.addListener(net.neoforged.bus.api.EventPriority.LOWEST, (net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent e) ->
+                e.registerSpecial(net.minecraft.core.particles.ParticleTypes.DAMAGE_INDICATOR, (t, l, x, y, z, dx, dy, dz) -> null));
         modBus.addListener((net.neoforged.fml.event.lifecycle.FMLClientSetupEvent e) -> e.enqueueWork(() -> {
             for (var h : ModRegistry.ITEMS.getEntries())
                 if (h.get() instanceof com.pvpciv.item.CivWeaponItem)
@@ -48,6 +63,7 @@ public final class ClientInit {
             e.registerEntityRenderer(ModRegistry.CHEF.get(), GeoNpcRenderer::new);
             e.registerEntityRenderer(ModRegistry.ENCHANTER.get(), GeoNpcRenderer::new);
             e.registerEntityRenderer(ModRegistry.STELLA.get(), GeoNpcRenderer::new);
+            e.registerEntityRenderer(ModRegistry.LUNA_STATION.get(), GeoNpcRenderer::new);
             e.registerEntityRenderer(ModRegistry.ASSASSIN.get(), GeoNpcRenderer::new);
             e.registerEntityRenderer(ModRegistry.SMUGGLER.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/smuggler.png")));
             e.registerEntityRenderer(ModRegistry.CARMILLA.get(), GeoNpcRenderer::new);
@@ -91,12 +107,15 @@ public final class ClientInit {
             e.register(ModRegistry.TRADER_MENU.get(), com.pvpciv.client.screen.TraderScreen::new);
         });
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.RenderLivingEvent.Post<?, ?> e) -> MobBars.onRender(e));
-        NeoForge.EVENT_BUS.addListener(Lines::render);   // 0.10: лазеры и трассеры
+        NeoForge.EVENT_BUS.addListener(Lines::render);
+        NeoForge.EVENT_BUS.addListener(EnchModulesRenderer::render);
+        NeoForge.EVENT_BUS.addListener(Cutscene::camera);   // 0.12: кат-сцены (ракета)
+        NeoForge.EVENT_BUS.addListener(Cutscene::fov);   // 1.0: отъезд камеры (червь)
         // 0.10.7: в паре ванильная шкала удара под прицелом скрыта — вместо неё своя (Hud.nextHitBar), прицел рисуем сами
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.RenderGuiLayerEvent.Pre e) -> {
             if (!e.getName().equals(net.neoforged.neoforge.client.gui.VanillaGuiLayers.CROSSHAIR)) return;
             Minecraft mc = Minecraft.getInstance();
-            if (mc.player == null || !ClientCombat.isDual(mc.player) || mc.options.attackIndicator().get() != net.minecraft.client.AttackIndicatorStatus.CROSSHAIR) return;
+            if (mc.player == null || !ClientCombat.armed(mc.player) || mc.options.attackIndicator().get() != net.minecraft.client.AttackIndicatorStatus.CROSSHAIR) return;
             if (!mc.options.getCameraType().isFirstPerson() || mc.options.hideGui) return;
             e.setCanceled(true);
             var g = e.getGuiGraphics();

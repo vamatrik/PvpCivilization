@@ -84,13 +84,25 @@ public final class ClientPayloads {
             }
             case 7 -> mc.setScreen(new com.pvpciv.client.screen.GateScreen(j));
             case 9 -> mc.setScreen(new com.pvpciv.client.screen.AlmanacScreen(j));
+            case 22 -> Cutscene.start(j.get("cut").getAsString(), j.get("len").getAsInt());   // 0.12: кат-сцены
+            case 21 -> {   // 0.11.2: только гнёзда модулей (без открытия экрана)
+                var a = j.getAsJsonArray("mods");
+                for (int i = 0; i < 8 && i < a.size(); i++) EnchModulesRenderer.MODS[i] = a.get(i).getAsInt();
+            }
             case 19 -> {   // 0.11: молекулярный стол
                 ClientState.ench = j;
+                if (j.has("mods")) { var a = j.getAsJsonArray("mods"); for (int i = 0; i < 8 && i < a.size(); i++) EnchModulesRenderer.MODS[i] = a.get(i).getAsInt(); }
                 if (!(mc.screen instanceof com.pvpciv.client.screen.EnchantScreen)) mc.setScreen(new com.pvpciv.client.screen.EnchantScreen());
             }
             case 20 -> {   // 0.11: проглочен Лианой
                 ClientState.grabOn = j.get("on").getAsBoolean();
                 if (ClientState.grabOn) { ClientState.grabBar = j.get("bar").getAsFloat(); ClientState.grabT = j.get("t").getAsInt(); }
+            }
+            case 23 -> {   // 1.0: классы
+                ClientState.classes = j;
+                ClientState.dancer = false;
+                for (var el : j.getAsJsonArray("nodes")) { var o = el.getAsJsonObject(); if (o.get("id").getAsString().equals("a_dancer") && o.get("have").getAsBoolean()) ClientState.dancer = true; }
+                if (j.get("open").getAsBoolean() || mc.screen instanceof com.pvpciv.client.screen.ClassScreen) mc.setScreen(new com.pvpciv.client.screen.ClassScreen());
             }
             case 18 -> {   // навыки
                 var sel = j.getAsJsonArray("sel");

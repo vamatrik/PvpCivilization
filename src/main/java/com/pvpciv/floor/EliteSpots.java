@@ -76,7 +76,7 @@ public final class EliteSpots {
 
     /** Элитный моб с точки убит — запомнить время возрождения. */
     public static void onDeath(Mob m) {
-        for (Spot s : java.util.stream.Stream.of(SPOTS.stream(), Floor2.ELITES.stream(), Floor3Areas.ELITES.stream(), Floor4.ELITES.stream()).flatMap(x -> x).toList()) if (m.getTags().contains(tag(s)))
+        for (Spot s : java.util.stream.Stream.of(SPOTS.stream(), Floor2.ELITES.stream(), Floor3Areas.ELITES.stream(), Floor4.ELITES.stream(), Floor5.ELITES.stream()).flatMap(x -> x).toList()) if (m.getTags().contains(tag(s)))
             RESPAWN.put(s.id(), m.level().getGameTime() + 20L * (180 + m.getRandom().nextInt(121)));
     }
 
@@ -85,6 +85,7 @@ public final class EliteSpots {
         tick(server, CivWorld.f2(server), Floor2.ELITES);
         if (CivWorld.isF3(CivWorld.f3(server))) tick(server, CivWorld.f3(server), Floor3Areas.ELITES);
         if (CivWorld.isF4(CivWorld.f4(server))) tick(server, CivWorld.f4(server), Floor4.ELITES);
+        if (CivWorld.isF5(CivWorld.f5(server))) tick(server, CivWorld.f5(server), Floor5.ELITES);
         bossHolograms(server);
     }
 
@@ -117,16 +118,16 @@ public final class EliteSpots {
 
     private static void bossHolograms(MinecraftServer server) {
         for (BossManager.Def bd : BossManager.DEFS) {
-            ServerLevel lvl = BossManager.f4(bd) ? CivWorld.f4(server) : BossManager.f3(bd) ? CivWorld.f3(server) : bd.f2() ? CivWorld.f2(server) : CivWorld.level(server);
+            ServerLevel lvl = BossManager.f5(bd) ? CivWorld.f5(server) : BossManager.f4(bd) ? CivWorld.f4(server) : BossManager.f3(bd) ? CivWorld.f3(server) : bd.f2() ? CivWorld.f2(server) : CivWorld.level(server);
             int bs = BossManager.secondsLeft(server, bd.id());
             Vec3 lair = Vec3.atBottomCenterOf(bd.lair().get()).add(0, 4, 0);
             boolean nearLair = false;
             for (ServerPlayer p : lvl.players()) if (p.position().distanceTo(lair) < 80) nearLair = true;
             int col = bd == BossManager.KEEPER ? 0x7FD8FF : 0xFF5566;
-            String woke = bd == BossManager.KEEPER ? "просыпается…" : "просыпается…";
+            String woke = "алтарь горит — ПКМ, чтобы разбудить";
             if (nearLair) hologram(lvl, "holo_" + bd.id(), lair, bs < 0 ? null
                     : Component.literal("☠ " + bd.name() + "  ур. " + bd.level() + "\n").withStyle(x -> x.withColor(col).withBold(true))
-                    .append(Component.literal(bs == 0 ? woke : String.format("проснётся через %d:%02d", bs / 60, bs % 60)).withStyle(x -> x.withColor(0xE8ECF4).withBold(false))));
+                    .append(Component.literal(bs == 0 ? woke : String.format("алтарь оживёт через %d:%02d", bs / 60, bs % 60)).withStyle(x -> x.withColor(0xE8ECF4).withBold(false))));
         }
     }
 

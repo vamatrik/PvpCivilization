@@ -44,7 +44,13 @@ public final class Mobs {
         ROBOT(() -> com.pvpciv.registry.ModMobs.ROBOT.get(), "Робот-техник", "floor4_mob", 20),
         TURRET(() -> com.pvpciv.registry.ModMobs.TURRET.get(), "Турель", "floor4_mob", 21),
         CHIMERA(() -> com.pvpciv.registry.ModMobs.CHIMERA.get(), "Химера", "floor4b_mob", 23),
-        LAB_TECH(() -> com.pvpciv.registry.ModMobs.LAB_TECH.get(), "Лаборант с плазмаганом", "floor4b_mob", 22);
+        LAB_TECH(() -> com.pvpciv.registry.ModMobs.LAB_TECH.get(), "Лаборант с плазмаганом", "floor4b_mob", 22),
+        VOID_CRAWLER(() -> com.pvpciv.registry.ModMobs.VOID_CRAWLER.get(), "Пустотный ползун", "floor5_mob", 24),
+        ROGUE_ASTRO(() -> com.pvpciv.registry.ModMobs.ROGUE_ASTRO.get(), "Сорвавшийся космонавт", "floor5_mob", 25),
+        ANDROID(() -> com.pvpciv.registry.ModMobs.ANDROID.get(), "Андроид охраны", "floor5_mob", 26),
+        XENO(() -> com.pvpciv.registry.ModMobs.XENO.get(), "Ксеноморф", "floor5_mob", 27),
+        DRONE(() -> com.pvpciv.registry.ModMobs.DRONE.get(), "Ремонтный дрон", "floor5_mob", 28),
+        COLLECTOR(() -> com.pvpciv.registry.ModMobs.COLLECTOR.get(), "Коллектор долгов", "floor5_mob", 29);
         private final java.util.function.Supplier<? extends EntityType<? extends Mob>> type;
         public final String title, loot; public final int defLevel;
         Kind(java.util.function.Supplier<? extends EntityType<? extends Mob>> t, String n, String loot, int lvl) { type = t; title = n; this.loot = loot; defLevel = lvl; }
@@ -113,6 +119,11 @@ public final class Mobs {
             case BOTANIST -> m.setItemSlot(EquipmentSlot.MAINHAND, prop(Items.IRON_HOE));
             case ROBOT -> { m.setItemSlot(EquipmentSlot.MAINHAND, prop(com.pvpciv.registry.ModF4.GRAVITY_HAMMER.get())); set(m, Attributes.SCALE, 1.1); }
             case CHIMERA -> set(m, Attributes.SCALE, 1.2);
+            case ANDROID -> m.setItemSlot(EquipmentSlot.MAINHAND, prop(ModRegistry.RIFLE.get()));
+            case XENO -> set(m, Attributes.SCALE, 1.15);
+            case ROGUE_ASTRO -> m.setItemSlot(EquipmentSlot.MAINHAND, prop(Items.IRON_SHOVEL));
+            case COLLECTOR -> m.setItemSlot(EquipmentSlot.MAINHAND, prop(Items.BOOK));
+            case DRONE -> m.setNoGravity(true);
             case TURRET -> m.setNoGravity(false);
             default -> {}
         }

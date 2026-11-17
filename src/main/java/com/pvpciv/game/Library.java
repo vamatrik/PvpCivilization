@@ -291,6 +291,7 @@ public final class Library {
         TABLE_NAMES.put("floor2b_boss_personal", "Крысиный король"); TABLE_NAMES.put("floor2b_boss_ground", "Король (на земле)");
         TABLE_NAMES.put("floor3_mob", "мобы деревни самураев"); TABLE_NAMES.put("floor3_elite", "элитки деревни"); TABLE_NAMES.put("floor3_stash", "тайники деревни самураев");
         TABLE_NAMES.put("floor3_boss_personal", "Братья-каппы"); TABLE_NAMES.put("floor3b_mob", "мобы деревни Кумихо"); TABLE_NAMES.put("floor3b_elite", "элитки Кумихо");
+        TABLE_NAMES.put("floor5_mob", "мобы станции «Орбита»"); TABLE_NAMES.put("floor5_elite", "элитки «Орбиты»"); TABLE_NAMES.put("floor5_stash", "тайники «Орбиты»");
         TABLE_NAMES.put("floor4_mob", "мобы НТЦ NaZa"); TABLE_NAMES.put("floor4_elite", "элитки NaZa"); TABLE_NAMES.put("floor4b_mob", "мобы «Ковчега»"); TABLE_NAMES.put("floor4b_elite", "элитки «Ковчега»");
         TABLE_NAMES.put("floor4_stash", "тайники NaZa"); TABLE_NAMES.put("floor4_boss_personal", "Ноэль и Лиана"); TABLE_NAMES.put("floor4_boss_ground", "Ноэль (на земле)");
         TABLE_NAMES.put("floor3b_stash", "тайники деревни Кумихо"); TABLE_NAMES.put("floor3b_boss_personal", "Кумихо");

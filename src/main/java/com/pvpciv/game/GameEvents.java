@@ -60,6 +60,19 @@ public final class GameEvents {
         bus.addListener(GameEvents::onAttack);
         bus.addListener(GameEvents::onBoatTick);
         bus.addListener(BossManager::onDeath);
+        // 1.0: смерть на арене испытаний Луны — не смерть
+        bus.addListener(net.neoforged.bus.api.EventPriority.HIGHEST, (net.neoforged.neoforge.event.entity.living.LivingDeathEvent e) -> {
+            if (!(e.getEntity() instanceof ServerPlayer p) || p.level().isClientSide) return;
+            if (LunaTrial.onPlayerDeath(p)) e.setCanceled(true);
+            else if (VoidRift.inRift(p)) VoidRift.onPlayerDeath(p);
+        });
+        // 1.0: «Аудит» Дипломата — 6 с без зелий, еды и торговли
+        bus.addListener((net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem e) -> {
+            if (e.getEntity() instanceof ServerPlayer p && com.pvpciv.entity.boss.DiplomatBoss.audited(p)) {
+                e.setCanceled(true);
+                p.displayClientMessage(net.minecraft.network.chat.Component.literal("АУДИТ: кошелёк и запасы заморожены").withStyle(net.minecraft.ChatFormatting.AQUA), true);
+            }
+        });
         bus.addListener(GameEvents::onPickup);
         bus.addListener(GameEvents::onEntityJoin);
         bus.addListener(GameEvents::onRightClickBlock);
@@ -151,7 +164,13 @@ public final class GameEvents {
         if (ticks % 20 == 7) for (ServerPlayer p : server.getPlayerList().getPlayers()) { FoodApp.tick(p); Gates.tick(p); }
         if (ticks % 40 == 11) for (ServerPlayer p : server.getPlayerList().getPlayers()) Library.tick(p);
         if (ticks % 20 == 13) for (ServerPlayer p : server.getPlayerList().getPlayers()) Assassin.setBonus(p);
+        if (ticks % 5 == 2) for (ServerPlayer p : server.getPlayerList().getPlayers()) com.pvpciv.inv.InvLock.tick(p);   // 0.11.1
         for (ServerPlayer p : server.getPlayerList().getPlayers()) Enchanting.tick(p);
+        Rocket.tick(server);   // 0.12
+        Classes.tick(server);   // 1.0
+        LunaTrial.tick(server);
+        VoidRift.tick(server);
+        com.pvpciv.floor.Belt.tick(server);
         if (ticks % 100 == 41) Gates.ensure(server);
         if (ticks % 100 == 0) {
             LunaEntity.ensure(server); TraderEntity.ensure(server);
@@ -162,6 +181,7 @@ public final class GameEvents {
             com.pvpciv.world.Monorail.ensure4(server);
             Library.ensure(server);
             com.pvpciv.floor.Floor4.ensureNpcs(server);
+            com.pvpciv.floor.Floor5.ensureNpcs(server);
             com.pvpciv.world.Signposts.ensure(server);   // 0.10: дорожные указатели
         }
         com.pvpciv.world.IceTrack.tick(server);
@@ -176,7 +196,11 @@ public final class GameEvents {
         if (st.getItem() instanceof com.pvpciv.item.SparkItem) return;
         int before = st.getCount();
         ItemStack rest = com.pvpciv.inv.Bag.insert(p, st.copy());
-        if (rest.getCount() == before) return;
+        if (rest.getCount() == before) {   // 0.11.1: сумка полна — предмет остаётся лежать (раньше уходил в ванильные строки)
+            e.setCanPickup(net.neoforged.neoforge.common.util.TriState.FALSE);
+            if (p.tickCount % 40 == 0) p.displayClientMessage(Component.literal("Сумка полна").withStyle(ChatFormatting.RED), true);
+            return;
+        }
         p.take(ie, before - rest.getCount());
         if (rest.isEmpty()) {
             ie.discard();
@@ -208,6 +232,13 @@ public final class GameEvents {
         if (!(e.getEntity() instanceof ServerPlayer p) || e.getHand() != net.minecraft.world.InteractionHand.MAIN_HAND) return;
         if (!com.pvpciv.world.CivWorld.is(p.level())) return;
         net.minecraft.core.BlockPos pos = e.getPos();
+        if (Rocket.onUse(p, pos)) { e.setCanceled(true); return; }   // 0.12: ракета «Заря-5»
+        if (com.pvpciv.floor.Belt.onUse(p, pos)) { e.setCanceled(true); return; }   // 1.0: шлюз к поясу астероидов
+        if (SkyLift.onF5Console(p, pos)) { e.setCanceled(true); return; }   // 1.0: лифт станции (ремонт адским следом)
+        if (p.level().getBlockState(pos).is(net.minecraft.world.level.block.Blocks.RESPAWN_ANCHOR) && com.pvpciv.floor.BossManager.onAltarUse(p, pos)) {
+            e.setCanceled(true);   // 0.11.2: алтарь босса (ванильный якорь вне Незера ещё и взрывается — не даём)
+            return;
+        }
         if (pos.equals(DormBuilder.LUNA_DIARY)) {
             e.setCanceled(true);
             if (!DialogueManager.inDialogue(p)) DialogueManager.open(p, null, Dialogues.lunaDiary(p));
@@ -268,6 +299,7 @@ public final class GameEvents {
 
     private static void onToss(ItemTossEvent e) {
         ItemStack st = e.getEntity().getItem();
+        if (com.pvpciv.inv.InvLock.isPlug(st)) { e.setCanceled(true); return; }
         if (st.is(ModRegistry.KEY_CARD.get()) || st.getItem() instanceof BoatSummonItem) {
             e.setCanceled(true);
             e.getPlayer().getInventory().add(st.copy());
@@ -325,6 +357,9 @@ public final class GameEvents {
                             if (!l.isEmpty()) l.get(0).forceGrab(pl);
                             return l.size(); }))
                         .then(Commands.literal("full4").executes(c -> AdminKit.full4(c.getSource().getPlayerOrException(), c.getSource())))
+                        .then(Commands.literal("rift").then(Commands.argument("mana", com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, 100)).executes(c -> { VoidRift.setMana(c.getSource().getPlayerOrException(), com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "mana")); return 1; })))
+                        .then(Commands.literal("clearbag").executes(c -> { var h = com.pvpciv.inv.Bag.get(c.getSource().getPlayerOrException()); for (int i = 0; i < h.getSlots(); i++) h.setStackInSlot(i, net.minecraft.world.item.ItemStack.EMPTY); return 1; }))
+                        .then(Commands.literal("matter").executes(c -> { var p = c.getSource().getPlayerOrException(); com.pvpciv.inv.Bag.give(p, new net.minecraft.world.item.ItemStack(com.pvpciv.registry.ModF5.DARK_MATTER.get(), 9)); com.pvpciv.inv.Bag.give(p, new net.minecraft.world.item.ItemStack(com.pvpciv.registry.ModF5.DARK_STAR.get(), 2)); com.pvpciv.inv.Bag.give(p, new net.minecraft.world.item.ItemStack(com.pvpciv.registry.ModF5.HELL_TRAIL.get(), 1)); return 1; }))
                         .then(Commands.literal("back").executes(c -> AdminKit.back(c.getSource().getPlayerOrException(), c.getSource())))
                         .then(Commands.literal("resetgates").executes(c -> AdminKit.resetGates(c.getSource().getPlayerOrException(), c.getSource()))))
                 .then(Commands.literal("home").executes(c -> {

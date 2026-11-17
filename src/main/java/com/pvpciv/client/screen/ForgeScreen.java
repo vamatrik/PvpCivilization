@@ -52,7 +52,8 @@ public class ForgeScreen extends CivScreen<ForgeMenu> {
         ItemStack w = menu.box.getItem(0), star = menu.box.getItem(1);
         boolean weapon = w.getItem() instanceof CivWeaponItem;
         int s = Gear.stars(w);
-        boolean maxed = weapon && s >= Gear.MAX_STARS;
+        boolean darkStar = star.is(com.pvpciv.registry.ModF5.DARK_STAR.get());
+        boolean maxed = weapon && (s > Gear.MAX_STARS || (s == Gear.MAX_STARS && !darkStar));
         boolean ritual = menu.progress() > 0;
         // сцена
         Skin.inset(g, x + 10, y + 24, 152, 70);
@@ -79,7 +80,7 @@ public class ForgeScreen extends CivScreen<ForgeMenu> {
             Rarity r = Gear.rarity(w).ordinal() < cw.minRarity.ordinal() ? cw.minRarity : Gear.rarity(w);
             g.drawString(font, Skin.fit(font, w.getHoverName().getString(), 140), x + 16, y + 103, 0xFF000000 | r.color, true);
             Skin.stars(g, font, x + 16, y + 114, s, 0xFF000000 | Gear.starColor(Math.max(1, s)));
-            if (maxed) g.drawString(font, "Предел: +10", x + 16, y + 126, Skin.BAD, false);
+            if (maxed) g.drawString(font, s > Gear.MAX_STARS ? "Предел: +11" : "+10 · дальше — тёмная звезда", x + 16, y + 126, Skin.BAD, false);
             else {
                 double now = CivWeaponItem.damage(cw.tierValue(), cw.cls, r, s), next = CivWeaponItem.damage(cw.tierValue(), cw.cls, r, s + 1);
                 String a = String.format("Урон %.1f", now);

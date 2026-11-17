@@ -16,7 +16,7 @@ public final class CivWorld {
         return l != null ? l : server.overworld();
     }
 
-    public static boolean is(Level level) { return level.dimension() == WORLD1 || level.dimension() == F2 || level.dimension() == F3 || level.dimension() == F4; }
+    public static boolean is(Level level) { return level.dimension() == WORLD1 || level.dimension() == F2 || level.dimension() == F3 || level.dimension() == F4 || level.dimension() == F5; }
 
     /** Этаж 2 мира 1 — отдельное измерение (небо над этажом 1). */
     public static final ResourceKey<Level> F2 = ResourceKey.create(Registries.DIMENSION, PvpCiv.id("world1_f2"));
@@ -40,7 +40,15 @@ public final class CivWorld {
         return l != null ? l : level(server);
     }
     public static boolean isF4(Level level) { return level.dimension() == F4; }
+
+    /** 0.12: этаж 5 — орбитальная станция (тип измерения pvpciv:space — своё небо). */
+    public static final ResourceKey<Level> F5 = ResourceKey.create(Registries.DIMENSION, PvpCiv.id("world1_f5"));
+    public static ServerLevel f5(MinecraftServer server) {
+        ServerLevel l = server.getLevel(F5);
+        return l != null ? l : level(server);
+    }
+    public static boolean isF5(Level level) { return level.dimension() == F5; }
     /** Номер этажа мира 1 (0 — не мир цивилизации). */
-    public static int floor(Level level) { return isF4(level) ? 4 : isF3(level) ? 3 : isF2(level) ? 2 : level.dimension() == WORLD1 ? 1 : 0; }
-    public static ServerLevel byFloor(MinecraftServer s, int floor) { return floor == 4 ? f4(s) : floor == 3 ? f3(s) : floor == 2 ? f2(s) : level(s); }
+    public static int floor(Level level) { return isF5(level) ? 5 : isF4(level) ? 4 : isF3(level) ? 3 : isF2(level) ? 2 : level.dimension() == WORLD1 ? 1 : 0; }
+    public static ServerLevel byFloor(MinecraftServer s, int floor) { return floor == 5 ? f5(s) : floor == 4 ? f4(s) : floor == 3 ? f3(s) : floor == 2 ? f2(s) : level(s); }
 }

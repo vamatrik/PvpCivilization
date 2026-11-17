@@ -288,6 +288,96 @@ public final class Mob3DParts {
         return l;
     }
 
+    // ================================================================ 0.12: этаж 5 — станция «Орбита»
+    /** Андроид охраны: гладкий белый корпус, голубая полоса-визор, ядро в груди. 0 — белый, 1 — голубое свечение, 2 — графит, 3 — светлая сталь. */
+    public static List<Mob3DLayer.Cube> android() {
+        List<Mob3DLayer.Cube> l = new ArrayList<>();
+        l.add(c(HEAD, 0, -4.4f, -8.6f, -4.4f, 8.8f, 8.6f, 8.8f));
+        l.add(c(HEAD, 1, -4.6f, -5.6f, -4.65f, 9.2f, 1.2f, 0.5f));
+        l.add(c(HEAD, 2, -1.6f, -2.4f, -4.6f, 3.2f, 1.2f, 0.4f));
+        l.add(c(HEAD, 3, -4.8f, -6.4f, -1.2f, 0.6f, 2.4f, 2.4f));
+        l.add(c(HEAD, 3, 4.2f, -6.4f, -1.2f, 0.6f, 2.4f, 2.4f));
+        l.add(c(BODY, 0, -4.5f, 0.2f, -2.6f, 9, 8.5f, 5.2f));
+        l.add(c(BODY, 1, -1.3f, 2.6f, -2.85f, 2.6f, 2.6f, 0.4f));
+        l.add(c(BODY, 2, -4.6f, 8.8f, -2.7f, 9.2f, 1.6f, 5.4f));
+        l.add(c(RARM, 0, -3.8f, -2.6f, -2.6f, 5.4f, 3.2f, 5.2f));
+        l.add(c(LARM, 0, -1.6f, -2.6f, -2.6f, 5.4f, 3.2f, 5.2f));
+        l.add(c(RARM, 1, -3.3f, 6f, -2.3f, 4.6f, 0.6f, 4.6f));
+        l.add(c(LARM, 1, -1.3f, 6f, -2.3f, 4.6f, 0.6f, 4.6f));
+        l.add(c(RLEG, 3, -2.3f, 5f, -2.5f, 4.6f, 2.2f, 0.8f));
+        l.add(c(LLEG, 3, -2.3f, 5f, -2.5f, 4.6f, 2.2f, 0.8f));
+        return l;
+    }
+
+    /** Ксеноморф: вытянутый назад череп, гребни, хвост-хлыст, когти. 0 — чёрный хитин, 1 — кислота, 2 — кость, 3 — тёмный. */
+    public static List<Mob3DLayer.Cube> xeno() {
+        List<Mob3DLayer.Cube> l = new ArrayList<>();
+        l.add(r(HEAD, 0, 0, -6, 4, 0.5f, 0, 0, -3.2f, -8.5f, 2f, 6.4f, 4.8f, 9f));       // череп назад
+        l.add(r(HEAD, 3, 0, -6, 4, 0.5f, 0, 0, -2.6f, -9f, 4f, 5.2f, 1.2f, 7f));
+        l.add(c(HEAD, 2, -2.2f, -1.4f, -4.8f, 0.6f, 1.2f, 0.6f));                        // зубы
+        l.add(c(HEAD, 2, -0.3f, -1.4f, -4.8f, 0.6f, 1.2f, 0.6f));
+        l.add(c(HEAD, 2, 1.6f, -1.4f, -4.8f, 0.6f, 1.2f, 0.6f));
+        l.add(c(HEAD, 1, -3.4f, -3.2f, -4.6f, 6.8f, 0.6f, 0.4f));                        // слюна-кислота
+        for (int i = 0; i < 3; i++) l.add(r(BODY, 0, 0, 1 + i * 3, 2, -0.7f, 0, 0, -0.5f, -1f + i * 3, 2f, 1f, 4f, 1f));   // трубки на спине
+        l.add(c(BODY, 3, -4.4f, 2f, -2.4f, 8.8f, 1f, 4.8f));
+        l.add(c(BODY, 3, -4.4f, 5f, -2.4f, 8.8f, 1f, 4.8f));
+        l.add(wob(r(BODY, 0, 0, 10.5f, 2, -0.35f, 0, 0, -0.9f, 9.6f, 1.8f, 1.8f, 1.8f, 14f), 1));   // хвост
+        l.add(wob(r(BODY, 2, 0, 10.5f, 2, -0.35f, 0, 0, -0.6f, 10f, 15.6f, 1.2f, 1.2f, 3f), 1));
+        for (int i = 0; i < 3; i++) {
+            l.add(c(RARM, 2, -2.8f + i * 1.3f, 9.6f, -2.6f, 0.5f, 3f, 0.7f));
+            l.add(c(LARM, 2, -0.8f + i * 1.3f, 9.6f, -2.6f, 0.5f, 3f, 0.7f));
+        }
+        return l;
+    }
+
+    /** Сорвавшийся космонавт: шлем-пузырь с золотым стеклом, ранец, оранжевые полосы. 0 — белый скафандр, 1 — оранжевый, 2 — золото визора, 3 — серый. */
+    public static List<Mob3DLayer.Cube> astro() {
+        List<Mob3DLayer.Cube> l = new ArrayList<>();
+        l.add(c(HEAD, 0, -5.2f, -9.4f, -5.2f, 10.4f, 10.4f, 10.4f));                     // шлем
+        l.add(c(HEAD, 2, -3.8f, -7.4f, -5.45f, 7.6f, 5.4f, 0.5f));                       // золотой визор
+        l.add(c(HEAD, 3, -5.4f, -0.4f, -5.4f, 10.8f, 1.4f, 10.8f));                      // кольцо шлема
+        l.add(c(BODY, 3, -3.6f, 0.5f, 2.4f, 7.2f, 9f, 3.4f));                            // ранец
+        l.add(c(BODY, 1, -3f, 1.5f, 5.6f, 6f, 1f, 0.4f));
+        l.add(c(BODY, 1, -4.4f, 4f, -2.55f, 8.8f, 1.2f, 0.3f));
+        l.add(c(BODY, 3, -2f, 5.5f, -2.8f, 4f, 2.4f, 0.6f));                             // пульт на груди
+        l.add(c(RARM, 1, -3.3f, 4f, -2.3f, 4.6f, 1f, 4.6f));
+        l.add(c(LARM, 1, -1.3f, 4f, -2.3f, 4.6f, 1f, 4.6f));
+        l.add(c(RLEG, 3, -2.4f, 8.5f, -2.4f, 4.8f, 3.5f, 4.8f));
+        l.add(c(LLEG, 3, -2.4f, 8.5f, -2.4f, 4.8f, 3.5f, 4.8f));
+        return l;
+    }
+
+    /** Коллектор долгов: котелок, галстук, кейс с документами. 0 — тёмный костюм, 1 — золото, 2 — белая рубашка, 3 — кожа кейса. */
+    public static List<Mob3DLayer.Cube> collector() {
+        List<Mob3DLayer.Cube> l = new ArrayList<>();
+        l.add(c(HEAD, 0, -5f, -8.6f, -5f, 10, 1, 10));                                   // поля котелка
+        l.add(c(HEAD, 0, -4f, -11.4f, -4f, 8, 3, 8));
+        l.add(c(HEAD, 1, -4.05f, -9.2f, -4.05f, 8.1f, 0.6f, 8.1f));
+        l.add(c(HEAD, 1, -3.2f, -5.8f, -4.7f, 2.6f, 1.6f, 0.4f));                        // монокль
+        l.add(c(BODY, 2, -1.5f, 0f, -2.6f, 3f, 3f, 0.3f));
+        l.add(c(BODY, 1, -0.6f, 0.4f, -2.75f, 1.2f, 7f, 0.3f));                          // галстук
+        l.add(c(BODY, 0, -4.5f, 0f, -2.6f, 9f, 11f, 5.2f));
+        l.add(c(RARM, 3, -3.6f, 11f, -4f, 3.2f, 5f, 8f));                                // кейс
+        l.add(c(RARM, 1, -2.4f, 10.4f, -0.6f, 0.8f, 1f, 1.2f));
+        return l;
+    }
+
+    /** Ремонтный дрон: корпус с камерой и четыре винта (всё на кости тела, у земли). 0 — жёлтый, 1 — голубой глаз, 2 — графит, 3 — серый. */
+    public static List<Mob3DLayer.Cube> drone() {
+        List<Mob3DLayer.Cube> l = new ArrayList<>();
+        l.add(c(BODY, 0, -4f, 12f, -4f, 8, 5, 8));
+        l.add(c(BODY, 2, -3f, 17f, -3f, 6, 1.5f, 6));
+        l.add(c(BODY, 1, -1.5f, 13.2f, -4.4f, 3, 2.4f, 0.5f));                           // камера
+        l.add(c(BODY, 2, -0.5f, 18.5f, -0.5f, 1, 3, 1));                                 // манипулятор
+        l.add(c(BODY, 3, -1.5f, 21.2f, -1.5f, 3, 1, 3));
+        for (int[] o : new int[][]{{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}) {
+            l.add(c(BODY, 2, o[0] * 5f - 0.5f, 12.2f, o[1] * 5f - 0.5f, 1, 1, 1));
+            l.add(c(BODY, 3, o[0] * 3.5f - 1.5f, 12.4f, o[1] * 3.5f - 1.5f, 3, 0.6f, 3));
+            l.add(wob(r(BODY, 3, o[0] * 5f, 11.5f, o[1] * 5f, 0, 0, 0, o[0] * 5f - 3f, 11.4f, o[1] * 5f - 0.3f, 6, 0.3f, 0.6f), 3));   // лопасть (крутится)
+        }
+        return l;
+    }
+
     /** Для брони игрока: только кости из набора, увеличенные (поверх ванильного слоя брони, он раздут на 1 пиксель). */
     public static List<Mob3DLayer.Cube> forArmor(List<Mob3DLayer.Cube> src, float k, Mob3DLayer.Bone... bones) {
         java.util.Set<Mob3DLayer.Bone> set = java.util.EnumSet.noneOf(Mob3DLayer.Bone.class);

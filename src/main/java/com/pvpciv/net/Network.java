@@ -210,6 +210,8 @@ public final class Network {
                 else if (p.cmd().equals("swing")) com.pvpciv.combat.Melee.airSwing(sp);
                 else if (p.cmd().startsWith("ench:")) com.pvpciv.game.Enchanting.cmd(sp, p.cmd());
                 else if (p.cmd().equals("mash")) com.pvpciv.entity.boss.LianaBoss.mash(sp);
+                else if (p.cmd().startsWith("cls:")) com.pvpciv.game.Classes.cmd(sp, p.cmd());
+                else if (p.cmd().startsWith("luna:")) com.pvpciv.game.LunaTrial.cmd(sp, p.cmd());
                 else if (p.cmd().startsWith("setskill:")) { String[] a = p.cmd().split(":"); if (a.length == 3) try { com.pvpciv.game.Skills.choose(sp, Integer.parseInt(a[1]), a[2]); } catch (NumberFormatException ignored) {} }
                 else if (p.cmd().startsWith("combo:")) { try { com.pvpciv.combat.Melee.setCombo(sp, Integer.parseInt(p.cmd().substring(6))); } catch (NumberFormatException ignored) {} }
                 else com.pvpciv.game.Phone.cmd(sp, p.cmd());

@@ -18,6 +18,15 @@ import net.minecraft.world.effect.MobEffects;
 public final class Falling {
     public static void tick(ServerPlayer p) {
         if (p.isCreative() || p.isSpectator() || p.getVehicle() instanceof com.pvpciv.entity.LiftCabin) return;
+        if (CivWorld.isF5(p.level()) && (VoidRift.inRift(p) || LunaTrial.in(p) || com.pvpciv.floor.Belt.fall(p) || com.pvpciv.floor.Belt.inBelt(p.level(), p.position()))) return;   // 1.0: пояс, разлом, арена Луны — свои правила
+        if (CivWorld.isF5(p.level()) && p.getY() < com.pvpciv.floor.Floor5.Y - 40) {   // 0.12: со станции — в атмосферу и на космодром NaZa
+            var to = CivWorld.f4(p.server);
+            p.teleportTo(to, com.pvpciv.floor.Floor4.COSMO.getX() + 0.5 + p.getRandom().nextInt(16) - 8, com.pvpciv.floor.Floor4.Y + 120, com.pvpciv.floor.Floor4.COSMO.getZ() + 0.5 + p.getRandom().nextInt(16) - 8, p.getYRot(), 30);
+            p.resetFallDistance();
+            p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.SLOW_FALLING, 20 * 12, 0));
+            p.sendSystemMessage(Component.literal("Ты выпал со станции! Обшивка скафандра выдержала вход в атмосферу… почти.").withStyle(ChatFormatting.RED));
+            return;
+        }
         if (CivWorld.isF4(p.level()) && p.getY() < com.pvpciv.floor.Floor4.Y - 40) {   // 0.11: с этажа 4 — на остров библиотеки
             var to = CivWorld.f3(p.server);
             net.minecraft.world.phys.Vec3 at = landingF3(to, p.getRandom());

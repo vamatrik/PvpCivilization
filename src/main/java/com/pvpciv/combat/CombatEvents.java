@@ -117,6 +117,8 @@ public final class CombatEvents {
             }
             e.setAmount(e.getAmount() * (float) Melee.chargeFix(attacker, e) * (float) (1 + 0.015 * (la - 1)) * (float) Melee.handMul(attacker));
             crit(e, attacker, victim);
+            e.setAmount(com.pvpciv.game.Classes.onAttack(attacker, victim, e.getAmount(), e.getSource().getDirectEntity() == attacker));
+            if (e.getSource().getDirectEntity() == attacker) e.setAmount(com.pvpciv.game.Classes.onDefend(victim, attacker, e.getAmount()));
             if (com.pvpciv.game.Enchanting.dodge(victim)) { e.setCanceled(true); return; }
             boolean ml = e.getSource().getDirectEntity() == attacker;
             e.setAmount(com.pvpciv.game.Enchanting.onDefend(victim, attacker, com.pvpciv.game.Enchanting.onAttack(attacker, victim, e.getAmount(), ml), ml));
@@ -136,6 +138,7 @@ public final class CombatEvents {
             }
             e.setAmount((float) (e.getAmount() * Melee.chargeFix(p, e) * (1 - r) * (1 + 0.015 * (Progress.d(p).level - 1)) * Melee.handMul(p)));
             crit(e, p, mob);
+            e.setAmount(com.pvpciv.game.Classes.onAttack(p, mob, e.getAmount(), e.getSource().getDirectEntity() == p));
             e.setAmount(com.pvpciv.game.Enchanting.onAttack(p, mob, e.getAmount(), e.getSource().getDirectEntity() == p));
             if (e.getSource().getDirectEntity() == p) com.pvpciv.game.WeaponSkills.onHit(p, mob);
             return;
@@ -150,6 +153,7 @@ public final class CombatEvents {
             if (com.pvpciv.game.Enchanting.dodge(p)) { e.setCanceled(true); return; }
             e.setAmount((float) (e.getAmount() * levelTaken(dl) * crowd(p, mob)));
             e.setAmount(com.pvpciv.game.Enchanting.onDefend(p, mob, e.getAmount(), e.getSource().getDirectEntity() == mob));
+            e.setAmount(com.pvpciv.game.Classes.onDefend(p, mob, e.getAmount()));
             Mobs.Kind k = Mobs.Kind.of(mob.getType());
             if (k == Mobs.Kind.FROST_ZOMBIE || k == Mobs.Kind.FROST_ARCHER || k == Mobs.Kind.FROST_SPIDER) frost(p, lvlOf(p));
             if (k == Mobs.Kind.FOX || k == Mobs.Kind.KITSUNE_ARCHER || mob.getTags().contains("kumiho_court")) Bleed.hit(p);   // 0.9.9: кровотечение лис
@@ -251,6 +255,7 @@ public final class CombatEvents {
             com.pvpciv.game.Assassin.onKill(p, kind.endsWith("_elite") ? com.pvpciv.game.Assassin.ELITE : com.pvpciv.game.Assassin.MOB);
             com.pvpciv.floor.SpawnZones.onDeath(mob);
         }
+        if (e.getSource().getEntity() instanceof ServerPlayer kp && !(dead instanceof ServerPlayer)) com.pvpciv.game.Classes.onKill(kp, dead);
     }
 
     private static void onDrops(LivingDropsEvent e) {
@@ -261,7 +266,9 @@ public final class CombatEvents {
         if (mob.getTags().stream().anyMatch(t -> t.equals("boss_minion") || t.equals("don_goon") || t.equals("king_rat") || t.equals("kumiho_court"))) return;
         String kind = Mobs.lootKind(mob);
         if (kind.isEmpty()) return;
-        List<ItemStack> loot = LootTables.roll(kind, mob.getRandom(), 1.0);
+        LootTables.PREFER = com.pvpciv.game.Classes.prefer(e.getSource().getEntity() instanceof ServerPlayer kp0 ? kp0 : null);
+        List<ItemStack> loot;
+        try { loot = LootTables.roll(kind, mob.getRandom(), 1.0); } finally { LootTables.PREFER = null; }
         for (ItemStack st : loot) {
             ItemEntity ie = new ItemEntity(mob.level(), mob.getX(), mob.getY() + 0.5, mob.getZ(), st);
             ie.setDefaultPickUpDelay();
@@ -274,7 +281,8 @@ public final class CombatEvents {
     private static void crit(net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent e, ServerPlayer p, LivingEntity target) {
         if (e.getSource().getDirectEntity() != p) return;
         double ch = com.pvpciv.game.Assassin.critChance(p);
-        if (ch <= 0 || p.getRandom().nextDouble() >= ch) return;
+        boolean forced = com.pvpciv.game.Classes.forceCrit(p, target);
+        if (!forced && (ch <= 0 || p.getRandom().nextDouble() >= ch)) return;
         e.setAmount((float) (e.getAmount() * com.pvpciv.game.Assassin.critMult(p)));
         CRIT_MARK.put(target.getUUID(), p.serverLevel().getGameTime());
         com.pvpciv.game.Assassin.particlesCrit(p, target);
@@ -293,7 +301,7 @@ public final class CombatEvents {
         if (armor <= 0 && Balance.protection(t) <= 0) return;
         float before = e.getNewDamage();
         // 0.11: броня «срезает» удар пропорционально весу оружия. Раньше она вычиталась одинаково из любого удара,
-        // и быстрые лёгкие клинки (сабля ×0.42, кинжал ×0.32 урона за удар) теряли в разы больше, чем топор и молот.
+        // и быстрые лёгкие клинки (сабля ×0.45, кинжал ×0.40 урона за удар) теряли в разы больше, чем топор и молот.
         if (e.getSource().getEntity() instanceof ServerPlayer wp && e.getSource().getDirectEntity() == wp
                 && Melee.striking(wp).getItem() instanceof com.pvpciv.item.CivWeaponItem cw) armor *= cw.cls.dmg;
         double pen = Balance.PEN;
@@ -308,7 +316,7 @@ public final class CombatEvents {
 
     /** Цвет цифры комбо: ×1 — 0xFFD890, ×10 — 0xFF5A00. */
     public static int comboColor(int c) {
-        float t = Math.max(0, Math.min(1, (c - 1) / 9f));
+        float t = Math.max(0, Math.min(1, (c - 1) / (float) (Math.max(Melee.COMBO_MAX, c) - 1)));
         int r = 255, g = Math.round(0xD8 + (0x5A - 0xD8) * t), b = Math.round(0x90 + (0x00 - 0x90) * t);
         return r << 16 | g << 8 | b;
     }

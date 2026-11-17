@@ -54,7 +54,7 @@ public class Mob3DLayer<T extends LivingEntity, M extends HumanoidModel<T>> exte
         String[] names = {"head", "body", "rarm", "larm", "rleg", "lleg"};
         for (int i = 0; i < 6; i++) b[i] = root.addOrReplaceChild(names[i], CubeListBuilder.create(), PartPose.ZERO);
         int n = 0;
-        List<String> tails = new ArrayList<>(), ears = new ArrayList<>();
+        List<String> tails = new ArrayList<>(), ears = new ArrayList<>(), spins = new ArrayList<>();
         for (Cube c : cubes) {
             int u = (c.color % 4) * 64, v = (c.color / 4) * 64;
             String id = "p" + (n++);
@@ -63,12 +63,16 @@ public class Mob3DLayer<T extends LivingEntity, M extends HumanoidModel<T>> exte
                     PartPose.offsetAndRotation(c.px, c.py, c.pz, c.rx, c.ry, c.rz));
             if (c.wob == 1) tails.add(c.bone.ordinal() + ":" + id);
             if (c.wob == 2) ears.add(c.bone.ordinal() + ":" + id);
+            if (c.wob == 3) spins.add(c.bone.ordinal() + ":" + id);
         }
         ModelPart baked = LayerDefinition.create(mesh, 256, 256).bakeRoot();
         for (int i = 0; i < 6; i++) bones[i] = baked.getChild(names[i]);
         for (String s : tails) { ModelPart p = bones[s.charAt(0) - '0'].getChild(s.substring(2)); wobTail.add(p); wobTailBase.add(new float[]{p.xRot, p.yRot, p.zRot}); }
         for (String s : ears) { ModelPart p = bones[s.charAt(0) - '0'].getChild(s.substring(2)); wobEar.add(p); wobEarBase.add(new float[]{p.xRot, p.yRot, p.zRot}); }
+        for (String s : spins) wobSpin.add(bones[s.charAt(0) - '0'].getChild(s.substring(2)));
     }
+    /** 0.12: вращающиеся части (винты дрона). */
+    private final List<ModelPart> wobSpin = new ArrayList<>();
 
     @Override
     public void render(PoseStack ps, MultiBufferSource buf, int light, T e, float limb, float limbAmt, float pt, float age, float yaw, float pitch) {
@@ -89,6 +93,7 @@ public class Mob3DLayer<T extends LivingEntity, M extends HumanoidModel<T>> exte
             float tw = (t % 90) < 6 ? (float) Math.sin((t % 90) * Math.PI / 3) * 0.25f : 0;
             p.xRot = b0[0] + tw; p.yRot = b0[1]; p.zRot = b0[2];
         }
+        for (int i = 0; i < wobSpin.size(); i++) wobSpin.get(i).yRot = (t * 1.4f + i) % ((float) Math.PI * 2);
         int overlay = LivingEntityRenderer.getOverlayCoords(e, 0);
         var vc = buf.getBuffer(RenderType.entityCutoutNoCull(tex));
         for (ModelPart p : bones) p.render(ps, vc, light, overlay);

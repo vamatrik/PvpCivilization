@@ -32,7 +32,16 @@ public final class Skills {
             new Skill("dash2", 1, "Рывок II", "»»", "Рывок дальше и быстрее. Перезарядка 6 с.", 6, "Стелла: 1000 рывков с её прибором", d -> d.gates.getBoolean("dash2")),
             new Skill("backstep", 1, "Отскок", "«", "Прыжок назад; 0.5 с неуязвимости к ударам.", 8, "С 5 уровня", d -> d.level >= 5),
             new Skill("touch", 2, "Касание убийцы", "✦", "6 с: +40% шанс и +50% урон крита Юки, скорость.", 45, "Юки — в конце охоты", d -> d.touchSkill),
-            new Skill("whirl", 2, "Вихрь", "⟳", "Удар по кругу оружием в руке: ×1.5 урона всем рядом.", 12, "С 10 уровня", d -> d.level >= 10)
+            new Skill("whirl", 2, "Вихрь", "⟳", "Удар по кругу оружием в руке: ×1.5 урона всем рядом.", 12, "С 10 уровня", d -> d.level >= 10),
+            // 1.0: навыки эволюций классов (дерево у Луны)
+            new Skill("shadowstep", 3, "Шаг в тень", "☾", "Телепорт за спину цели; следующий удар — крит.", 10, "Ассасин → эволюция «Тень»", d -> Classes.has(d, "a_shade")),
+            new Skill("bladestorm", 3, "Вихрь клинков", "✺", "4 удара по всем вокруг (×1.1 каждый).", 14, "Ассасин → эволюция «Танцор клинков»", d -> Classes.has(d, "a_dancer")),
+            new Skill("skycut", 3, "Небесный разрез", "⟿", "Рывок-разрез на 8 блоков: ×3 урона всем на пути.", 12, "Мечник → эволюция «Страж»", d -> Classes.has(d, "s_guard")),
+            new Skill("lunge", 3, "Выпад", "➹", "4 с: все удары — криты.", 20, "Мечник → эволюция «Дуэлянт»", d -> Classes.has(d, "s_duel")),
+            new Skill("execute", 3, "Казнь", "☠", "Прыжок к цели и удар ×4 (×8 ниже 25% здоровья). Убийство сбрасывает перезарядку.", 16, "Берсерк → эволюция «Палач»", d -> Classes.has(d, "b_exec")),
+            new Skill("warcry", 3, "Боевой клич", "‼", "8 с: +20% урона и вампиризм 15% — тебе и союзникам рядом.", 30, "Берсерк → эволюция «Вождь»", d -> Classes.has(d, "b_chief")),
+            new Skill("groundslam", 3, "Сокрушающий прыжок", "⤓", "Прыжок и удар о землю: ×3 урона в радиусе 5, оглушение 1 с.", 14, "Крушитель → эволюция «Землетряс»", d -> Classes.has(d, "c_quake")),
+            new Skill("stoneskin", 3, "Каменная кожа", "▣", "5 с: −60% входящего урона.", 25, "Крушитель → эволюция «Титан»", d -> Classes.has(d, "c_titan"))
     );
     public static final int[] SLOT_LEVEL = {1, 10, 35};
     public static final String[] SLOT_TYPE = {"Перемещение", "Боевые", "Особые"};
@@ -63,6 +72,7 @@ public final class Skills {
         if (s == null || !s.open.test(d)) { p.displayClientMessage(Component.literal("Слот " + slot + " пуст — выбери навык: Герой → «Навыки».").withStyle(ChatFormatting.GRAY), true); return; }
         if (id.equals("touch")) { Assassin.touch(p); return; }   // у «Касания» своя перезарядка
         String key = p.getUUID() + ":" + slot;
+        if (slot == 3 && Classes.CD_RESET.remove(p.getUUID())) CD.remove(key);
         long now = System.currentTimeMillis();
         if (now < CD.getOrDefault(key, 0L)) return;
         CD.put(key, now + s.cd * 1000L);
@@ -71,7 +81,7 @@ public final class Skills {
             case "dash2" -> { DashSkill.perform(p, 1.6); com.pvpciv.game.Stella.onDash(p); }
             case "backstep" -> backstep(p);
             case "whirl" -> whirl(p);
-            default -> {}
+            default -> Classes.skill(p, id);
         }
         PacketDistributor.sendToPlayer(p, new Network.PhoneData(11, "{\"slot\":" + slot + ",\"cd\":" + s.cd + "}"));
     }

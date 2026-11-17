@@ -9,7 +9,8 @@ import net.minecraft.world.level.Level;
 public class AnimeNpc extends GeoNpc {
     public enum Kind {
         YUKI("Юки, Тихая тень", 0xE0405A, "yuki"), SHODO("Хранитель Сёдо", 0xC8A86A, "shodo"), HARUKI("Повар Харуки", 0xF0A040, "haruki"),
-        AURELIUS("Чарователь Аурелий", 0x40D0FF, "aurelius"), STELLA("Стелла", 0xC060FF, "stella");
+        AURELIUS("Чарователь Аурелий", 0x40D0FF, "aurelius"), STELLA("Стелла", 0xC060FF, "stella"),
+        LUNA("Луна", 0xE070C0, "luna");
         public final String name, model; public final int color;
         Kind(String n, int c, String m) { name = n; color = c; model = m; }
     }
@@ -31,6 +32,7 @@ public class AnimeNpc extends GeoNpc {
             case HARUKI -> com.pvpciv.game.Library.chef(p, this);
             case AURELIUS -> com.pvpciv.game.Enchanter.talk(p, this);
             case STELLA -> com.pvpciv.game.Stella.talk(p, this);
+            case LUNA -> com.pvpciv.game.LunaStation.talk(p, this);
         }
     }
 }

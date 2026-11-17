@@ -36,6 +36,13 @@ public final class MobRenderers {
         e.registerEntityRenderer(ModMobs.KUMIHO_BOSS.get(), ctx -> new BossRenderer<>(ctx, "kumiho", 1.2f, 0.6f));
         e.registerEntityRenderer(ModMobs.NOEL_BOSS.get(), ctx -> new BossRenderer<>(ctx, "noel", 1.1f, 0.6f));
         e.registerEntityRenderer(ModMobs.LIANA_BOSS.get(), ctx -> new BossRenderer<>(ctx, "liana", 2.0f, 1.8f));
+        // 1.0: этаж 5
+        e.registerEntityRenderer(ModMobs.LUNA_BOSS.get(), ctx -> new BossRenderer<>(ctx, "luna_boss", 1.0f, 0.5f));
+        e.registerEntityRenderer(ModMobs.DIPLOMAT_BOSS.get(), ctx -> new BossRenderer<>(ctx, "diplomat", 1.25f, 0.7f));
+        e.registerEntityRenderer(ModMobs.VOID_DEMON.get(), ctx -> new BossRenderer<>(ctx, "void_demon", 1.15f, 0.0f));
+        e.registerEntityRenderer(ModMobs.WORM_BOSS.get(), ctx -> new WormRenderer<>(ctx, "worm_head", 2.2f));
+        e.registerEntityRenderer(ModMobs.WORM_SEG.get(), ctx -> new WormRenderer<>(ctx, "worm_seg", 2.0f));
+        e.registerEntityRenderer(ModMobs.CONTRACT.get(), ctx -> new net.minecraft.client.renderer.entity.ThrownItemRenderer<>(ctx, 2.2f, true));
         ResourceLocation gt = tex("gunner");
         e.registerEntityRenderer(ModMobs.GUNNER.get(), ctx -> new HumanoidMobRenderer<net.minecraft.world.entity.monster.Skeleton, net.minecraft.client.model.HumanoidModel<net.minecraft.world.entity.monster.Skeleton>>(
                 ctx, new net.minecraft.client.model.HumanoidModel<>(ctx.bakeLayer(net.minecraft.client.model.geom.ModelLayers.ZOMBIE)) {
@@ -56,6 +63,13 @@ public final class MobRenderers {
         gunner3d(e, ModMobs.SENTRY.get(), "naza_guard", "guard", Mob3DParts.guard(), true);
         gunner3d(e, ModMobs.LAB_TECH.get(), "lab_tech", "labtech", Mob3DParts.labtech(), true);
         gunner3d(e, ModMobs.TURRET.get(), "turret", "turret", Mob3DParts.turret(), false);
+        // 0.12: этаж 5 — станция «Орбита»
+        gunner3d(e, ModMobs.ANDROID.get(), "android", "android", Mob3DParts.android(), true);
+        zombie3d(e, ModMobs.XENO.get(), "xeno", "xeno", Mob3DParts.xeno(), 1f);
+        zombie3d(e, ModMobs.ROGUE_ASTRO.get(), "rogue_astro", "astro", Mob3DParts.astro(), 1f);
+        zombie3d(e, ModMobs.COLLECTOR.get(), "collector", "collector", Mob3DParts.collector(), 1f);
+        gunner3d(e, ModMobs.DRONE.get(), "drone", "drone", Mob3DParts.drone(), false);
+        spider(e, ModMobs.VOID_CRAWLER.get(), "void_crawler");
         e.registerEntityRenderer(ModMobs.RAT.get(), ctx -> new BeastRenderer<>(ctx, 0.3f));
         e.registerEntityRenderer(ModMobs.PET_RAT.get(), ctx -> new BeastRenderer<>(ctx, 0.3f));
         e.registerEntityRenderer(ModMobs.STREET_DOG.get(), ctx -> new BeastRenderer<>(ctx, 0.45f));

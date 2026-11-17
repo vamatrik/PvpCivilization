@@ -16,9 +16,19 @@ public class EnchantScreen extends PlainScreen {
     private static final int[] TIER_COL = {0xFF2A2236, 0xFF40D0FF, 0xFF60FF90, 0xFFC060FF};
     private static final int[] RANK_COL = {0, 0xFFCFCFCF, 0xFF6AD0FF, 0xFFC070FF, 0xFFFFB030};
 
-    public EnchantScreen() { super("Молекулярный стол", 440, 222, false); }
+    public EnchantScreen() { super("Молекулярный стол", 440, 252, false); }
 
     private JsonObject j() { return ClientState.ench; }
+    private static final int ROWS = 5;
+    private int scroll;
+    private com.google.gson.JsonArray cand() { return j().has("cand") ? j().getAsJsonArray("cand") : new com.google.gson.JsonArray(); }
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double dx, double dy) {
+        int n = cand().size();
+        scroll = Math.max(0, Math.min(Math.max(0, n - ROWS), scroll - (int) Math.signum(dy)));
+        return true;
+    }
     private int i(String k) { return j().has(k) ? j().get(k).getAsInt() : 0; }
     private String s(String k) { return j().has(k) ? j().get(k).getAsString() : ""; }
 
@@ -27,21 +37,38 @@ public class EnchantScreen extends PlainScreen {
         int lx = left + 10, ly = top + 14, lw = 160;
         Skin.inset(g, lx, ly, lw, h - 24);
         boolean ok = j().has("ok") && j().get("ok").getAsBoolean();
-        g.drawString(font, ok ? Skin.fit(font, s("item"), lw - 10) : "Возьми в руку оружие или броню", lx + 5, ly + 5, ok ? Skin.GOLD_L : Skin.BAD, false);
-        String cur = s("cur");
-        Skin.para(g, font, cur.isEmpty() ? "Без зачарования" : "⚛ " + cur, lx + 5, ly + 16, lw - 10, 9, 2, cur.isEmpty() ? Skin.FAINT : CYAN, false);
+        if (ok) {   // 0.11.2: предмет лежит в столе
+            g.drawString(font, Skin.fit(font, s("item"), lw - 10), lx + 5, ly + 5, Skin.GOLD_L, false);
+            String cur = s("cur");
+            Skin.para(g, font, cur.isEmpty() ? "Без зачарования" : "⚛ " + cur, lx + 5, ly + 16, lw - 10, 9, 2, cur.isEmpty() ? Skin.FAINT : CYAN, false);
+            Skin.button(g, font, lx + 5, ly + 42, lw - 10, "Забрать из стола", mx, my, true, false);
+        } else {
+            g.drawString(font, "Положи в стол:", lx + 5, ly + 5, Skin.DIM, false);
+            var cand = cand();
+            if (cand.isEmpty()) g.drawString(font, "нет оружия и брони", lx + 5, ly + 18, Skin.FAINT, false);
+            for (int k = 0; k < ROWS && k + scroll < cand.size(); k++) {
+                JsonObject c = cand.get(k + scroll).getAsJsonObject();
+                int ry0 = ly + 15 + k * 11;
+                boolean hv = Skin.hover(mx, my, lx + 3, ry0, lw - 6, 11);
+                if (hv) g.fill(lx + 3, ry0, lx + lw - 3, ry0 + 11, 0x4040D0FF);
+                String e = c.get("ench").getAsString();
+                g.drawString(font, Skin.fit(font, c.get("name").getAsString() + (e.isEmpty() ? "" : " ⚛"), lw - 12), lx + 6, ry0 + 2, hv ? 0xFFFFFFFF : Skin.TEXT, false);
+            }
+            if (cand.size() > ROWS) g.drawString(font, (scroll + 1) + "–" + Math.min(cand.size(), scroll + ROWS) + " из " + cand.size() + " (колесо)", lx + 5, ly + 15 + ROWS * 11, Skin.FAINT, false);
+        }
+        int ly2 = ly + 48;   // дальше всё ниже
         // гнёзда модулей
-        g.drawString(font, "Модули (ПКМ у стола):", lx + 5, ly + 38, Skin.DIM, false);
+        g.drawString(font, "Модули (ПКМ у стола):", lx + 5, ly2 + 38, Skin.DIM, false);
         var mods = j().has("mods") ? j().getAsJsonArray("mods") : new com.google.gson.JsonArray();
         for (int k = 0; k < 8; k++) {
             int t = k < mods.size() ? mods.get(k).getAsInt() : 0;
-            int sx = lx + 6 + (k % 4) * 37, sy = ly + 49 + (k / 4) * 16;
+            int sx = lx + 6 + (k % 4) * 37, sy = ly2 + 49 + (k / 4) * 16;
             g.fill(sx, sy, sx + 34, sy + 13, 0xFF0C0A12);
             g.fill(sx + 1, sy + 1, sx + 33, sy + 12, t > 0 ? (TIER_COL[t] & 0x60FFFFFF) : 0xFF16121E);
             g.drawCenteredString(font, t == 0 ? "—" : new String[]{"", "I", "II", "III"}[t], sx + 17, sy + 3, t > 0 ? TIER_COL[t] : Skin.FAINT);
         }
         // ресурсы
-        int ry = ly + 86;
+        int ry = ly2 + 86;
         g.drawString(font, "Лазуратрон: " + i("laz") + (ok ? "  (x1 = " + i("cost") + ")" : ""), lx + 5, ry, i("laz") >= i("cost") && ok ? Skin.TEXT : Skin.BAD, false);
         g.drawString(font, "Фокус " + i("focus") + " · Якорь " + i("anchor") + " · Резон. " + i("reso"), lx + 5, ry + 11, Skin.DIM, false);
         g.pose().pushPose(); g.pose().translate(lx + 5, ry + 23, 0); g.pose().scale(0.75f, 0.75f, 1);
@@ -94,6 +121,13 @@ public class EnchantScreen extends PlainScreen {
     public boolean mouseClicked(double mx, double my, int b) {
         int rx = left + 178, rw = w - 188, ly = top + 14;
         boolean ok = j().has("ok") && j().get("ok").getAsBoolean();
+        int lx = left + 10, lw = 160;
+        if (ok && Skin.hover((int) mx, (int) my, lx + 5, ly + 42, lw - 10, 16)) { send("ench:take"); return true; }
+        if (!ok) {
+            var cand = cand();
+            for (int k = 0; k < ROWS && k + scroll < cand.size(); k++)
+                if (Skin.hover((int) mx, (int) my, lx + 3, ly + 15 + k * 11, lw - 6, 11)) { send("ench:put:" + cand.get(k + scroll).getAsJsonObject().get("src").getAsString()); scroll = 0; return true; }
+        }
         for (int k = 0; k < 3; k++) {
             int bx = rx + 5 + k * ((rw - 10) / 3);
             if (ok && Skin.hover((int) mx, (int) my, bx, ly + 16, (rw - 10) / 3 - 3, 16) && i("laz") >= i("cost") * MODES[k]) {

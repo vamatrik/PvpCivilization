@@ -42,6 +42,22 @@ public final class Story {
 
     public static StoryData data(ServerPlayer p) { return p.getData(ModRegistry.STORY.get()); }
 
+    public static String objective(ServerPlayer p, StoryData d) {
+        if (d.stage == NEW) return objective(d.stage);
+        int f = com.pvpciv.world.CivWorld.floor(p.level());
+        return switch (f) {
+            case 2 -> "Этаж 2: победи двух боссов этажа и выставь трофеи на витрину — лифт поднимет тебя на этаж 3.";
+            case 3 -> "Этаж 3: одолей братьев-капп и Кумихо, поставь трофеи на витрину — откроется этаж 4.";
+            case 4 -> Rocket.unlocked(d) ? "Этаж 4: доктор Ноэль повержен. Космодром NaZa — ПКМ по пульту ракеты «Заря-5», полёт на станцию (этаж 5)."
+                                         : "Этаж 4: найди и победи доктора Ноэль — её ключ откроет ракету «Заря-5» на космодроме.";
+            case 5 -> (d.gates.getInt("lift5") > 0) ? "Этаж 5 пройден: лифт станции починен. Испытания Луны (стадии без конца), дерево классов, заточка +11. Этаж 6 — Ад (скоро)."
+                    : (d.trophies & 256) != 0 ? "Этаж 5: червь пал — разлом Пустоты. Победи демоницу, забери «адский след» и почини лифт в атриуме (пульт у шахты)."
+                    : (d.trophies & 128) != 0 ? "Этаж 5: Дипломат отозван. Шлюз ангара открыт — пояс астероидов, алтарь Галактического червя в центре (ур. 38)."
+                    : "Этаж 5: станция «Орбита» (ур. 23–32). Луна в атриуме: лавка, испытания (с ур. 30) и дерево классов. Мостик на севере — Инопланетный дипломат (ур. 32). Обратно — ракета в ангаре.";
+            default -> objective(d.stage);
+        };
+    }
+
     public static String objective(int stage) {
         if (stage == NEW) return "Кто-то стучит в дверь. Открой её ключ-картой (ПКМ картой по двери) и выйди к гостю.";
         return "Этаж 1: юг — Пепельная пустошь (ур. 1–4), север за Трассой — Инеевый Кряж (ур. 5–7). Убей Громилу и Хранительницу, выставь трофеи на витрину — и на крыше тебя ждёт Небесный лифт на этаж 2.";
@@ -58,7 +74,7 @@ public final class Story {
         Skills.sync(p);   // 0.10.5
         Zones.Zone z = Zones.at(p);
         int boss = BossManager.secondsLeft(p.server);
-        PacketDistributor.sendToPlayer(p, new Network.SyncState(d.stage, objective(d.stage), d.level, d.xp, Progress.xpToNext(d.level),
+        PacketDistributor.sendToPlayer(p, new Network.SyncState(d.stage, objective(p, d), d.level, d.xp, Progress.xpToNext(d.level),
                 d.money, z.name(), z.type().ordinal(), boss, questLines(d), Vampire.hudSeconds(p, d), Vampire.jailSeconds(p),
                 String.join(",", d.titles), d.activeTitle, BossManager.secondsLeft(p.server, "keeper"), d.trophies, String.join(",", d.boats) + "|" + d.activeBoat, bossTimers(p.server)));
     }
@@ -108,6 +124,15 @@ public final class Story {
         d.stage = stage;
         p.setData(ModRegistry.STORY.get(), d);
         sync(p);
+    }
+
+    /** 1.0: «Искры ×450, Тёмная звезда, …» — одинаковые предметы сложены. */
+    public static String lootLine(java.util.List<ItemStack> loot) {
+        java.util.LinkedHashMap<String, Integer> m = new java.util.LinkedHashMap<>();
+        for (ItemStack i : loot) m.merge(i.getHoverName().getString(), i.getCount(), Integer::sum);
+        StringBuilder b = new StringBuilder();
+        m.forEach((k, v) -> b.append(b.length() > 0 ? ", " : "").append(k).append(v > 1 ? " ×" + v : ""));
+        return b.toString();
     }
 
     public static void title(ServerPlayer p, String title, String sub, int color) {

@@ -47,14 +47,15 @@ public final class SpawnZones {
             all.addAll(Floor2.ZONES);
             all.addAll(Floor3Areas.ZONES);
             all.addAll(Floor4.ZONES);
+            all.addAll(Floor5.ZONES);
         }
         return all;
     }
 
     public static void tick(MinecraftServer server) {
-        ServerLevel w1 = com.pvpciv.world.CivWorld.level(server), f2 = com.pvpciv.world.CivWorld.f2(server), f3 = com.pvpciv.world.CivWorld.f3(server), f4 = com.pvpciv.world.CivWorld.f4(server);
+        ServerLevel w1 = com.pvpciv.world.CivWorld.level(server), f2 = com.pvpciv.world.CivWorld.f2(server), f3 = com.pvpciv.world.CivWorld.f3(server), f4 = com.pvpciv.world.CivWorld.f4(server), f5 = com.pvpciv.world.CivWorld.f5(server);
         for (Zone z : zones()) {
-            ServerLevel lvl = z.id().startsWith("f4") ? f4 : z.id().startsWith("f3") ? f3 : z.f2() ? f2 : w1;
+            ServerLevel lvl = z.id().startsWith("f5") ? f5 : z.id().startsWith("f4") ? f4 : z.id().startsWith("f3") ? f3 : z.f2() ? f2 : w1;
             int maxN = (int) Math.ceil(z.max() * 1.3);   // бета 11.11: спавнов ×1.3
             int baseY = z.y() >= 0 ? z.y() : Floor1.Y;
             Vec3 c = Vec3.atBottomCenterOf(z.center());

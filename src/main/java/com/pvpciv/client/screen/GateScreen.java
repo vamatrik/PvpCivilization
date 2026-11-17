@@ -30,13 +30,13 @@ public class GateScreen extends PlainScreen {
     private boolean home() { return from.equals("home"); }
     private int homeLvl() { return d.get("home").getAsInt(); }
     private List<Gates.Gate> list() { return Gates.ALL.stream().filter(g -> g.floor() == floor).toList(); }
-    private boolean floorOpen(int f) { return home() ? f <= homeLvl() && (f == 1 || d.get("lift").getAsBoolean()) && (f < 3 || (d.has("lift3") && d.get("lift3").getAsBoolean())) : Gates.byId(from) != null && Gates.byId(from).floor() == f; }
+    private boolean floorOpen(int f) { return home() ? f <= homeLvl() && (f == 1 || d.get("lift").getAsBoolean()) && (f < 3 || (d.has("lift3") && d.get("lift3").getAsBoolean())) && (f < 4 || (d.has("lift4") && d.get("lift4").getAsBoolean())) : Gates.byId(from) != null && Gates.byId(from).floor() == f; }
 
     @Override
     protected void drawContent(GuiGraphics g, int mx, int my, float pt) {
         // вкладки: мир → этажи
         g.drawString(font, "Мир 1", left + 14, top + 20, Skin.GOLD_L, false);
-        for (int f = 1; f <= 3; f++) {
+        for (int f = 1; f <= 4; f++) {
             int tx = left + 52 + (f - 1) * 64;
             boolean on = floor == f, ok = floorOpen(f);
             Skin.tab(g, font, tx, top + 17, 60, "Этаж " + f, on, mx, my);
@@ -97,7 +97,7 @@ public class GateScreen extends PlainScreen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int b) {
-        for (int f = 1; f <= 3; f++) if (in(mx, my, 52 + (f - 1) * 64, 17, 60, 14)) { floor = f; sel = -1; ls.off = 0; return true; }
+        for (int f = 1; f <= 4; f++) if (in(mx, my, 52 + (f - 1) * 64, 17, 60, 14)) { floor = f; sel = -1; ls.off = 0; return true; }
         if (!home() && in(mx, my, 248, 17, 100, 16)) { cmd("gate:" + from + ":home"); onClose(); return true; }
         List<Gates.Gate> l = list();
         if (my >= top + 36 && my < top + 208)

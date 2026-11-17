@@ -52,8 +52,8 @@ public final class Balance {
         double k = 1;
         Mobs.Kind kind = Mobs.Kind.of(e.getType());
         if (kind != null) k = switch (kind) {
-            case SAMURAI, POLICE, GUNNER, FROST_ZOMBIE, SENTRY, ROBOT, TURRET -> 1.5;
-            case RAT, FOX, STREET_DOG, ASH_SPIDER, FROST_SPIDER, NINJA, SPORELING, BOTANIST -> 0.6;
+            case SAMURAI, POLICE, GUNNER, FROST_ZOMBIE, SENTRY, ROBOT, TURRET, ANDROID, DRONE -> 1.5;
+            case RAT, FOX, STREET_DOG, ASH_SPIDER, FROST_SPIDER, NINJA, SPORELING, BOTANIST, VOID_CRAWLER, XENO -> 0.6;
             default -> 1.0;
         };
         if (e instanceof com.pvpciv.entity.boss.CivBoss) k = 1.5;

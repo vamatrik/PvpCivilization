@@ -51,11 +51,13 @@ public class CivZombie extends Zombie {
         if (ty == com.pvpciv.registry.ModMobs.THAWED.get()) le.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 50, 1));
         else if (ty == com.pvpciv.registry.ModMobs.BOTANIST.get()) le.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON, 50, 0));
         else if (ty == com.pvpciv.registry.ModMobs.ROBOT.get()) le.knockback(0.9, getX() - le.getX(), getZ() - le.getZ());
+        else if (ty == com.pvpciv.registry.ModMobs.ROGUE_ASTRO.get()) le.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.WEAKNESS, 60, 0));
+        else if (ty == com.pvpciv.registry.ModMobs.COLLECTOR.get() && le instanceof net.minecraft.server.level.ServerPlayer sp) steal(sp);
         return r;
     }
     @Override public void aiStep() {
         super.aiStep();
-        if (level().isClientSide || getType() != com.pvpciv.registry.ModMobs.CHIMERA.get()) return;
+        if (level().isClientSide || getType() != com.pvpciv.registry.ModMobs.CHIMERA.get() && getType() != com.pvpciv.registry.ModMobs.XENO.get()) return;
         var t = getTarget();
         if (lunge > 0) { lunge--; return; }
         if (t != null && onGround()) {
@@ -67,5 +69,23 @@ public class CivZombie extends Zombie {
                 playSound(net.minecraft.sounds.SoundEvents.RAVAGER_ROAR, 0.8f, 1.4f);
             }
         }
+    }
+
+    // ---- 0.12: коллектор долгов — забирает 1% искр за удар (до 300), при смерти возвращает каждому его долю
+    private final java.util.Map<java.util.UUID, Long> stolen = new java.util.HashMap<>();
+    private void steal(net.minecraft.server.level.ServerPlayer p) {
+        var d = com.pvpciv.progress.Progress.d(p);
+        long take = Math.min(300, d.money / 100);
+        if (take <= 0) return;
+        com.pvpciv.progress.Progress.addMoney(p, -take, false);
+        stolen.merge(p.getUUID(), take, Long::sum);
+        p.displayClientMessage(net.minecraft.network.chat.Component.literal("Коллектор списал " + take + " ✦ «в счёт долга»").withStyle(net.minecraft.ChatFormatting.GOLD), true);
+        playSound(net.minecraft.sounds.SoundEvents.VILLAGER_TRADE, 1f, 0.7f);
+    }
+    @Override public void die(net.minecraft.world.damagesource.DamageSource src) {
+        if (!level().isClientSide && !stolen.isEmpty() && level() instanceof net.minecraft.server.level.ServerLevel sl)
+            stolen.forEach((u, v) -> { var p = sl.getServer().getPlayerList().getPlayer(u); if (p != null) com.pvpciv.progress.Progress.addMoney(p, v, true); });
+        stolen.clear();
+        super.die(src);
     }
 }

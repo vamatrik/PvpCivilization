@@ -65,14 +65,14 @@ public final class Melee {
     public static InteractionHand hand(ServerPlayer p) { return dual(p) ? NEXT.getOrDefault(p.getUUID(), InteractionHand.MAIN_HAND) : InteractionHand.MAIN_HAND; }
 
     /** Множитель урона прямого удара игрока: обе руки — полный урон; 0.10.4 — бонус комбо (+6% за стак, до 5). */
-    public static double handMul(ServerPlayer p) { int c = combo(p); return 1.0 + 0.03 * c; }   // 0.10.5: +3% за стак, до ×10
+    public static double handMul(ServerPlayer p) { int c = combo(p); return 1.0 + 0.05 * c; }   // Танцор клинков: до ×10   // 0.11.1: +5% за стак, до ×7 (было +3%, ×10)
 
     // ------------------------------------------------------------------ 0.10.4: комбо (точный удар в окно готовности)
-    public static final int COMBO_MAX = 10;
+    public static final int COMBO_MAX = 7;
     private record Combo(int n, long tick) {}
     private static final java.util.Map<java.util.UUID, Combo> COMBO = new java.util.HashMap<>();
     /** Клиент сообщает перед ударом: n > 0 — удар точный, n — текущий стак. */
-    public static void setCombo(ServerPlayer p, int n) { COMBO.put(p.getUUID(), new Combo(Math.max(0, Math.min(COMBO_MAX, n)), p.serverLevel().getGameTime())); }
+    public static void setCombo(ServerPlayer p, int n) { COMBO.put(p.getUUID(), new Combo(Math.max(0, Math.min(com.pvpciv.game.Classes.comboMax(p), n)), p.serverLevel().getGameTime())); }
     /** Стак комбо текущего удара (действует 3 тика — на удар и его дугу). */
     public static int combo(ServerPlayer p) {
         Combo c = COMBO.get(p.getUUID());

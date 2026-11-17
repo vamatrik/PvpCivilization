@@ -52,6 +52,7 @@ public final class Vampire {
             case "SAMURAI" -> "самураев-ронинов"; case "NINJA" -> "ниндзя"; case "ASHIGARU" -> "асигару-лучников";
             case "WEREWOLF" -> "оборотней"; case "FOX" -> "лис-оборотней"; case "KITSUNE_ARCHER" -> "лучниц кицунэ";
             case "BOTANIST" -> "обезумевших ботаников"; case "SPORELING" -> "споровых ползунов"; case "THAWED" -> "размороженных образцов";
+            case "ANDROID" -> "андроидов"; case "XENO" -> "ксеноморфов"; case "VOID_CRAWLER" -> "пустотных ползунов"; case "ROGUE_ASTRO" -> "космонавтов"; case "DRONE" -> "дронов"; case "COLLECTOR" -> "коллекторов";
             case "SENTRY" -> "охранников NaZa"; case "ROBOT" -> "роботов-техников"; case "TURRET" -> "турелей"; case "CHIMERA" -> "химер"; case "LAB_TECH" -> "лаборантов";
             default -> { try { yield com.pvpciv.combat.Mobs.Kind.valueOf(kind).title.toLowerCase(); } catch (Exception e) { yield kind; } }
         };

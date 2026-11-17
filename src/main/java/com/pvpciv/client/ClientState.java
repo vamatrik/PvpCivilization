@@ -8,6 +8,13 @@ public final class ClientState {
     public static int bleed = 0;
     /** 0.10.5: навыки — выбранные id по слотам, готовность (мс), все навыки (json). */
     public static final String[] skillSel = {"dash", "", ""};
+    /** 1.0: классы — последняя синхронизация (PhoneData 23). */
+    public static com.google.gson.JsonObject classes;
+    public static boolean dancer;
+    public static int comboMax() {
+        var mc = net.minecraft.client.Minecraft.getInstance();
+        return dancer && mc.player != null && mc.player.getMainHandItem().getItem() instanceof com.pvpciv.item.CivWeaponItem w && w.cls == com.pvpciv.item.CivWeaponItem.WClass.SABER ? 10 : com.pvpciv.combat.Melee.COMBO_MAX;
+    }
     public static final long[] skillReady = new long[3], skillCdMs = new long[3];
     public static com.google.gson.JsonArray skillsAll = new com.google.gson.JsonArray();
     public static long bleedBurst = 0;

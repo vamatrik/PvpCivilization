@@ -29,7 +29,7 @@ public class TraderScreen extends CivScreen<TraderMenu> {
         return super.mouseScrolled(mx, my, sx, sy);
     }
 
-    public TraderScreen(TraderMenu m, Inventory inv, Component t) { super(m, inv, t.getString().equals("Контрабандист") ? "Контрабандист Шнырь" : t.getString().equals("Элеонора") ? "Лавка охотницы Элеоноры" : "Лавка Сороки", 352, 206); }
+    public TraderScreen(TraderMenu m, Inventory inv, Component t) { super(m, inv, t.getString().equals("Контрабандист") ? "Контрабандист Шнырь" : t.getString().equals("Элеонора") ? "Лавка охотницы Элеоноры" : t.getString().equals("Луна") ? "Лавка Луны" : "Лавка Сороки", 352, 206); }
 
     private static boolean tokens() { return ClientState.shopTokens >= 0; }
     private static long balance() { return tokens() ? ClientState.shopTokens : ClientState.money; }

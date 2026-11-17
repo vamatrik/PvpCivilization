@@ -32,6 +32,9 @@ public final class Floor4 extends Builder {
     public static final BlockPos ENCH_TABLE = new BlockPos(11, Y, 0);
     public static final Vec3 ENCHANTER = new Vec3(14.5, Y, 3.5), STELLA = new Vec3(-12.5, Y, -6.5), RECEPTION = new Vec3(0.5, Y, -13.5);
     public static final BlockPos ARK_ARENA = ARK.offset(-12, 0, 0);
+    /** 0.11.2: космодром — к югу от Реактора, туннель из купола. */
+    public static final BlockPos COSMO = new BlockPos(0, Y, 270);
+    public static final int COSMO_R = 36;
     public static final List<BlockPos> STASHES = new ArrayList<>();
 
     private Floor4(ServerLevel level) { super(level, 404); }
@@ -40,11 +43,12 @@ public final class Floor4 extends Builder {
         Floor4 b = new Floor4(level);
         STASHES.clear();
         b.hub();
-        for (int i = 0; i < 4; i++) b.gallery(i);
         b.dome(GREEN, Theme.GREEN);
         b.dome(CRYO, Theme.CRYO);
         b.dome(REACTOR, Theme.REACTOR);
         b.dome(ARK, Theme.ARK);
+        for (int i = 0; i < 4; i++) b.gallery(i);   // 0.11.1: галереи после куполов — входят в купол без зазора
+        b.cosmodrome();   // 0.11.2
         b.fixShapes();
     }
 
@@ -56,6 +60,7 @@ public final class Floor4 extends Builder {
     public static final Zones.Zone Z_REACTOR = new Zones.Zone("Этаж 4 · Реакторный купол", Zones.Type.PVE);
     public static final Zones.Zone Z_ARK = new Zones.Zone("Этаж 4 · Биокупол «Ковчег»", Zones.Type.PVP);
     public static final Zones.Zone SKY = new Zones.Zone("Небо над Шпилем", Zones.Type.SAFE);
+    public static final Zones.Zone Z_COSMO = new Zones.Zone("Этаж 4 · Космодром", Zones.Type.SAFE);
 
     public static Zones.Zone zone(Vec3 p) {
         if (Math.hypot(p.x, p.z) <= ISLAND + 2) return HUB;
@@ -63,6 +68,8 @@ public final class Floor4 extends Builder {
         if (near(p, CRYO)) return Z_CRYO;
         if (near(p, REACTOR)) return Z_REACTOR;
         if (near(p, ARK)) return Z_ARK;
+        if (Math.hypot(p.x - COSMO.getX(), p.z - COSMO.getZ()) <= COSMO_R + 4) return Z_COSMO;
+        if (Math.abs(p.x) <= 4 && p.z > REACTOR.getZ() && p.z < COSMO.getZ() && p.y > Y - 6) return GALLERY;
         if ((Math.abs(p.x) <= 4 || Math.abs(p.z) <= 4) && p.y > Y - 6) return GALLERY;
         return SKY;
     }
@@ -71,10 +78,10 @@ public final class Floor4 extends Builder {
     // ------------------------------------------------------------------ спавн
     public static final List<SpawnZones.Zone> ZONES = new ArrayList<>();
     static {
-        ZONES.add(new SpawnZones.Zone("f4_green", GREEN, 24, 6, 16, 18, 0f, Y, false, Mobs.Kind.BOTANIST, Mobs.Kind.BOTANIST, Mobs.Kind.SPORELING));
-        ZONES.add(new SpawnZones.Zone("f4_cryo", CRYO, 24, 6, 18, 20, 0f, Y, false, Mobs.Kind.THAWED, Mobs.Kind.THAWED, Mobs.Kind.SENTRY));
-        ZONES.add(new SpawnZones.Zone("f4_reactor", REACTOR, 24, 6, 20, 22, 0f, Y, false, Mobs.Kind.ROBOT, Mobs.Kind.ROBOT, Mobs.Kind.TURRET));
-        ZONES.add(new SpawnZones.Zone("f4_ark", ARK.offset(14, 0, 0), 14, 6, 22, 24, 0f, Y, false, Mobs.Kind.CHIMERA, Mobs.Kind.CHIMERA, Mobs.Kind.LAB_TECH));
+        ZONES.add(new SpawnZones.Zone("f4_green", GREEN, 25, 11, 16, 18, 0f, Y, false, Mobs.Kind.BOTANIST, Mobs.Kind.BOTANIST, Mobs.Kind.SPORELING));
+        ZONES.add(new SpawnZones.Zone("f4_cryo", CRYO, 25, 11, 18, 20, 0f, Y, false, Mobs.Kind.THAWED, Mobs.Kind.THAWED, Mobs.Kind.SENTRY));
+        ZONES.add(new SpawnZones.Zone("f4_reactor", REACTOR, 25, 11, 20, 22, 0f, Y, false, Mobs.Kind.ROBOT, Mobs.Kind.ROBOT, Mobs.Kind.TURRET));
+        ZONES.add(new SpawnZones.Zone("f4_ark", ARK.offset(14, 0, 0), 14, 8, 22, 24, 0f, Y, false, Mobs.Kind.CHIMERA, Mobs.Kind.CHIMERA, Mobs.Kind.LAB_TECH));
     }
 
     public static final List<EliteSpots.Spot> ELITES = new ArrayList<>();
@@ -153,13 +160,13 @@ public final class Floor4 extends Builder {
             boolean rib = Math.abs(x) <= 0 || Math.abs(z) <= 0 || Math.abs(Math.abs(x) - Math.abs(z)) <= 0;
             set(x, Y + 9 + h, z, rib ? Blocks.WHITE_CONCRETE : Blocks.LIGHT_BLUE_STAINED_GLASS);
         }
-        // шахта лифта: стеклянный цилиндр, проём в полу до бездны
-        for (int x = -2; x <= 2; x++) for (int z = -2; z <= 2; z++) {
-            boolean edge = Math.abs(x) == 2 || Math.abs(z) == 2;
-            for (int y = Y - 12; y < Y; y++) set(x, y, z, Blocks.AIR);
-            if (edge && !(z == 2 && Math.abs(x) <= 1)) for (int y = Y; y <= Y + 4; y++) set(x, y, z, y == Y + 4 ? Blocks.WHITE_CONCRETE : Blocks.GLASS);
+        // площадка лифта как на этаже 3: кабина приезжает сквозь пол, вокруг — светящееся кольцо (без стеклянной шахты — у кабины своя дверь)
+        for (int x = -4; x <= 4; x++) for (int z = -4; z <= 4; z++) {
+            double r = Math.hypot(x, z);
+            if (r > 4.5) continue;
+            set(x, Y - 1, z, r < 2 ? Blocks.LIGHT_BLUE_STAINED_GLASS : r < 3.2 ? Blocks.SEA_LANTERN : Blocks.POLISHED_DEEPSLATE);
+            for (int y = Y; y <= Y + 4; y++) set(x, y, z, Blocks.AIR);
         }
-        for (int x = -2; x <= 2; x++) for (int z = -2; z <= 2; z++) if (Math.abs(x) == 2 || Math.abs(z) == 2) set(x, Y - 1, z, Blocks.SEA_LANTERN);
         // ресепшен (север): стойка, логотип NaZa
         for (int x = -5; x <= 5; x++) { set(x, Y, -12, Blocks.WHITE_CONCRETE); set(x, Y + 1, -12, Blocks.SMOOTH_QUARTZ_SLAB); }
         for (int x = -6; x <= 6; x++) for (int y = Y + 2; y <= Y + 6; y++) set(x, y, -17, Blocks.BLACK_CONCRETE);
@@ -211,17 +218,77 @@ public final class Floor4 extends Builder {
     // ------------------------------------------------------------------ галереи
     private void gallery(int i) {
         int[] d = DIRS[i];
-        int from = HUB_R + 1, to = DOME_D - DOME_R - 1;
+        int from = HUB_R, to = DOME_D - DOME_R + 1;
         for (int t = from; t <= to; t++) {
             for (int w = -3; w <= 3; w++) {
                 int x = d[0] * t + d[1] * w, z = d[1] * t + d[0] * w;
                 boolean wall = Math.abs(w) == 3;
-                set(x, Y - 1, z, wall ? Blocks.WHITE_CONCRETE : Math.abs(w) == 0 && t % 4 == 0 ? Blocks.SEA_LANTERN : Blocks.SMOOTH_QUARTZ);
+                if (t >= to - 1 && wall) { for (int y = Y - 1; y <= Y + 5; y++) set(x, y, z, Blocks.WHITE_CONCRETE); continue; }   // рамка шлюза в куполе
+                // 0.11.1: скользкий пол (лёд), посередине — полоса подсветки под стеклом
+                set(x, Y - 1, z, wall ? Blocks.WHITE_CONCRETE : Math.abs(w) == 0 && t % 4 == 0 ? Blocks.SEA_LANTERN : Math.abs(w) == 0 ? Blocks.LIGHT_BLUE_STAINED_GLASS : Blocks.PACKED_ICE);
                 for (int y = Y; y <= Y + 4; y++) set(x, y, z, wall ? (y == Y ? Blocks.WHITE_CONCRETE : Blocks.GLASS) : Blocks.AIR);
-                set(x, Y + 5, z, wall ? Blocks.WHITE_CONCRETE : (t % 6 == 0 ? Blocks.WHITE_CONCRETE : Blocks.GLASS));
+                set(x, Y + 5, z, wall || t >= to - 1 ? Blocks.WHITE_CONCRETE : (t % 6 == 0 ? Blocks.WHITE_CONCRETE : Blocks.GLASS));
             }
             if (t % 12 == 0) for (int y = Y - 30; y < Y - 1; y++) { set(d[0] * t, y, d[1] * t, Blocks.IRON_BARS); }
         }
+    }
+
+    // ------------------------------------------------------------------ 0.11.2: космодром
+    private void cosmodrome() {
+        int cx = COSMO.getX(), cz = COSMO.getZ();
+        // туннель из Реактора на юг: тёмный металл, красные огни — служебный ход
+        int z0 = REACTOR.getZ() + DOME_R - 2, z1 = cz - COSMO_R + 1;
+        for (int z = z0; z <= z1; z++) for (int w = -3; w <= 3; w++) {
+            boolean wall = Math.abs(w) == 3;
+            set(w, Y - 1, z, wall ? Blocks.POLISHED_DEEPSLATE.defaultBlockState() : w == 0 && z % 5 == 0 ? lit(Blocks.REDSTONE_LAMP) : Blocks.PACKED_ICE.defaultBlockState());
+            for (int y = Y; y <= Y + 4; y++) set(w, y, z, wall ? (y == Y || y == Y + 4 ? Blocks.POLISHED_DEEPSLATE : Blocks.TINTED_GLASS) : Blocks.AIR);
+            set(w, Y + 5, z, Blocks.POLISHED_DEEPSLATE);
+        }
+        // площадка: круглая, с жёлтой разметкой
+        for (int x = -COSMO_R - 1; x <= COSMO_R + 1; x++) for (int z = -COSMO_R - 1; z <= COSMO_R + 1; z++) {
+            double r = Math.hypot(x, z);
+            if (r > COSMO_R + 0.5) continue;
+            Block top = r > COSMO_R - 1 ? Blocks.YELLOW_CONCRETE : Math.abs(r - 12) < 0.6 ? Blocks.YELLOW_CONCRETE : r < 11.5 ? (((x + z) & 1) == 0 ? Blocks.GRAY_CONCRETE : Blocks.LIGHT_GRAY_CONCRETE) : Blocks.SMOOTH_STONE;
+            for (int d = 1; d <= 4; d++) set(cx + x, Y - d, cz + z, d == 1 ? top : d == 4 ? Blocks.IRON_BLOCK : Blocks.GRAY_CONCRETE);
+            for (int y = Y; y <= Y + 50; y++) set(cx + x, y, cz + z, Blocks.AIR);
+            if (r > COSMO_R - 1 && r <= COSMO_R + 0.5) set(cx + x, Y, cz + z, Blocks.IRON_BARS);   // ограждение по краю
+        }
+        for (int w = -2; w <= 2; w++) set(w, Y, cz - COSMO_R, Blocks.AIR);   // проход из туннеля
+        // ракета «Заря-5» (сломана): корпус, обтекатель, сопла, стабилизаторы
+        int rx = cx, rz = cz + 2;
+        for (int y = 0; y < 30; y++) for (int x = -3; x <= 3; x++) for (int z = -3; z <= 3; z++) {
+            double r = Math.hypot(x, z), rr = y < 22 ? 3.2 : 3.2 * (1 - (y - 21) / 9.0);
+            if (r > rr) continue;
+            boolean shell = r > rr - 1.1;
+            if (!shell && y > 1 && y < 28) continue;
+            Block b = y >= 27 ? Blocks.RED_CONCRETE : y % 7 == 3 ? Blocks.BLACK_CONCRETE : (y == 14 && x == 0 && z < 0) ? Blocks.LIGHT_BLUE_STAINED_GLASS : Blocks.WHITE_CONCRETE;
+            set(rx + x, Y + 3 + y, rz + z, b);
+        }
+        for (int[] o : new int[][]{{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}) {   // сопла
+            set(rx + o[0], Y + 2, rz + o[1], Blocks.POLISHED_BLACKSTONE);
+            set(rx + o[0], Y + 1, rz + o[1], Blocks.BLACKSTONE_WALL);
+        }
+        for (int[] o : new int[][]{{4, 0}, {-4, 0}, {0, 4}, {0, -4}}) for (int y = 0; y < 7; y++) {   // стабилизаторы
+            int k = y < 3 ? 1 : 0;
+            set(rx + o[0], Y + 3 + y, rz + o[1], Blocks.RED_CONCRETE);
+            if (k == 1) set(rx + o[0] + Integer.signum(o[0]), Y + 3 + y, rz + o[1] + Integer.signum(o[1]), Blocks.RED_CONCRETE);
+        }
+        // «рана»: пробитый борт с дымом
+        set(rx + 3, Y + 12, rz, Blocks.AIR); set(rx + 3, Y + 13, rz, Blocks.AIR); set(rx + 3, Y + 12, rz + 1, Blocks.BLACK_CONCRETE);
+        set(rx + 3, Y + 13, rz - 1, Blocks.CAMPFIRE);
+        // фермы обслуживания
+        for (int y = 0; y < 34; y++) for (int[] o : new int[][]{{8, -2}, {8, 2}, {12, -2}, {12, 2}}) set(rx + o[0], Y + y, rz + o[1], y % 4 == 0 ? Blocks.IRON_BLOCK : Blocks.IRON_BARS);
+        for (int y = 6; y < 34; y += 7) for (int x = 4; x <= 12; x++) for (int z = -2; z <= 2; z++) set(rx + x, Y + y, rz + z, Blocks.IRON_TRAPDOOR);
+        // ящики и пульт управления
+        for (int i = 0; i < 9; i++) {
+            double a = Math.PI * 2 * i / 9 + 0.4;
+            int x = cx + (int) Math.round(Math.cos(a) * 24), z = cz + (int) Math.round(Math.sin(a) * 24);
+            if (Math.abs(x - cx) <= 4 && z < cz) continue;
+            set(x, Y, z, i % 3 == 0 ? Blocks.BARREL : Blocks.LIGHT_GRAY_SHULKER_BOX);
+            if (i % 2 == 0) set(x, Y + 1, z, Blocks.LIGHT_GRAY_SHULKER_BOX);
+        }
+        for (int x = -3; x <= 3; x++) { set(cx + x, Y, cz - 16, Blocks.POLISHED_DEEPSLATE); set(cx + x, Y + 1, cz - 16, x % 2 == 0 ? lit(Blocks.REDSTONE_LAMP) : Blocks.OBSERVER.defaultBlockState()); }
+        sign(new BlockPos(cx, Y + 2, cz - 16), Direction.NORTH, DyeColor.RED, "РАКЕТА «ЗАРЯ-5»", "ПКМ по пульту —", "полёт на станцию", "(ключ: доктор Ноэль)");
     }
 
     // ------------------------------------------------------------------ купола
@@ -235,9 +302,10 @@ public final class Floor4 extends Builder {
             for (int y = Y; y <= Y + DOME_R; y++) set(cx + x, y, cz + z, Blocks.AIR);
         }
         // полусфера: стекло, рёбра — рама
-        for (int x = -DOME_R; x <= DOME_R; x++) for (int z = -DOME_R; z <= DOME_R; z++) for (int y = 0; y <= DOME_R; y++) {
+        // 0.11.1: оболочка без щелей — блок внутри купола, у которого есть сосед снаружи (раньше по диагоналям оставались дыры, мобы выходили за купол)
+        for (int x = -DOME_R - 1; x <= DOME_R + 1; x++) for (int z = -DOME_R - 1; z <= DOME_R + 1; z++) for (int y = 0; y <= DOME_R; y++) {
+            if (!inDome(x, y, z) || inDome(x + 1, y, z) && inDome(x - 1, y, z) && inDome(x, y, z + 1) && inDome(x, y, z - 1) && inDome(x, y + 1, z)) continue;
             double r = Math.sqrt(x * x + z * z + y * y * 1.6 * 1.6);
-            if (Math.abs(r - DOME_R) > 0.55) continue;
             double ang = Math.atan2(z, x);
             boolean rib = Math.abs(Math.sin(ang * 6)) < 0.08 || y % 6 == 0;
             set(cx + x, Y + y, cz + z, rib ? th.frame : th.glass);
@@ -265,6 +333,8 @@ public final class Floor4 extends Builder {
             stash(s.getX(), Y, s.getZ(), STASHES);
         }
     }
+
+    private static boolean inDome(int x, int y, int z) { return x * x + z * z + y * y * 1.6 * 1.6 <= (double) DOME_R * DOME_R; }
 
     private Block floorOf(Theme th, int x, int z, double r) {
         return switch (th) {

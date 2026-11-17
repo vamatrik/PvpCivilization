@@ -30,6 +30,12 @@ public final class ModF4 {
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> NAZA_TROPHY = simple("naza_trophy", 0, true, 1, "Трофей: доктор Ноэль и Лиана повержены.", "Для витрины в квартире.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> NAZA_BADGE = simple("naza_badge", 0, true, 1, "Пропуск сотрудника NaZa.", "Даёт Чарователь. Открывает молекулярный стол.");
 
+    // ---- 0.11.2: расширители сумки этажей 3 и 4
+    public static final DeferredItem<com.pvpciv.item.BagBuckleItem> SILK_POUCH = ITEMS.register("silk_pouch",
+            () -> new com.pvpciv.item.BagBuckleItem(new Item.Properties().stacksTo(16).rarity(net.minecraft.world.item.Rarity.RARE), 4, 3));
+    public static final DeferredItem<com.pvpciv.item.BagBuckleItem> NANO_POCKET = ITEMS.register("nano_pocket",
+            () -> new com.pvpciv.item.BagBuckleItem(new Item.Properties().stacksTo(16).rarity(net.minecraft.world.item.Rarity.EPIC), 5, 4));
+
     // ---- модули молекулярного стола (ставятся ПКМ рядом со столом)
     public static final DeferredItem<com.pvpciv.item.EnchModuleItem> MODULE_BASIC = ITEMS.register("module_basic",
             () -> new com.pvpciv.item.EnchModuleItem(new Item.Properties().stacksTo(16), 1));

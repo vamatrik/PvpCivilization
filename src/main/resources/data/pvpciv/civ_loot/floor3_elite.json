@@ -57,6 +57,10 @@
   {
    "item": "pvpciv:blood_star_w1",
    "chance": 0.035
+  },
+  {
+   "item": "pvpciv:silk_pouch",
+   "chance": 0.02
   }
  ]
 }

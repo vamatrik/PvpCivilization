@@ -27,12 +27,20 @@ public final class Bag {
 
     /** 0.9.0: правило строк поменялось — уже открытые строки не отнимаем (добавляем в «пряжки»). */
     public static void migrate(StoryData d) {
+        if (d.bagRule == 1) {   // 0.11.2: расширители «по одному на этаж» — уже использованные засчитываем
+            d.bagRule = 2;
+            if (d.extraSlots >= 3) d.gates.putBoolean("bag_f1", true);
+            if (d.extraSlots == 4 || d.extraSlots >= 7) d.gates.putBoolean("bag_f2", true);
+            return;
+        }
         if (d.bagRule >= 1) return;
         d.bagRule = 1;
         int old = 0, now = 0;
         for (int m : OLD_MILESTONES) if (d.level >= m) old += 9;
         for (int m : LEVEL_MILESTONES) if (d.level >= m) now += 9;
         if (old > now) d.extraSlots += old - now;
+        d.bagRule = 1;
+        migrate(d);
     }
 
     public static int unlocked(Player p) {

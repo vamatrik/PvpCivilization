@@ -40,7 +40,7 @@ public final class Shop {
 
     public static List<Offer> offers(ServerPlayer p) {
         String v = VENDOR.get(p.getUUID());
-        return "chef".equals(v) ? chef() : "smuggler".equals(v) ? smuggler() : "eleonora".equals(v) ? eleonora() : offers();
+        return "luna".equals(v) ? luna() : "chef".equals(v) ? chef() : "smuggler".equals(v) ? smuggler() : "eleonora".equals(v) ? eleonora() : offers();
     }
 
     public static boolean tokenShop(ServerPlayer p) { return "eleonora".equals(VENDOR.get(p.getUUID())); }
@@ -84,6 +84,24 @@ public final class Shop {
         return out;
     }
 
+    /** 0.12: Луна, лавка станции «Орбита» (этаж 5). Свиток забвения появится вместе с классами (0.13). */
+    public static List<Offer> luna() {
+        List<Offer> out = new ArrayList<>();
+        out.add(new Offer("l_cmp", new ItemStack(com.pvpciv.registry.ModF5.CMP_LAZURATRON.get(), 2), 900, 6));
+        out.add(new Offer("l_forget", new ItemStack(com.pvpciv.registry.ModF5.FORGET_SCROLL.get()), 25000, 1));   // 1.0: сброс класса
+        out.add(new Offer("l_focus", new ItemStack(com.pvpciv.registry.ModF4.CAT_FOCUS.get()), 650, 3));
+        out.add(new Offer("l_anchor", new ItemStack(com.pvpciv.registry.ModF4.CAT_ANCHOR.get()), 900, 2));
+        out.add(new Offer("l_reso", new ItemStack(com.pvpciv.registry.ModF4.CAT_RESONATOR.get()), 2200, 1));
+        out.add(new Offer("l_mod", new ItemStack(com.pvpciv.registry.ModF4.MODULE_IMPROVED.get()), 5200, 1));
+        out.add(new Offer("l_star", new ItemStack(ModRegistry.STAR_W1.get()), 700, 3));
+        out.add(new Offer("l_scroll", new ItemStack(ModRegistry.TEMPER_SCROLL.get()), 2400, 1));
+        out.add(new Offer("l_apple", new ItemStack(Items.ENCHANTED_GOLDEN_APPLE), 3000, 1));
+        out.add(new Offer("l_rocket", new ItemStack(Items.FIREWORK_ROCKET, 16), 120, 999));   // приколы
+        out.add(new Offer("l_plush", new ItemStack(ModRegistry.LUNA_PLUSH.get()), 1500, 1));
+        out.add(new Offer("l_cake", new ItemStack(Items.CAKE), 200, 3));
+        return out;
+    }
+
     /** Повар Харуки (деревня самураев, этаж 3): японская кухня и одно особое блюдо в завоз. */
     public static List<Offer> chef() {
         List<Offer> out = new ArrayList<>();
@@ -94,6 +112,7 @@ public final class Shop {
         out.add(new Offer("c_tako", new ItemStack(ModRegistry.TAKOYAKI.get()), 110, 6));
         out.add(new Offer("c_seal", new ItemStack(ModRegistry.JADE_SEAL.get()), 520, 2));
         out.add(new Offer("c_bento", new ItemStack(ModRegistry.IMPERIAL_BENTO.get()), 2400, 1));
+        out.add(new Offer("c_pouch", new ItemStack(com.pvpciv.registry.ModF4.SILK_POUCH.get()), 3800, 1));   // 0.11.2: расширитель этажа 3
         return out;
     }
 

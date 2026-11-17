@@ -42,13 +42,24 @@ public final class Titles {
         add(new Def("shadow", "Тень", 0xE0405A, "Пройди всю цепочку охоты Юки", "+3% к урону", Bonus.DAMAGE, 0.03));
         add(new Def("gates_1", "Привратник", 0x8FE3FF, "Почини все врата этажа 1", "+2% к скорости бега", Bonus.SPEED, 0.02));
         add(new Def("gates_2", "Наладчик", 0x8FE3FF, "Почини все врата этажа 2", "+2% к здоровью", Bonus.HP, 0.02));
+        add(new Def("gates_4", "Сетевик", 0x8FE3FF, "Почини все врата этажа 4", "+2% к здоровью", Bonus.HP, 0.02));
         add(new Def("gates_3", "Странник", 0x8FE3FF, "Почини все врата этажа 3", "+2% к урону", Bonus.DAMAGE, 0.02));
+        add(new Def("orbit", "Космонавт", 0xC8A0FF, "Долети до станции «Орбита» (этаж 5)", "+2% к урону", Bonus.DAMAGE, 0.02));
         add(new Def("naza_staff", "Стажёр", 0x40D0FF, "Доберись до НТЦ «NaZa» (этаж 4)", "+2% к здоровью", Bonus.HP, 0.02));
         add(new Def("molecular", "Синтезатор", 0x40D0FF, "Получи зачарование IV ранга", "+2% к урону", Bonus.DAMAGE, 0.02));
         add(new Def("phase", "Фазовый", 0xC060FF, "Зарядь прибор Стеллы: 1000 рывков", "+3% к скорости бега", Bonus.SPEED, 0.03));
         add(new Def("gardener", "Прополка", 0x6AD040, "Победи доктора Ноэля и Лиану", "+3% к здоровью", Bonus.HP, 0.03));
         add(new Def("black_star", "Чёрная звезда", 0x9A6AFF, "Заточи оружие до +11", "чёрная аура (скоро)", Bonus.NONE, 0));
-        add(new Def("luna_100", "Неудачник", 0xFF8AD8, "Проиграй Луне 100 раз (скоро)", "до +10% урона", Bonus.NONE, 0));
+        add(new Def("luna_100", "Неудачник", 0xFF8AD8, "Проиграй Луне 100 раз", "+5% к урону", Bonus.DAMAGE, 0.05));
+        // 1.0
+        add(new Def("moon_rival", "Соперник Луны", 0xE070C0, "Пройди 3-ю стадию испытания Луны", "+3% к урону", Bonus.DAMAGE, 0.03));
+        add(new Def("ambassador", "Без подписи", 0x40D0FF, "Победи Инопланетного дипломата", "+3% к здоровью", Bonus.HP, 0.03));
+        add(new Def("hell_walker", "Изгоняющий", 0xFF5030, "Изгони демоницу Пустоты в Ад", "+4% к урону", Bonus.DAMAGE, 0.04));
+        add(new Def("liftfixer", "Механик миров", 0xFF8A30, "Почини лифт станции адским следом", "+3% к скорости бега", Bonus.SPEED, 0.03));
+        add(new Def("cls_assassin", "Ассасин", 0xB070FF, "Выбери класс «Ассасин»", "+2% к скорости бега", Bonus.SPEED, 0.02));
+        add(new Def("cls_swordsman", "Мечник", 0x6AC8FF, "Выбери класс «Мечник»", "+2% к здоровью", Bonus.HP, 0.02));
+        add(new Def("cls_berserk", "Берсерк", 0xFF5A40, "Выбери класс «Берсерк»", "+2% к урону", Bonus.DAMAGE, 0.02));
+        add(new Def("cls_crusher", "Крушитель", 0xFFB040, "Выбери класс «Крушитель»", "+2% к здоровью", Bonus.HP, 0.02));
     }
     private static void add(Def d) { DEFS.put(d.id(), d); }
 

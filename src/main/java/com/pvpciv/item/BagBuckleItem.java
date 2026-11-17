@@ -19,22 +19,34 @@ import net.minecraft.world.level.Level;
 
 import java.util.List;
 
-/** Пряжка рюкзака: навсегда +3 слота сумки. */
+/**
+ * Расширитель сумки. 0.11.2: у каждого этажа свой (1 — пряжка, 2 — рюкзак контрабандиста, 3 — шёлковый кисет, 4 — нанокарман),
+ * использовать можно только ОДИН расширитель каждого этажа; лишние — продать или отдать другу.
+ * Ещё по строке (9 слотов) — на уровнях 10, 20, 30, 40, 50.
+ */
 public class BagBuckleItem extends Item {
-    public final int slots;
-    public BagBuckleItem(Properties p) { this(p, 3); }
-    public BagBuckleItem(Properties p, int slots) { super(p); this.slots = slots; }
+    public final int slots, floor;
+    public BagBuckleItem(Properties p) { this(p, 3, 1); }
+    public BagBuckleItem(Properties p, int slots) { this(p, slots, 2); }
+    public BagBuckleItem(Properties p, int slots, int floor) { super(p); this.slots = slots; this.floor = floor; }
+
+    public static boolean used(StoryData d, int floor) { return d.gates.getBoolean("bag_f" + floor); }
 
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack st = player.getItemInHand(hand);
         if (!level.isClientSide && player instanceof ServerPlayer sp) {
             StoryData d = Story.data(sp);
+            if (used(d, floor)) {
+                sp.displayClientMessage(Component.literal("Расширитель этажа " + floor + " уже использован. Этот можно продать или отдать другу.").withStyle(ChatFormatting.GRAY), true);
+                return InteractionResultHolder.fail(st);
+            }
             if (Bag.unlocked(d.level, d.extraSlots) >= Bag.MAX) {
                 sp.displayClientMessage(Component.literal("Сумка уже максимального размера!").withStyle(ChatFormatting.GRAY), true);
                 return InteractionResultHolder.fail(st);
             }
             d.extraSlots += slots;
+            d.gates.putBoolean("bag_f" + floor, true);
             sp.setData(ModRegistry.STORY.get(), d);
             st.shrink(1);
             level.playSound(null, sp.blockPosition(), SoundEvents.ARMOR_EQUIP_LEATHER.value(), SoundSource.PLAYERS, 1f, 1.2f);
@@ -47,6 +59,7 @@ public class BagBuckleItem extends Item {
     @Override
     public void appendHoverText(ItemStack st, TooltipContext ctx, List<Component> tip, TooltipFlag flag) {
         tip.add(Component.literal("ПКМ — навсегда +" + slots + " слота сумки").withStyle(ChatFormatting.AQUA));
+        tip.add(Component.literal("Расширитель этажа " + floor + ": один на игрока. Лишние — продать или отдать.").withStyle(ChatFormatting.GOLD));
         tip.add(Component.literal("Ещё по ряду (9 слотов) — на уровнях 10, 20, 30, 40, 50").withStyle(ChatFormatting.GRAY));
         tip.add(Component.literal("Максимум сумки — " + Bag.MAX + " слота").withStyle(ChatFormatting.DARK_GRAY));
     }

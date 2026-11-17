@@ -1,0 +1,85 @@
+{
+ "entries": [
+  {
+   "item": "pvpciv:sparks",
+   "chance": 1,
+   "min": 700,
+   "max": 1100
+  },
+  {
+   "item": "pvpciv:cmp_lazuratron",
+   "chance": 1,
+   "min": 2,
+   "max": 4
+  },
+  {
+   "item": "pvpciv:quasar_cell",
+   "chance": 1,
+   "min": 1,
+   "max": 2
+  },
+  {
+   "item": "pvpciv:astro_core",
+   "chance": 0.6
+  },
+  {
+   "item": "pvpciv:star_w1",
+   "chance": 1,
+   "min": 4,
+   "max": 6
+  },
+  {
+   "item": "pvpciv:blessed_star_w1",
+   "chance": 0.6
+  },
+  {
+   "item": "pvpciv:cat_resonator",
+   "chance": 0.6,
+   "min": 1,
+   "max": 2
+  },
+  {
+   "item": "pvpciv:module_improved",
+   "chance": 0.4
+  },
+  {
+   "weapons": [
+    "pvpciv:supernova"
+   ],
+   "chance": 0.12,
+   "min_rarity": "EPIC"
+  },
+  {
+   "weapons": [
+    "pvpciv:photon_blade",
+    "pvpciv:void_knife",
+    "pvpciv:comet_saber",
+    "pvpciv:meteor_axe"
+   ],
+   "chance": 0.55,
+   "min_rarity": "RARE"
+  },
+  {
+   "gear": [
+    "pvpciv:orbit_helmet",
+    "pvpciv:orbit_chestplate",
+    "pvpciv:orbit_leggings",
+    "pvpciv:orbit_boots"
+   ],
+   "chance": 0.4,
+   "min_rarity": "RARE"
+  },
+  {
+   "item": "pvpciv:temper_scroll",
+   "chance": 0.35
+  },
+  {
+   "item": "pvpciv:blood_star_w1",
+   "chance": 0.2
+  },
+  {
+   "item": "pvpciv:grav_pouch",
+   "chance": 0.25
+  }
+ ]
+}

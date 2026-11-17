@@ -75,15 +75,26 @@ public final class BossManager {
             () -> Floor4.ARK_ARENA, 13, new Vec3(-7, 0, 0), () -> com.pvpciv.registry.ModMobs.NOEL_BOSS.get(),
             "floor4_boss_personal", "floor4_boss_ground", 64, com.pvpciv.registry.ModF4.NAZA_TROPHY, BossEvent.BossBarColor.GREEN, ChatFormatting.GREEN,
             "ДОКТОР НОЭЛЬ ВЫПУСТИЛ ЛИАНУ! Биокупол «Ковчег», этаж 4.", false);
-    public static final List<Def> DEFS = List.of(BRUTE, KEEPER, DON, RAT_KING, KAPPA, KUMIHO, NOEL);
+    public static final Def DIPLOMAT = new Def("diplomat", "Инопланетный дипломат", "Мостик станции «Орбита» (этаж 5)", 32, 40 * MIN, 11, 1.5,
+            () -> Floor5.BRIDGE_M.center(), 13, new Vec3(0, 0, -4), () -> com.pvpciv.registry.ModMobs.DIPLOMAT_BOSS.get(),
+            "floor5_boss_personal", "floor5_boss_ground", 128, com.pvpciv.registry.ModF5.DIPLOMAT_TROPHY, BossEvent.BossBarColor.BLUE, ChatFormatting.AQUA,
+            "ИНОПЛАНЕТНЫЙ ДИПЛОМАТ ПРИБЫЛ НА МОСТИК! Этаж 5. Не подписывайте ничего.", false);
+    public static final Def WORM = new Def("worm", "Галактический червь", "Пояс астероидов (шлюз ангара, этаж 5)", 38, 60 * MIN, 13, 1.6,
+            () -> Belt.CENTER, 30, new Vec3(0, 6, 0), () -> com.pvpciv.registry.ModMobs.WORM_BOSS.get(),
+            "floor5_worm_personal", "floor5_worm_ground", 256, com.pvpciv.registry.ModF5.WORM_TROPHY, BossEvent.BossBarColor.PINK, ChatFormatting.LIGHT_PURPLE,
+            "ГАЛАКТИЧЕСКИЙ ЧЕРВЬ ПРОСНУЛСЯ! Пояс астероидов, этаж 5.", false);
+    public static final List<Def> DEFS = List.of(BRUTE, KEEPER, DON, RAT_KING, KAPPA, KUMIHO, NOEL, DIPLOMAT, WORM);
+    public static boolean f5(Def d) { return d == DIPLOMAT || d == WORM; }
     /** Сколько тел у босса (каппы — четверо братьев, Ноэль + Лиана; урон и лут общие). */
     public static int group(Def d) { return d == KAPPA ? 4 : d == NOEL ? 2 : 1; }
     public static boolean f3(Def d) { return d == KAPPA || d == KUMIHO; }
     public static boolean f4(Def d) { return d == NOEL; }
-    public static int floor(Def d) { return f4(d) ? 4 : f3(d) ? 3 : d.f2() ? 2 : 1; }
+    public static int floor(Def d) { return f5(d) ? 5 : f4(d) ? 4 : f3(d) ? 3 : d.f2() ? 2 : 1; }
 
     private static final class St {
         UUID id; ServerBossEvent bar; int alive; boolean w5, w1, scanned;
+        /** 0.11.2: арена закрыта после первого удара; внутри — те, кто был там в этот момент. */
+        boolean locked; final Set<UUID> inside = new HashSet<>();
         final Map<UUID, Float> dmg = new HashMap<>();
     }
     private static final Map<String, St> ST = new HashMap<>();
@@ -117,7 +128,7 @@ public final class BossManager {
     /** Реальное время в тиках: таймеры боссов идут, даже когда сервер выключен (бета 12.11). */
     public static long now() { return System.currentTimeMillis() / 50; }
 
-    private static ServerLevel lvl(MinecraftServer server, Def d) { if (f4(d)) return com.pvpciv.world.CivWorld.f4(server); if (f3(d)) return com.pvpciv.world.CivWorld.f3(server); return d.f2() ? com.pvpciv.world.CivWorld.f2(server) : com.pvpciv.world.CivWorld.level(server); }
+    private static ServerLevel lvl(MinecraftServer server, Def d) { if (f5(d)) return com.pvpciv.world.CivWorld.f5(server); if (f4(d)) return com.pvpciv.world.CivWorld.f4(server); if (f3(d)) return com.pvpciv.world.CivWorld.f3(server); return d.f2() ? com.pvpciv.world.CivWorld.f2(server) : com.pvpciv.world.CivWorld.level(server); }
 
     private static void tick(MinecraftServer server, Def d) {
         ServerLevel lvl = lvl(server, d);
@@ -152,9 +163,10 @@ public final class BossManager {
         }
         if (boss == null) {
             long left = data.bossNext(d.id()) - now;
-            if (left <= 20L * 300 && !s.w5) { s.w5 = true; broadcast(server, d.name() + " проснётся через 5 минут: " + d.where() + " (PvP)!", ChatFormatting.GOLD); }
-            if (left <= 20L * 60 && !s.w1) { s.w1 = true; broadcast(server, d.name() + " проснётся через минуту! Готовьте оружие.", d.chat()); }
-            if (left <= 0 && lairLoaded && s.scanned) spawn(lvl, d);
+            if (left <= 20L * 300 && !s.w5) { s.w5 = true; broadcast(server, "Алтарь «" + d.name() + "» оживёт через 5 минут: " + d.where() + " (PvP).", ChatFormatting.GOLD); }
+            if (left <= 20L * 60 && !s.w1) { s.w1 = true; broadcast(server, "Алтарь «" + d.name() + "» оживёт через минуту.", d.chat()); }
+            // 0.11.2: босс спит — по таймеру в логове загорается алтарь, будит его игрок (ПКМ по алтарю)
+            if (left <= 0 && lairLoaded && s.scanned) altar(lvl, d, true);
             return;
         }
         Vec3 c = center(d);
@@ -183,6 +195,7 @@ public final class BossManager {
         s.bar.setName(Component.literal(d.name() + " • ур. " + d.level() + (boss.enraged() ? "  — ЯРОСТЬ" : "")));
         if (d == NOEL) s.bar.setName(Component.literal("Ноэль ▌ Лиана • ур. " + d.level() + (boss instanceof com.pvpciv.entity.boss.NoelBoss nb && nb.enraged() ? "  — ЯРОСТЬ" : "")));
         for (ServerPlayer p : new ArrayList<>(s.bar.getPlayers())) if (p.level() != lvl || p.isRemoved()) s.bar.removePlayer(p);   // 0.11: ушёл на другой этаж — полоса не висит
+        lockTick(lvl, d, s, c);
         for (ServerPlayer p : lvl.players()) {
             boolean near = p.position().distanceTo(c) < d.lairR() + 34;
             if (near && !s.bar.getPlayers().contains(p)) s.bar.addPlayer(p);
@@ -259,7 +272,108 @@ public final class BossManager {
     }
 
     public static void recordDamage(Mob mob, ServerPlayer p, float dmg) {
-        if (mob instanceof CivBoss b) { Def d = def(b.defId()); if (d != null) st(d).dmg.merge(p.getUUID(), dmg, Float::sum); }
+        if (mob instanceof CivBoss b) {
+            Def d = def(b.defId());
+            if (d == null) return;
+            St s = st(d);
+            s.dmg.merge(p.getUUID(), dmg, Float::sum);
+            if (!s.locked && mob.level() instanceof ServerLevel lvl) lock(lvl, d, s);
+        }
+    }
+
+    // ------------------------------------------------------------------ 0.11.2: алтарь пробуждения
+    /** Блок алтаря стоит в центре логова, на земле. */
+    private static final java.util.Map<String, BlockPos> ALTAR_AT = new java.util.HashMap<>();
+    public static BlockPos altarPos(Def d) { return ALTAR_AT.getOrDefault(d.id(), d.lair().get()); }
+    /** Ближайшая к центру логова сухая точка на земле (у капп центр — в пруду). */
+    private static BlockPos findAltar(ServerLevel lvl, Def d) {
+        BlockPos c = d.lair().get();
+        for (int r = 0; r <= 8; r++) for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++) {
+            if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
+            for (int dy = -2; dy <= 4; dy++) {
+                BlockPos q = c.offset(dx, dy, dz);
+                var st = lvl.getBlockState(q);
+                if ((st.isAir() || st.is(net.minecraft.world.level.block.Blocks.RESPAWN_ANCHOR)) && lvl.getFluidState(q).isEmpty()
+                        && lvl.getBlockState(q.below()).isFaceSturdy(lvl, q.below(), net.minecraft.core.Direction.UP) && lvl.getFluidState(q.below()).isEmpty()) return q;
+            }
+        }
+        return c;
+    }
+    private static final java.util.Map<String, Boolean> ALTAR_LIT = new java.util.HashMap<>();
+
+    private static void altar(ServerLevel lvl, Def d, boolean on) {
+        BlockPos a = ALTAR_AT.computeIfAbsent(d.id(), k -> findAltar(lvl, d));
+        boolean has = lvl.getBlockState(a).is(net.minecraft.world.level.block.Blocks.RESPAWN_ANCHOR);
+        if (on && !has) {
+            lvl.setBlock(a, net.minecraft.world.level.block.Blocks.RESPAWN_ANCHOR.defaultBlockState().setValue(net.minecraft.world.level.block.RespawnAnchorBlock.CHARGE, 4), 3);
+            if (!Boolean.TRUE.equals(ALTAR_LIT.get(d.id()))) {
+                broadcast(lvl.getServer(), "Алтарь «" + d.name() + "» горит: " + d.where() + ". ПКМ по алтарю — разбудить.", d.chat());
+                lvl.playSound(null, a, SoundEvents.RESPAWN_ANCHOR_CHARGE, SoundSource.HOSTILE, 2f, 0.6f);
+            }
+            ALTAR_LIT.put(d.id(), true);
+        } else if (!on && has) lvl.setBlock(a, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+        if (on && lvl.getGameTime() % 10 == 0)
+            lvl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, a.getX() + 0.5, a.getY() + 1.2, a.getZ() + 0.5, 6, 0.3, 0.3, 0.3, 0.02);
+    }
+
+    /** ПКМ по блоку: если это горящий алтарь босса — будим. */
+    public static boolean onAltarUse(ServerPlayer p, BlockPos pos) {
+        for (Def d : DEFS) {
+            if (!altarPos(d).equals(pos) || lvl(p.server, d) != p.level()) continue;
+            if (!p.level().getBlockState(pos).is(net.minecraft.world.level.block.Blocks.RESPAWN_ANCHOR)) return false;
+            St s = st(d);
+            if (s.id != null || secondsLeft(p.server, d.id()) > 0) return true;
+            altar((ServerLevel) p.level(), d, false);
+            ALTAR_LIT.remove(d.id());
+            broadcast(p.server, p.getGameProfile().getName() + " будит: " + d.name() + "!", d.chat());
+            spawn((ServerLevel) p.level(), d);
+            return true;
+        }
+        return false;
+    }
+
+    // ------------------------------------------------------------------ 0.11.2: закрытая арена
+    private static void lock(ServerLevel lvl, Def d, St s) {
+        Vec3 c = center(d);
+        s.locked = true;
+        s.inside.clear();
+        for (ServerPlayer p : lvl.players()) if (!p.isSpectator() && flat(p.position(), c) <= d.lairR()) s.inside.add(p.getUUID());
+        lvl.playSound(null, BlockPos.containing(c), SoundEvents.IRON_DOOR_CLOSE, SoundSource.HOSTILE, 3f, 0.5f);
+        lvl.playSound(null, BlockPos.containing(c), SoundEvents.BEACON_ACTIVATE, SoundSource.HOSTILE, 2f, 0.6f);
+        for (ServerPlayer p : lvl.players()) if (flat(p.position(), c) < d.lairR() + 30)
+            p.displayClientMessage(Component.literal("Арена закрыта до конца боя").withStyle(ChatFormatting.RED, ChatFormatting.BOLD), true);
+    }
+
+    private static double flat(Vec3 a, Vec3 b) { return Math.hypot(a.x - b.x, a.z - b.z); }
+
+    /** Каждый тик боя: стена-кольцо из частиц; своих не выпускает, чужих не пускает. Все свои ушли или погибли — арена открывается. */
+    private static void lockTick(ServerLevel lvl, Def d, St s, Vec3 c) {
+        if (!s.locked) return;
+        double R = d.lairR();
+        s.inside.removeIf(u -> { ServerPlayer p = lvl.getServer().getPlayerList().getPlayer(u); return p == null || !p.isAlive() || p.level() != lvl; });
+        if (s.inside.isEmpty()) { s.locked = false; return; }
+        if (lvl.getGameTime() % 6 == 0) for (int i = 0; i < 48; i++) {
+            double a = Math.PI * 2 * i / 48 + lvl.getGameTime() * 0.01;
+            lvl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, c.x + Math.cos(a) * R, c.y + 0.2 + (i % 4) * 0.9, c.z + Math.sin(a) * R, 1, 0, 0.2, 0, 0);
+        }
+        for (ServerPlayer p : lvl.players()) {
+            if (p.isSpectator() || p.isCreative()) continue;
+            double r = flat(p.position(), c);
+            boolean in = s.inside.contains(p.getUUID());
+            if (in && r > R + 8) { s.inside.remove(p.getUUID()); continue; }   // ушёл телепортом (врата, лифт) — выпускаем
+            if (in && r > R - 0.6) push(p, c, -1, R - 1.2);
+            else if (!in && r < R + 0.6 && r > 0.01) push(p, c, 1, R + 1.2);
+        }
+    }
+
+    /** dir −1 — к центру (вернуть на радиус), +1 — наружу. */
+    private static void push(ServerPlayer p, Vec3 c, int dir, double toR) {
+        Vec3 v = new Vec3(p.getX() - c.x, 0, p.getZ() - c.z).normalize();
+        Vec3 at = new Vec3(c.x + v.x * toR, p.getY(), c.z + v.z * toR);
+        p.teleportTo(at.x, at.y, at.z);
+        p.setDeltaMovement(v.scale(0.35 * dir).add(0, 0.1, 0));
+        p.hurtMarked = true;
+        if (p.tickCount % 20 == 0) p.displayClientMessage(Component.literal(dir < 0 ? "Арена закрыта — бой до конца" : "Арена закрыта: бой уже идёт").withStyle(ChatFormatting.RED), true);
     }
 
     public static void onDeath(LivingDeathEvent e) {
@@ -289,7 +403,9 @@ public final class BossManager {
             String name = p != null ? p.getGameProfile().getName() : "?";
             if (top.length() < 120) top.append(name).append(" ").append(Math.round(share * 100)).append("%  ");
             if (p == null || share < 0.05f) continue;
-            List<ItemStack> loot = LootTables.roll(d.personal(), lvl.random, 1.0);
+            LootTables.PREFER = com.pvpciv.game.Classes.prefer(p);
+            List<ItemStack> loot;
+            try { loot = LootTables.roll(d.personal(), lvl.random, 1.0); } finally { LootTables.PREFER = null; }
             StoryData sd = Progress.d(p);
             if ((sd.trophies & d.trophyBit()) == 0) {
                 sd.trophies |= d.trophyBit();
@@ -306,7 +422,9 @@ public final class BossManager {
             com.pvpciv.game.Library.onKillBoss(p, d.id());
             com.pvpciv.game.Assassin.onKill(p, com.pvpciv.game.Assassin.BOSS);
             if (d == NOEL) { com.pvpciv.game.Enchanter.onBoss(p); com.pvpciv.progress.Titles.grant(p, "gardener"); }
+            if (d == DIPLOMAT) com.pvpciv.progress.Titles.grant(p, "ambassador");
         }
+        if (d == WORM) com.pvpciv.game.VoidRift.begin(lvl, new ArrayList<>(s.dmg.keySet()));   // 1.0: фаза 2 — демоница Пустоты
         for (ItemStack st : LootTables.roll(d.ground(), lvl.random, 1.0)) {
             ItemEntity ie = new ItemEntity(lvl, boss.getX(), boss.getY() + 1, boss.getZ(), st);
             ie.setDeltaMovement((lvl.random.nextDouble() - 0.5) * 0.5, 0.4, (lvl.random.nextDouble() - 0.5) * 0.5);
@@ -323,6 +441,7 @@ public final class BossManager {
         s.id = null;
         s.dmg.clear();
         s.w5 = s.w1 = false;
+        s.locked = false; s.inside.clear();
         CivData data = CivData.get(server);
         data.bossNext.put(d.id(), now() + d.period());
         data.setDirty();

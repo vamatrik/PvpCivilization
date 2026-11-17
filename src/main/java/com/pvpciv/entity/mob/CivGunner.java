@@ -44,9 +44,9 @@ public class CivGunner extends CivSkeleton {
     @Override public void performRangedAttack(LivingEntity target, float power) {}
 
     /** 0.11: цвета лазера-подсказки и трассера у мобов этажа 4. */
-    int laser() { var t = getType(); return t == com.pvpciv.registry.ModMobs.LAB_TECH.get() ? 0xC040FF : t == com.pvpciv.registry.ModMobs.SENTRY.get() ? 0x30C8FF : 0xFF2030; }
-    int tracer() { var t = getType(); return t == com.pvpciv.registry.ModMobs.LAB_TECH.get() ? 0xE090FF : t == com.pvpciv.registry.ModMobs.SENTRY.get() ? 0x90E8FF : 0xFFD060; }
-    @Override public boolean isPushable() { return getType() != com.pvpciv.registry.ModMobs.TURRET.get() && super.isPushable(); }
+    int laser() { var t = getType(); return t == com.pvpciv.registry.ModMobs.ANDROID.get() ? 0x30E0FF : t == com.pvpciv.registry.ModMobs.DRONE.get() ? 0xFFC030 : t == com.pvpciv.registry.ModMobs.LAB_TECH.get() ? 0xC040FF : t == com.pvpciv.registry.ModMobs.SENTRY.get() ? 0x30C8FF : 0xFF2030; }
+    int tracer() { var t = getType(); return t == com.pvpciv.registry.ModMobs.ANDROID.get() ? 0xA0F4FF : t == com.pvpciv.registry.ModMobs.DRONE.get() ? 0xFFE090 : t == com.pvpciv.registry.ModMobs.LAB_TECH.get() ? 0xE090FF : t == com.pvpciv.registry.ModMobs.SENTRY.get() ? 0x90E8FF : 0xFFD060; }
+    @Override public boolean isPushable() { return getType() != com.pvpciv.registry.ModMobs.TURRET.get() && getType() != com.pvpciv.registry.ModMobs.DRONE.get() && super.isPushable(); }
 
     static boolean exo(Player p) {
         for (var sl : new net.minecraft.world.entity.EquipmentSlot[]{net.minecraft.world.entity.EquipmentSlot.HEAD, net.minecraft.world.entity.EquipmentSlot.CHEST,
@@ -127,7 +127,12 @@ public class CivGunner extends CivSkeleton {
                 double dmg = g.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) * (g.elite() ? 0.11 : 0.15);
                 if (exo(hitP)) dmg *= 0.9;   // 0.11: экзокостюм держит пули
                 com.pvpciv.combat.Balance.PEN = 0.5;   // 0.10.2: пули пробивают половину брони
+                var v0 = hitP.getDeltaMovement();
                 try { hitP.hurt(g.damageSources().mobAttack(g), (float) dmg); } finally { com.pvpciv.combat.Balance.PEN = 0; }
+                // 0.11.1: отдача от пуль — четверть ванильной (очередь больше не «сдувает» игрока)
+                var v1 = hitP.getDeltaMovement();
+                hitP.setDeltaMovement(v0.add(v1.subtract(v0).scale(0.25)));
+                hitP.hurtMarked = true;
                 hitP.invulnerableTime = 0;
             }
             line(lvl, from, end, g.tracer(), g.getType() == com.pvpciv.registry.ModMobs.LAB_TECH.get() ? 0.05f : 0.025f, 90, false);

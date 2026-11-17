@@ -19,7 +19,7 @@ public class SkillsScreen extends PlainScreen {
 
     private List<JsonObject> slot(int s) {
         List<JsonObject> l = new ArrayList<>();
-        for (var el : ClientState.skillsAll) { JsonObject o = el.getAsJsonObject(); if (o.get("slot").getAsInt() == s) l.add(o); }
+        for (var el : ClientState.skillsAll) { JsonObject o = el.getAsJsonObject(); if (o.get("slot").getAsInt() == s && (s != 3 || o.get("open").getAsBoolean())) l.add(o); }
         return l;
     }
 
@@ -27,7 +27,8 @@ public class SkillsScreen extends PlainScreen {
 
     @Override
     protected void drawContent(GuiGraphics g, int mx, int my, float pt) {
-        g.drawCenteredString(font, "Щёлкни по навыку, чтобы поставить его в слот", left + w / 2, top + 18, Skin.DIM);
+        g.drawString(font, "Щёлкни по навыку, чтобы поставить его в слот", left + 12, top + 18, Skin.DIM, false);
+        Skin.button(g, font, left + w - 74, top + 12, 64, "Класс ▸", mx, my, true, true);
         for (int i = 0; i < 3; i++) {
             int x = left + 10 + i * (COL + 3), y = top + 32;
             boolean open = ClientState.level >= LVL[i];
@@ -35,7 +36,7 @@ public class SkillsScreen extends PlainScreen {
             g.drawString(font, "Слот " + (i + 1) + " · " + key(i), x + 5, y + 4, open ? Skin.GOLD_L : Skin.FAINT, false);
             g.drawString(font, TYPE[i] + (open ? "" : " · с ур. " + LVL[i]), x + 5, y + 14, Skin.DIM, false);
             List<JsonObject> l = slot(i + 1);
-            if (l.isEmpty()) { Skin.para(g, font, "Навыки этого слота появятся на следующих этажах.", x + 5, y + 30, COL - 10, 10, 4, Skin.FAINT, false); continue; }
+            if (l.isEmpty()) { Skin.para(g, font, i == 2 ? "Навыки слота 3 дают эволюции классов. Дерево классов — кнопка «Класс» сверху (тёмная материя — у Луны на станции)." : "Навыки этого слота появятся на следующих этажах.", x + 5, y + 30, COL - 10, 10, 4, Skin.FAINT, false); continue; }
             for (int k = 0; k < l.size(); k++) {
                 JsonObject o = l.get(k);
                 int cy = y + 28 + k * (CARD + 3);
@@ -60,6 +61,7 @@ public class SkillsScreen extends PlainScreen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int b) {
+        if (in(mx, my, w - 74, 12, 64, 16)) { PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd("cls:open")); return true; }
         for (int i = 0; i < 3; i++) {
             if (ClientState.level < LVL[i]) continue;
             List<JsonObject> l = slot(i + 1);

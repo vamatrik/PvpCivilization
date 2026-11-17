@@ -1,0 +1,22 @@
+{
+ "entries": [
+  {
+   "item": "pvpciv:sparks",
+   "chance": 1,
+   "min": 200,
+   "max": 350
+  },
+  {
+   "item": "pvpciv:lazuratron",
+   "chance": 1,
+   "min": 6,
+   "max": 12
+  },
+  {
+   "item": "pvpciv:void_shard",
+   "chance": 1,
+   "min": 3,
+   "max": 6
+  }
+ ]
+}

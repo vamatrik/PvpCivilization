@@ -65,7 +65,9 @@ public final class Signposts {
             new Post("f4_hub_e", 4, () -> new BlockPos(5, Floor4.Y, 7), List.of(
                     d("Оранжерея · 16–18", () -> Floor4.GREEN), d("Криолаборатория · 18–20", () -> Floor4.CRYO))),
             new Post("f4_hub_w", 4, () -> new BlockPos(-5, Floor4.Y, 7), List.of(
-                    d("Реактор · 20–22", () -> Floor4.REACTOR), d("«Ковчег» · 22–24", () -> Floor4.ARK)))
+                    d("Реактор · 20–22", () -> Floor4.REACTOR), d("«Ковчег» · 22–24", () -> Floor4.ARK))),
+            new Post("f4_reactor_s", 4, () -> Floor4.REACTOR.offset(4, 0, 22), List.of(
+                    d("Космодром", () -> Floor4.COSMO), d("Вестибюль NaZa", () -> new BlockPos(0, Floor4.Y, 0))))
     );
 
     /** 0.10.5: старые таблички «куда идти» у лагеря пустоши и заставы кряжа — убрать (есть 3D-указатели). */

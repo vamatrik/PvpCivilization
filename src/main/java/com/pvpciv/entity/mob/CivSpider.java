@@ -33,6 +33,8 @@ public class CivSpider extends Spider {
             if (level() instanceof net.minecraft.server.level.ServerLevel sl)
                 sl.sendParticles(net.minecraft.core.particles.ParticleTypes.SPORE_BLOSSOM_AIR, t.getX(), t.getY() + 1, t.getZ(), 20, 0.6, 0.6, 0.6, 0.01);
         }
+        if (r && getType() == com.pvpciv.registry.ModMobs.VOID_CRAWLER.get() && t instanceof net.minecraft.world.entity.LivingEntity le)
+            le.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.DARKNESS, 80, 0));   // 0.12: пустота гасит свет
         return r;
     }
 }

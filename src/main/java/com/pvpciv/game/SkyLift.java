@@ -34,13 +34,37 @@ import static com.pvpciv.game.DialogueManager.opt;
 public final class SkyLift {
     public static final int C = 0x9A5AE0;
     private static final Set<UUID> RIDING = new HashSet<>();
-    public static final String[] FLOORS = {"Нижний Шпиль", "Неоновый город", "Тихая библиотека", "НТЦ «NaZa»", "???"};
+    public static final String[] FLOORS = {"Нижний Шпиль", "Неоновый город", "Тихая библиотека", "НТЦ «NaZa»", "Станция «Орбита»"};
+    /** 1.0: лифт станции починен адским следом — этаж 5 в списке лифта. */
+    public static boolean f5Ok(StoryData d) { return d.gates.getInt("lift5") > 0; }
 
     /** Этаж 3 — когда пали оба босса этажа 2 (Дон и Крысиный король, их трофеи). */
     public static boolean f3Ok(StoryData d) { return d.liftOk && (d.trophies & 12) == 12 && (d.showcase & 12) == 12; }   // бета 0.9.6: и трофеи на витрине
     /** 0.11: этаж 4 — когда пали братья-каппы и Кумихо (трофеи на витрине). */
     public static boolean f4Ok(StoryData d) { return f3Ok(d) && (d.trophies & 48) == 48 && (d.showcase & 48) == 48; }
-    public static int unlocked(StoryData d) { return !d.liftOk ? 0b1 : f4Ok(d) ? 0b1111 : f3Ok(d) ? 0b111 : 0b11; }
+    public static int unlocked(StoryData d) { return !d.liftOk ? 0b1 : f4Ok(d) ? (f5Ok(d) ? 0b11111 : 0b1111) : f3Ok(d) ? 0b111 : 0b11; }
+
+    /** 1.0: пульт у шахты лифта в атриуме станции: ремонт (адский след) или вызов лифта. */
+    public static boolean onF5Console(ServerPlayer p, BlockPos pos) {
+        if (!CivWorld.isF5(p.level()) || !pos.equals(com.pvpciv.floor.Floor5.LIFT_CONSOLE())) return false;
+        StoryData d = Progress.d(p);
+        if (f5Ok(d)) { use(p); return true; }
+        if (com.pvpciv.inv.Bag.count(p, s -> s.is(com.pvpciv.registry.ModF5.HELL_TRAIL.get())) <= 0) {
+            Story.say(p, "Лифт станции", C, "НЕИСПРАВЕН. Кабина застряла между мирами. Для ремонта нужен «адский след» — его оставляет демоница Пустоты (пояс астероидов, после Галактического червя).");
+            return true;
+        }
+        com.pvpciv.inv.Bag.take(p, s -> s.is(com.pvpciv.registry.ModF5.HELL_TRAIL.get()), 1);
+        d.gates.putInt("lift5", 1);
+        p.setData(ModRegistry.STORY.get(), d);
+        ServerLevel l = p.serverLevel();
+        l.playSound(null, pos, SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 1f, 0.8f);
+        l.playSound(null, pos, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 1.5f, 1f);
+        l.sendParticles(ParticleTypes.FLAME, pos.getX() + 0.5, pos.getY() + 1.5, pos.getZ() + 0.5, 60, 1.5, 2, 1.5, 0.05);
+        Story.title(p, "Лифт починен", "Этаж 5 теперь в лифте — ракета больше не нужна", 0xFF8A30);
+        com.pvpciv.progress.Titles.grant(p, "liftfixer");
+        p.sendSystemMessage(Component.literal("✦ Адский след вплавлен в механизм. Небесный лифт ходит до станции «Орбита». Первый мир пройден — дальше только Ад (этаж 6, скоро).").withStyle(ChatFormatting.GOLD));
+        return true;
+    }
 
     /** ПКМ по табло лифта. */
     private static final java.util.Map<UUID, Long> LAST = new java.util.HashMap<>();
@@ -118,6 +142,7 @@ public final class SkyLift {
         if ((unlocked(d) & (1 << (floor - 1))) == 0 || RIDING.contains(p.getUUID())) return;
         int cur = Math.max(1, CivWorld.floor(p.level()));
         if (floor == cur) return;
+        if (floor == 5 || cur == 5) { rideF5(p, floor); return; }   // 1.0: на станцию — без монорельса
         RIDING.add(p.getUUID());
         if (p.isPassenger()) p.stopRiding();
         p.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 300, 4, false, false));
@@ -145,6 +170,30 @@ public final class SkyLift {
             p.startRiding(c2, true);
             Vec3 end = path2.get(path2.size() - 1);
             c2.start(path2, 110, false, true, cc -> arrive(p, floor, end));
+        });
+    }
+
+    /** 1.0: лифт до станции и обратно — затемнение, гул, прибытие. */
+    private static void rideF5(ServerPlayer p, int floor) {
+        RIDING.add(p.getUUID());
+        if (p.isPassenger()) p.stopRiding();
+        p.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 120, 4, false, false));
+        p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 70, 10, false, false));
+        PacketDistributor.sendToPlayer(p, new Network.PhoneData(22, "{\"cut\":\"lift\",\"len\":60}"));
+        p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.2f, 0.6f);
+        GameEvents.later(p.server, 60, () -> {
+            RIDING.remove(p.getUUID());
+            if (!p.isAlive() || p.hasDisconnected()) return;
+            ServerLevel to = CivWorld.byFloor(p.server, floor);
+            Vec3 a = floor == 5 ? com.pvpciv.floor.Floor5.LIFT_ARRIVE() : floor == 4 ? com.pvpciv.floor.Floor4.LIFT_ARRIVE : floor == 3 ? com.pvpciv.floor.Floor3.LIFT_ARRIVE : floor == 2 ? com.pvpciv.floor.Floor2.LIFT_ARRIVE : com.pvpciv.world.DormBuilder.LIFT_ARRIVE;
+            p.teleportTo(to, a.x, a.y, a.z, floor == 5 ? 0 : p.getYRot(), 0);
+            p.resetFallDistance();
+            PacketDistributor.sendToPlayer(p, new Network.PhoneData(22, "{\"cut\":\"arrive\",\"len\":30}"));
+            p.connection.send(new net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket(Component.literal("ЭТАЖ " + floor).withStyle(ChatFormatting.GOLD)));
+            p.connection.send(new net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket(Component.literal(FLOORS[floor - 1]).withStyle(ChatFormatting.GRAY)));
+            if (floor == 5) com.pvpciv.floor.Floor5.onArrive(p);
+            if (floor == 4) com.pvpciv.floor.Floor4.onArrive(p);
+            if (floor == 3) com.pvpciv.game.Library.onArrive(p);
         });
     }
 

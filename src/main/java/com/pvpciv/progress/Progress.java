@@ -44,7 +44,7 @@ public final class Progress {
 
     /** Потолок уровня, пока не открыт следующий этаж: «уровень этажа» (сильнейший босс) + 3. Этаж 1 → 11, этаж 2 → 16. */
     /** Потолок уровня: макс. уровень мобов открытого этажа + 3 (0.11: этаж 3 — 19, этаж 4 — 27). */
-    public static int levelCap(StoryData d) { return com.pvpciv.game.SkyLift.f4Ok(d) ? 24 + 3 : com.pvpciv.game.SkyLift.f3Ok(d) ? 16 + 3 : d.liftOk ? 13 + 3 : 8 + 3; }
+    public static int levelCap(StoryData d) { return (d.trophies & 256) != 0 ? 40 : (d.trophies & 128) != 0 ? 38 : com.pvpciv.game.Rocket.unlocked(d) ? 32 + 3 : com.pvpciv.game.SkyLift.f4Ok(d) ? 24 + 3 : com.pvpciv.game.SkyLift.f3Ok(d) ? 16 + 3 : d.liftOk ? 13 + 3 : 8 + 3; }
 
     public static void addXp(ServerPlayer p, long amount) {
         StoryData d = d(p);

@@ -24,7 +24,9 @@ public final class Weapons {
             Map.entry("tetsubo", new int[]{0, 25}), Map.entry("kappa_naginata", new int[]{8, 20}), Map.entry("fox_fang", new int[]{12, 10}),
             Map.entry("foxfire_blade", new int[]{6, 20}), Map.entry("nine_tails", new int[]{12, 30}),
             Map.entry("plasma_cutter", new int[]{4, 15}), Map.entry("ion_dagger", new int[]{12, 10}), Map.entry("cryo_saber", new int[]{8, 0}),
-            Map.entry("gravity_hammer", new int[]{0, 30}), Map.entry("vine_axe", new int[]{10, 25}));
+            Map.entry("gravity_hammer", new int[]{0, 30}), Map.entry("vine_axe", new int[]{10, 25}),
+            Map.entry("photon_blade", new int[]{5, 15}), Map.entry("void_knife", new int[]{14, 15}), Map.entry("comet_saber", new int[]{9, 10}),
+            Map.entry("meteor_axe", new int[]{4, 25}), Map.entry("supernova", new int[]{6, 40}));
 
     public static String id(Item it) { return BuiltInRegistries.ITEM.getKey(it).getPath(); }
     public static int[] crit(Item it) { return CRIT.get(id(it)); }
@@ -49,7 +51,7 @@ public final class Weapons {
         out.add(String.format(Locale.ROOT, "%-16s %-6s %-4s %8s %5s %8s %5s %9s %7s %s", "id", "класс", "тир", "удар", "уд/с", "УВС", "пара", "УВС пары", "по бр.", "крит"));
         for (CivWeaponItem w : all()) {
             double h = hit(w), s = speed(w), ds = dualSpeed(w);
-            int fl = (int) Math.max(1, Math.min(4, Math.round(w.tierValue())));
+            int fl = (int) Math.max(1, Math.min(5, Math.round(w.tierValue())));
             int mobLvl = Math.max(1, fl * 6 - 3);
             double armor = Balance.mobArmor(mobLvl) * w.cls.dmg;
             double afterArmor = Balance.mitigate(h, armor, 0, 0) / h;

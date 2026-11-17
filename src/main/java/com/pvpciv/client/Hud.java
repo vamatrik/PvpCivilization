@@ -25,15 +25,18 @@ public final class Hud {
     private static void nextHitBar(GuiGraphics g, int w, int h) {
         var mc = Minecraft.getInstance();
         var p = mc.player;
-        if (p == null || !ClientCombat.isDual(p) || mc.screen != null) return;
+        if (p == null || !ClientCombat.armed(p) || mc.screen != null) return;
+        boolean dual = ClientCombat.isDual(p);
         boolean off = ClientCombat.nextIsOff(p);
         float ch = ClientCombat.nextCharge(p), fl = ClientCombat.flash(off ? 1 : 0);
+        if (!dual && ch >= 0.999f && fl <= 0) return;   // одна рука: как ваниль — шкала видна, пока идёт перезарядка (и вспышка окна комбо)
         boolean leftHand = off == (p.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT);
         int bw = 16, bx = w / 2 - 8, by = h / 2 + 9;   // ровно на месте ванильной шкалы «под прицелом» (её в паре скрываем)
         g.fill(bx - 1, by - 1, bx + bw + 1, by + 3, 0xA0101018);
         int col = fl > 0 ? 0xFFFFFFFF : ch >= 0.92f ? 0xFFFFE070 : off ? 0xFF4A9AC8 : 0xFFD9A441;
         g.fill(bx, by, bx + Math.round(bw * Math.min(1, ch)), by + 2, col);
         if (fl > 0) g.fill(bx - 2, by - 2, bx + bw + 2, by + 4, Skin.alpha(0xFFFFB040, fl * 0.5f));
+        if (!dual) return;
         Font font = mc.font;
         String arrow = leftHand ? "◀" : "▶";
         g.pose().pushPose();
@@ -52,7 +55,7 @@ public final class Hud {
         if (el > 1500) return;
         float a = el < 1100 ? 1f : 1f - (el - 1100) / 400f;
         float pop = el < 120 ? 1.6f - 0.6f * el / 120f : 1f;
-        String s = "×" + c + (c >= com.pvpciv.combat.Melee.COMBO_MAX ? " МАКС" : "");
+        String s = "×" + c + (c >= ClientState.comboMax() ? " МАКС" : "");
         g.pose().pushPose();
         g.pose().translate(w / 2f, h / 2f + 14, 0);
         g.pose().scale(pop, pop, 1);
@@ -97,6 +100,7 @@ public final class Hud {
         if (ClientState.zoneType == 2) pvpFrame(g, w, h);
         blood(g, w, h);
         grab(g, font, w, h);
+        Cutscene.overlay(g, w, h);
         comboLabel(g, font, w, h);
         nextHitBar(g, w, h);
         if (!ClientState.zone.isEmpty()) {

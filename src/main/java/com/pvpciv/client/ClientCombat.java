@@ -30,7 +30,7 @@ public final class ClientCombat {
 
     // ------------------------------------------------------------------ 0.10.4: комбо
     /** Окно точного удара после готовности руки (мс) и буфер «чуть раньше» (мс). */
-    public static final long WINDOW = 200, EARLY = 110;
+    public static final long WINDOW = 320, EARLY = 170;   // 0.11.1: окно шире (было 200 и 110 мс)
     public static int combo = 0;
     public static long comboAt = 0, readyMain = 0, readyOff = 0, lastHitPrecise = 0;
     private static boolean wasMain = true, wasOff = true;
@@ -58,7 +58,7 @@ public final class ClientCombat {
         }
         boolean precise = buffered || (ready > 0 && now - ready <= WINDOW);
         if (precise) {
-            combo = Math.min(com.pvpciv.combat.Melee.COMBO_MAX, combo + 1);
+            combo = Math.min(ClientState.comboMax(), combo + 1);
             lastHitPrecise = now;
             var mc = Minecraft.getInstance();
             if (mc.player != null) mc.player.playSound(net.minecraft.sounds.SoundEvents.NOTE_BLOCK_HAT.value(), 0.6f, 1.3f + combo * 0.12f);
@@ -94,6 +94,8 @@ public final class ClientCombat {
     public static boolean nextIsOff(LocalPlayer p) { return dual(p) && nextOff; }
     public static float nextCharge(LocalPlayer p) { return nextIsOff(p) ? offCharge(p) : p.getAttackStrengthScale(0f); }
     public static boolean isDual(LocalPlayer p) { return dual(p); }
+    /** 0.11.2: своя шкала удара — с любым оружием мода (одна рука или пара). */
+    public static boolean armed(LocalPlayer p) { return weapon(p.getMainHandItem()); }
 
     private static long lastPlantEvt;
 

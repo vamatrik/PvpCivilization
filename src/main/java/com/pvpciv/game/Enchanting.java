@@ -73,7 +73,7 @@ public final class Enchanting {
         double s = 0;
         Ench e = byId(id);
         if (e == null) return 0;
-        if (e.weapon) { ItemStack w = p.getMainHandItem(); if (id.equals(eid(w))) s += e.v[rank(w) - 1]; }
+        if (e.weapon) { ItemStack w = p instanceof ServerPlayer sp ? com.pvpciv.combat.Melee.striking(sp) : p.getMainHandItem(); if (id.equals(eid(w))) s += e.v[rank(w) - 1]; }
         else for (EquipmentSlot sl : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
             ItemStack a = p.getItemBySlot(sl);
             if (id.equals(eid(a))) s += e.v[rank(a) - 1];
@@ -139,6 +139,7 @@ public final class Enchanting {
     /** Раз в секунду: регенерация и скорость сервопривода. */
     public static void tick(ServerPlayer p) {
         if (p.tickCount % 20 != 0) return;
+        dimCheck(p);
         double rg = val(p, "regen");
         if (rg > 0 && p.getHealth() < p.getMaxHealth() && p.getLastHurtByMobTimestamp() + 100 < p.tickCount) p.heal((float) (p.getMaxHealth() * rg / 100));
         var attr = p.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
@@ -181,13 +182,98 @@ public final class Enchanting {
         st.shrink(1);
         p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.RESPAWN_ANCHOR_CHARGE, SoundSource.PLAYERS, 0.8f, 1.4f);
         p.displayClientMessage(Component.literal("⚛ Модуль встал в гнездо " + (slot + 1) + "/" + SOCKETS).withStyle(x -> x.withColor(0x40D0FF)), true);
+        syncMods(p);
         return true;
     }
 
     // ------------------------------------------------------------------ стол: синтез
     private record Opt(String id, int rank) {}
-    private record Pending(List<Opt> opts, boolean anchor, int slot) {}
+    private record Pending(List<Opt> opts, boolean anchor) {}
+
+    // ---- 0.11.2: предмет кладётся в стол (хранится в профиле игрока, пока не заберёт)
+    public static ItemStack stored(ServerPlayer p) {
+        StoryData d = Progress.d(p);
+        if (!d.gates.contains("ench_item")) return ItemStack.EMPTY;
+        return ItemStack.parseOptional(p.registryAccess(), d.gates.getCompound("ench_item"));
+    }
+    private static void store(ServerPlayer p, ItemStack st) {
+        StoryData d = Progress.d(p);
+        if (st.isEmpty()) d.gates.remove("ench_item");
+        else d.gates.put("ench_item", st.save(p.registryAccess()));
+        p.setData(ModRegistry.STORY.get(), d);
+    }
+
+    /** Источники предметов игрока: inv:i (хотбар), off, arm:i (броня), bag:i. */
+    private static ItemStack source(ServerPlayer p, String src) {
+        String[] a = src.split("@");
+        int i = a.length > 1 ? Integer.parseInt(a[1]) : 0;
+        return switch (a[0]) {
+            case "inv" -> i >= 0 && i < 9 ? p.getInventory().getItem(i) : ItemStack.EMPTY;
+            case "off" -> p.getOffhandItem();
+            case "arm" -> i >= 0 && i < 4 ? p.getInventory().armor.get(i) : ItemStack.EMPTY;
+            case "bag" -> i >= 0 && i < Bag.get(p).getSlots() ? Bag.get(p).getStackInSlot(i) : ItemStack.EMPTY;
+            default -> ItemStack.EMPTY;
+        };
+    }
+    private static void clearSource(ServerPlayer p, String src) {
+        String[] a = src.split("@");
+        int i = a.length > 1 ? Integer.parseInt(a[1]) : 0;
+        switch (a[0]) {
+            case "inv" -> p.getInventory().setItem(i, ItemStack.EMPTY);
+            case "off" -> p.getInventory().offhand.set(0, ItemStack.EMPTY);
+            case "arm" -> p.getInventory().armor.set(i, ItemStack.EMPTY);
+            case "bag" -> Bag.get(p).setStackInSlot(i, ItemStack.EMPTY);
+        }
+    }
+
+    private static void put(ServerPlayer p, String src) {
+        if (!stored(p).isEmpty()) return;
+        ItemStack st = source(p, src);
+        if (!ok(st)) return;
+        store(p, st.copy());
+        clearSource(p, src);
+        PENDING.remove(p.getUUID());
+        p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.ARMOR_EQUIP_NETHERITE.value(), SoundSource.PLAYERS, 0.8f, 1.3f);
+        sync(p);
+    }
+    private static void take(ServerPlayer p) {
+        ItemStack st = stored(p);
+        if (st.isEmpty()) return;
+        store(p, ItemStack.EMPTY);
+        PENDING.remove(p.getUUID());
+        Bag.give(p, st);
+        sync(p);
+    }
+
+    /** Только гнёзда модулей — для их 3D-отрисовки у владельца. */
+    public static void syncMods(ServerPlayer p) {
+        JsonObject o = new JsonObject();
+        JsonArray mods = new JsonArray();
+        for (int m : modules(Progress.d(p))) mods.add(m);
+        o.add("mods", mods);
+        PacketDistributor.sendToPlayer(p, new Network.PhoneData(21, o.toString()));
+    }
+    private static final Map<UUID, String> LAST_DIM = new HashMap<>();
+    public static void dimCheck(ServerPlayer p) {
+        String dim = p.level().dimension().location().toString();
+        if (dim.equals(LAST_DIM.put(p.getUUID(), dim))) return;
+        if (com.pvpciv.world.CivWorld.isF4(p.level())) syncMods(p);
+    }
     private static final Map<UUID, Pending> PENDING = new HashMap<>();
+
+    /** 0.12: весь лазуратрон игрока в пересчёте на обычный (сжатый = 8). */
+    public static int lazTotal(ServerPlayer p) {
+        return Bag.count(p, s -> s.is(ModF4.LAZURATRON.get())) + com.pvpciv.registry.ModF5.CMP * Bag.count(p, s -> s.is(com.pvpciv.registry.ModF5.CMP_LAZURATRON.get()));
+    }
+    /** Оплата: сначала сжатым (сдача — обычным), остаток — обычным. Пример: цена 12 → 2 сжатых, сдача 4. */
+    private static void payLaz(ServerPlayer p, int price) {
+        int cmp = Bag.count(p, s -> s.is(com.pvpciv.registry.ModF5.CMP_LAZURATRON.get()));
+        int k = Math.min(cmp, (price + com.pvpciv.registry.ModF5.CMP - 1) / com.pvpciv.registry.ModF5.CMP);
+        if (k > 0) Bag.take(p, s -> s.is(com.pvpciv.registry.ModF5.CMP_LAZURATRON.get()), k);
+        int left = price - k * com.pvpciv.registry.ModF5.CMP;
+        if (left > 0) Bag.take(p, s -> s.is(ModF4.LAZURATRON.get()), left);
+        else if (left < 0) Bag.give(p, new ItemStack(ModF4.LAZURATRON.get(), -left));
+    }
 
     public static int cost(ItemStack st) {
         int t = st.getItem() instanceof CivWeaponItem w ? w.tier : st.getItem() instanceof CivArmorItem a ? (int) Math.floor(a.tier) : 0;
@@ -211,14 +297,23 @@ public final class Enchanting {
 
     public static void sync(ServerPlayer p) {
         StoryData d = Progress.d(p);
-        ItemStack st = p.getMainHandItem();
+        ItemStack st = stored(p);
         JsonObject o = new JsonObject();
+        JsonArray cand = new JsonArray();   // что можно положить в стол
+        if (st.isEmpty()) {
+            for (int i = 0; i < 9; i++) addCand(cand, p.getInventory().getItem(i), "inv@" + i);
+            addCand(cand, p.getOffhandItem(), "off");
+            for (int i = 3; i >= 0; i--) addCand(cand, p.getInventory().armor.get(i), "arm@" + i);
+            for (int i = 0; i < Bag.get(p).getSlots(); i++) addCand(cand, Bag.get(p).getStackInSlot(i), "bag@" + i);
+        }
+        o.add("cand", cand);
         o.addProperty("ok", ok(st));
         o.addProperty("item", st.isEmpty() ? "" : st.getHoverName().getString());
         o.addProperty("weapon", weapon(st));
         o.addProperty("cur", ench(st) == null ? "" : ench(st).name + " " + ROMAN[Math.min(4, rank(st))] + " — " + ench(st).desc(rank(st)));
         o.addProperty("cost", ok(st) ? cost(st) : 0);
-        o.addProperty("laz", Bag.count(p, s -> s.is(ModF4.LAZURATRON.get())));
+        o.addProperty("laz", lazTotal(p));
+        o.addProperty("cmp", Bag.count(p, s -> s.is(com.pvpciv.registry.ModF5.CMP_LAZURATRON.get())));
         o.addProperty("focus", Bag.count(p, s -> s.is(ModF4.CAT_FOCUS.get())));
         o.addProperty("anchor", Bag.count(p, s -> s.is(ModF4.CAT_ANCHOR.get())));
         o.addProperty("reso", Bag.count(p, s -> s.is(ModF4.CAT_RESONATOR.get())));
@@ -230,7 +325,7 @@ public final class Enchanting {
         o.add("pool", pool);
         Pending pd = PENDING.get(p.getUUID());
         JsonArray opts = new JsonArray();
-        if (pd != null && pd.slot == p.getInventory().selected) for (Opt op : pd.opts) {
+        if (pd != null) for (Opt op : pd.opts) {
             Ench e = byId(op.id);
             JsonObject j = new JsonObject();
             j.addProperty("name", e.name + " " + ROMAN[op.rank]);
@@ -243,6 +338,16 @@ public final class Enchanting {
         PacketDistributor.sendToPlayer(p, new Network.PhoneData(19, o.toString()));
     }
 
+    private static void addCand(JsonArray a, ItemStack st, String src) {
+        if (!ok(st)) return;
+        JsonObject j = new JsonObject();
+        j.addProperty("src", src);
+        j.addProperty("name", st.getHoverName().getString());
+        Ench e = ench(st);
+        j.addProperty("ench", e == null ? "" : e.name + " " + ROMAN[Math.min(4, rank(st))]);
+        a.add(j);
+    }
+
     public static void cmd(ServerPlayer p, String c) {
         String[] a = c.split(":");
         if (a.length < 2) return;
@@ -251,17 +356,19 @@ public final class Enchanting {
             case "open" -> sync(p);
             case "roll" -> { try { roll(p, Integer.parseInt(a[2])); } catch (Exception ignored) {} }
             case "pick" -> { try { pick(p, Integer.parseInt(a[2])); } catch (Exception ignored) {} }
+            case "put" -> { try { put(p, a[2]); } catch (Exception ignored) {} }
+            case "take" -> take(p);
         }
     }
 
     private static void roll(ServerPlayer p, int mode) {
         if (mode != 1 && mode != 3 && mode != 10) return;
-        ItemStack st = p.getMainHandItem();
-        if (!ok(st)) { p.displayClientMessage(Component.literal("Возьми в руку оружие или броню").withStyle(ChatFormatting.RED), true); return; }
+        ItemStack st = stored(p);
+        if (!ok(st)) { p.displayClientMessage(Component.literal("Положи в стол оружие или броню").withStyle(ChatFormatting.RED), true); return; }
         StoryData d = Progress.d(p);
         int price = cost(st) * mode;
-        if (Bag.count(p, s -> s.is(ModF4.LAZURATRON.get())) < price) { p.displayClientMessage(Component.literal("Нужно лазуратрона: " + price).withStyle(ChatFormatting.RED), true); return; }
-        Bag.take(p, s -> s.is(ModF4.LAZURATRON.get()), price);
+        if (lazTotal(p) < price) { p.displayClientMessage(Component.literal("Нужно лазуратрона: " + price).withStyle(ChatFormatting.RED), true); return; }
+        payLaz(p, price);
         int nMods = 0, best = 0;
         for (int m : modules(d)) if (m > 0) { nMods++; best = Math.max(best, m); }
         int cap = Math.max(2, best + 1);                       // базовый — до II, улучшенный — III, продвинутый — IV
@@ -290,7 +397,7 @@ public final class Enchanting {
             int k = p.getRandom().nextInt(opts.size());
             opts.set(k, new Opt(opts.get(k).id, Math.min(4, opts.get(k).rank + 1)));
         }
-        PENDING.put(p.getUUID(), new Pending(opts, anchor > 0 || ench(st) == null, p.getInventory().selected));
+        PENDING.put(p.getUUID(), new Pending(opts, anchor > 0 || ench(st) == null));
         p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.PLAYERS, 1f, 0.8f);
         p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 0.6f, 1.6f);
         p.serverLevel().sendParticles(net.minecraft.core.particles.ParticleTypes.ENCHANT, com.pvpciv.floor.Floor4.ENCH_TABLE.getX() + 0.5, com.pvpciv.floor.Floor4.ENCH_TABLE.getY() + 1.5,
@@ -308,8 +415,8 @@ public final class Enchanting {
     private static void pick(ServerPlayer p, int i) {
         Pending pd = PENDING.get(p.getUUID());
         if (pd == null) return;
-        ItemStack st = p.getMainHandItem();
-        if (pd.slot != p.getInventory().selected || !ok(st)) { p.displayClientMessage(Component.literal("Предмет сменился — синтез сброшен").withStyle(ChatFormatting.RED), true); PENDING.remove(p.getUUID()); sync(p); return; }
+        ItemStack st = stored(p);
+        if (!ok(st)) { PENDING.remove(p.getUUID()); sync(p); return; }
         PENDING.remove(p.getUUID());
         if (i < 0) {
             if (!pd.anchor) return;
@@ -320,6 +427,7 @@ public final class Enchanting {
         if (i >= pd.opts.size()) return;
         Opt o = pd.opts.get(i);
         st.set(ModRegistry.ENCH.get(), o.id + ":" + o.rank);
+        store(p, st);
         Ench e = byId(o.id);
         p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.7f, 1.6f);
         p.displayClientMessage(Component.literal("⚛ " + e.name + " " + ROMAN[o.rank] + " — " + e.desc(o.rank)).withStyle(x -> x.withColor(0x40D0FF)), false);

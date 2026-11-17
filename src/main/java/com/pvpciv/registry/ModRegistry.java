@@ -216,6 +216,8 @@ public final class ModRegistry {
             () -> EntityType.Builder.<com.pvpciv.entity.AnimeNpc>of((t, l) -> new com.pvpciv.entity.AnimeNpc(t, l, com.pvpciv.entity.AnimeNpc.Kind.AURELIUS), MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("enchanter"));
     public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.AnimeNpc>> STELLA = ENTITIES.register("stella",
             () -> EntityType.Builder.<com.pvpciv.entity.AnimeNpc>of((t, l) -> new com.pvpciv.entity.AnimeNpc(t, l, com.pvpciv.entity.AnimeNpc.Kind.STELLA), MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("stella"));
+    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.AnimeNpc>> LUNA_STATION = ENTITIES.register("luna_station",
+            () -> EntityType.Builder.<com.pvpciv.entity.AnimeNpc>of((t, l) -> new com.pvpciv.entity.AnimeNpc(t, l, com.pvpciv.entity.AnimeNpc.Kind.LUNA), MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("luna_station"));
     public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.AnimeNpc>> CHEF = ENTITIES.register("chef",
             () -> EntityType.Builder.<com.pvpciv.entity.AnimeNpc>of((t, l) -> new com.pvpciv.entity.AnimeNpc(t, l, com.pvpciv.entity.AnimeNpc.Kind.HARUKI), MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("chef"));
     public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.AnimeNpc>> ASSASSIN = ENTITIES.register("assassin",
@@ -470,6 +472,7 @@ public final class ModRegistry {
     public static void register(IEventBus bus) {
         ModMobs.init();
         ModF4.init();
+        ModF5.init();
         SOUNDS.register(bus);
         BLOCKS.register(bus);
         ITEMS.register(bus);
@@ -497,6 +500,7 @@ public final class ModRegistry {
         e.put(CHEF.get(), StoryNpc.createAttributes().build());
         e.put(ENCHANTER.get(), StoryNpc.createAttributes().build());
         e.put(STELLA.get(), StoryNpc.createAttributes().build());
+        e.put(LUNA_STATION.get(), StoryNpc.createAttributes().build());
         e.put(TRADER.get(), StoryNpc.createAttributes().build());
         e.put(CARMILLA.get(), StoryNpc.createAttributes().build());
         e.put(ELEONORA.get(), StoryNpc.createAttributes().build());

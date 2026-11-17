@@ -21,7 +21,7 @@ public class CivWeaponItem extends SwordItem {
     public enum WClass {
         // 0.10: урон в секунду в «своём» режиме ≈ равный: меч и топор/молот — одной рукой, кинжал и сабля — в паре
         // 0.10.3: у рук свой заряд, обе бьют полным уроном → кинжал/сабля в паре = меч/топор/молот одной рукой (≈1.6 × урон тира в секунду)
-        SWORD("Меч", 1.0, -2.4), SABER("Сабля", 0.42, -2.0), DAGGER("Кинжал", 0.32, -1.5),
+        SWORD("Меч", 1.0, -2.4), SABER("Сабля", 0.45, -2.0), DAGGER("Кинжал", 0.40, -1.5),   // 0.11.1: кинжал 0.32→0.40, сабля 0.42→0.45
         AXE("Топор", 1.6, -3.0), HAMMER("Молот", 2.0, -3.2);
         public final String title; public final double dmg; public final double speed;
         WClass(String t, double d, double s) { title = t; dmg = d; speed = s; }

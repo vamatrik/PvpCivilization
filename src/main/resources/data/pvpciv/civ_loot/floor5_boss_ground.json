@@ -1,0 +1,32 @@
+{
+ "entries": [
+  {
+   "item": "pvpciv:sparks",
+   "chance": 1,
+   "min": 180,
+   "max": 300
+  },
+  {
+   "item": "pvpciv:lazuratron",
+   "chance": 1,
+   "min": 6,
+   "max": 10
+  },
+  {
+   "item": "pvpciv:circuit",
+   "chance": 1,
+   "min": 3,
+   "max": 6
+  },
+  {
+   "weapons": [
+    "pvpciv:photon_blade",
+    "pvpciv:void_knife",
+    "pvpciv:comet_saber",
+    "pvpciv:meteor_axe"
+   ],
+   "chance": 0.4,
+   "min_rarity": "UNCOMMON"
+  }
+ ]
+}

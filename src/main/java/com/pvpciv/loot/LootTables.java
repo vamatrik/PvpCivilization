@@ -44,6 +44,9 @@ public class LootTables extends SimpleJsonResourceReloadListener {
 
     public static Map<String, JsonArray> tables() { return java.util.Collections.unmodifiableMap(TABLES); }
 
+    /** 1.0: перекос лута к оружию класса игрока (ставится вокруг вызова roll, сервер однопоточный). */
+    public static java.util.function.Predicate<Item> PREFER;
+
     public static List<ItemStack> roll(String table, RandomSource rnd, double chanceMult) {
         List<ItemStack> out = new ArrayList<>();
         JsonArray entries = TABLES.get(table);
@@ -55,6 +58,11 @@ public class LootTables extends SimpleJsonResourceReloadListener {
             if (e.has("weapons") || e.has("gear")) {
                 JsonArray ws = e.getAsJsonArray(e.has("weapons") ? "weapons" : "gear");
                 Item it = item(ws.get(rnd.nextInt(ws.size())).getAsString());
+                if (PREFER != null && !PREFER.test(it) && rnd.nextDouble() < 0.5) {   // половина «чужих» бросков перекидывается на оружие класса
+                    List<Item> mine = new ArrayList<>();
+                    for (JsonElement we : ws) { Item wi = item(we.getAsString()); if (PREFER.test(wi)) mine.add(wi); }
+                    if (!mine.isEmpty()) it = mine.get(rnd.nextInt(mine.size()));
+                }
                 if (it == Items.AIR) continue;
                 Rarity min = e.has("min_rarity") ? Rarity.valueOf(e.get("min_rarity").getAsString()) : Rarity.COMMON;
                 if (it instanceof CivWeaponItem w && w.minRarity.ordinal() > min.ordinal()) min = w.minRarity;

@@ -59,6 +59,10 @@
   {
    "item": "pvpciv:temper_scroll",
    "chance": 0.07
+  },
+  {
+   "item": "pvpciv:nano_pocket",
+   "chance": 0.05
   }
  ]
 }

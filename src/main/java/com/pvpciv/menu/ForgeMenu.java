@@ -29,6 +29,9 @@ import org.joml.Vector3f;
 public class ForgeMenu extends CivMenu {
     public static final int BTN_ENHANCE = 0, BTN_UPGRADE = 1;
     public static final int RITUAL = 44;
+    /** 1.0: тёмная звезда — +10 → +11. */
+    public static final double DARK_CHANCE = 0.35;
+    private boolean pendingDark;
     public final SimpleContainer box = new SimpleContainer(2);
     private final DataSlot level = DataSlot.standalone(), progress = DataSlot.standalone(), result = DataSlot.standalone();
     private final BlockPos pos;
@@ -50,7 +53,7 @@ public class ForgeMenu extends CivMenu {
             @Override public int getMaxStackSize() { return 1; }
         });
         addSlot(new Slot(box, 1, 25, 51) {
-            @Override public boolean mayPlace(ItemStack st) { return (st.is(ModRegistry.STAR_W1.get()) || st.is(ModRegistry.BLESSED_STAR_W1.get()) || st.is(ModRegistry.BLOOD_STAR_W1.get())) && progress.get() == 0; }
+            @Override public boolean mayPlace(ItemStack st) { return (st.is(ModRegistry.STAR_W1.get()) || st.is(ModRegistry.BLESSED_STAR_W1.get()) || st.is(ModRegistry.BLOOD_STAR_W1.get()) || st.is(com.pvpciv.registry.ModF5.DARK_STAR.get())) && progress.get() == 0; }
             @Override public boolean mayPickup(Player p) { return progress.get() == 0; }
         });
         addBag(169, 37, () -> true);
@@ -65,6 +68,7 @@ public class ForgeMenu extends CivMenu {
     public double chance() {
         ItemStack w = box.getItem(0);
         if (w.isEmpty()) return 0;
+        if (box.getItem(1).is(com.pvpciv.registry.ModF5.DARK_STAR.get())) return Gear.stars(w) == Gear.MAX_STARS ? DARK_CHANCE : 0;
         return Math.min(1.0, Gear.chance(Gear.stars(w)) + chanceBonus());
     }
 
@@ -79,10 +83,16 @@ public class ForgeMenu extends CivMenu {
         ItemStack w = box.getItem(0), star = box.getItem(1);
         if (!(w.getItem() instanceof CivWeaponItem) || star.isEmpty()) return true;
         int s = Gear.stars(w);
-        if (s >= Gear.MAX_STARS) {
-            sp.displayClientMessage(Component.literal("Это +10. Дальше — только Звезда Бездны с финального босса мира.").withStyle(ChatFormatting.DARK_PURPLE), true);
+        boolean dark = star.is(com.pvpciv.registry.ModF5.DARK_STAR.get());
+        if (dark && s != Gear.MAX_STARS) {
+            sp.displayClientMessage(Component.literal(s > Gear.MAX_STARS ? "Это уже +11 — предел." : "Тёмная звезда берёт только +10 (до +11).").withStyle(ChatFormatting.DARK_PURPLE), true);
             return true;
         }
+        if (s > Gear.MAX_STARS || (s == Gear.MAX_STARS && !dark)) {
+            sp.displayClientMessage(Component.literal(s > Gear.MAX_STARS ? "Это +11 — предел." : "Это +10. Дальше — только тёмная звезда (испытания Луны, Демоница Пустоты).").withStyle(ChatFormatting.DARK_PURPLE), true);
+            return true;
+        }
+        pendingDark = dark;
         pendingBlessed = star.is(ModRegistry.BLESSED_STAR_W1.get());
         pendingBlood = star.is(ModRegistry.BLOOD_STAR_W1.get());
         star.shrink(1);
@@ -126,6 +136,12 @@ public class ForgeMenu extends CivMenu {
             lvl.sendParticles(new DustParticleOptions(rgb(Gear.starColor(target)), 2.0f), fx, fy, fz, 80, 0.5, 0.6, 0.5, 0);
             lvl.sendParticles(ParticleTypes.END_ROD, fx, fy, fz, 30, 0.2, 0.4, 0.2, 0.08);
             if (target >= 8) broadcast(lvl, "УСПЕХ! " + sp.getGameProfile().getName() + " получил +" + target + "!", ChatFormatting.GOLD);
+            if (target >= 11) com.pvpciv.progress.Titles.grant(sp, "black_star");
+        } else if (pendingDark) {
+            // тёмная звезда сгорела — оружие цело
+            result.set(2);
+            lvl.playSound(null, pos, SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 1f, 0.6f);
+            lvl.sendParticles(ParticleTypes.SQUID_INK, fx, fy, fz, 30, 0.3, 0.3, 0.3, 0.02);
         } else if (pendingBlood) {
             // звезда крови: оружие цело, но платит владелец — Кармилла уводит на 10 минут
             result.set(2);

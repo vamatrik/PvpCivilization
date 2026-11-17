@@ -49,6 +49,10 @@
   {
    "item": "pvpciv:temper_scroll",
    "chance": 0.07
+  },
+  {
+   "item": "pvpciv:silk_pouch",
+   "chance": 0.04
   }
  ]
 }
