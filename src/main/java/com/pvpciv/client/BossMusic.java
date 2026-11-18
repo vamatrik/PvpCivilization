@@ -68,7 +68,7 @@ public final class BossMusic {
         float vol = 0.05f;
 
         Track(String id, double offset) {
-            super(SoundEvent.createVariableRangeEvent(PvpCiv.id("music." + id)), SoundSource.MUSIC, RandomSource.create());
+            super(SoundEvent.createVariableRangeEvent(PvpCiv.id("music." + id)), SoundSource.RECORDS, RandomSource.create());   // 1.0.1: ползунок «Музыкальные блоки» — ванильную музыку часто выключают
             this.offset = offset;
             this.looping = true;
             this.delay = 0;

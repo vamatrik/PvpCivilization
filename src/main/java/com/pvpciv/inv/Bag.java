@@ -122,7 +122,7 @@ public final class Bag {
         Inventory inv = p.getInventory();
         for (int i = 9; i < 36; i++) {
             ItemStack st = inv.getItem(i);
-            if (st.isEmpty()) continue;
+            if (st.isEmpty() || InvLock.isPlug(st)) continue;   // 1.0.1: заглушки — не в сумку (из-за этого сумка забивалась барьерами)
             ItemStack rest = insert(p, st);
             inv.setItem(i, rest);
         }

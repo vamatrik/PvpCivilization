@@ -132,6 +132,15 @@ public final class ClientInit {
             if (e.getEntity() instanceof net.minecraft.world.entity.Mob && e.getOriginalContent().getString().startsWith("[")) e.setCanRender(net.neoforged.neoforge.common.util.TriState.FALSE);
         });
         NeoForge.EVENT_BUS.addListener(ClientInit::onAttackKey);   // 0.10: своя боёвка (пара, взмах по воздуху)   // 0.10: полоски HP над мобами
+        // 1.0.1: заглушки слотов 9–35 нельзя взять, переложить цифрой или выкинуть
+        NeoForge.EVENT_BUS.addListener((ScreenEvent.MouseButtonPressed.Pre e) -> { if (plugUnderMouse(e.getScreen())) e.setCanceled(true); });
+        NeoForge.EVENT_BUS.addListener((ScreenEvent.MouseButtonReleased.Pre e) -> { if (plugUnderMouse(e.getScreen())) e.setCanceled(true); });
+        NeoForge.EVENT_BUS.addListener((ScreenEvent.KeyPressed.Pre e) -> {
+            if (!plugUnderMouse(e.getScreen())) return;
+            var mc = net.minecraft.client.Minecraft.getInstance();
+            if (mc.options.keyDrop.matches(e.getKeyCode(), e.getScanCode()) || mc.options.keySwapOffhand.matches(e.getKeyCode(), e.getScanCode())) { e.setCanceled(true); return; }
+            for (var k : mc.options.keyHotbarSlots) if (k.matches(e.getKeyCode(), e.getScanCode())) { e.setCanceled(true); return; }
+        });
         NeoForge.EVENT_BUS.addListener((ScreenEvent.Opening e) -> {
             Minecraft mc = Minecraft.getInstance();
             if (e.getNewScreen() instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen && mc.player != null && !mc.player.isCreative()) {
@@ -295,4 +304,10 @@ public final class ClientInit {
     }
 
     private static void onAttackKey(net.neoforged.neoforge.client.event.InputEvent.InteractionKeyMappingTriggered e) { ClientCombat.onAttackKey(e); }
+
+    private static boolean plugUnderMouse(net.minecraft.client.gui.screens.Screen sc) {
+        if (!(sc instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> cs)) return false;
+        var slot = cs.getSlotUnderMouse();
+        return slot != null && com.pvpciv.inv.InvLock.isPlug(slot.getItem());
+    }
 }

@@ -418,6 +418,7 @@ public final class BossManager {
         double R = d.lairR();
         s.inside.removeIf(u -> { ServerPlayer p = lvl.getServer().getPlayerList().getPlayer(u); return p == null || !p.isAlive() || p.level() != lvl; });
         if (s.inside.isEmpty()) { s.locked = false; return; }
+        if (lvl.getGameTime() % 5 == 0) clearMobs(lvl, c, R);
         for (ServerPlayer p : lvl.players()) {
             if (p.isSpectator() || p.isCreative()) continue;
             double r = flat(p.position(), c);
@@ -428,6 +429,25 @@ public final class BossManager {
                 s.inside.add(p.getUUID());
                 p.displayClientMessage(Component.literal("Ты вошёл на арену — выхода нет до конца боя").withStyle(ChatFormatting.RED, ChatFormatting.BOLD), true);
                 lvl.playSound(null, p.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.HOSTILE, 1f, 1.4f);
+            }
+        }
+    }
+
+    /** 1.0.1: на закрытой арене — только босс и его свита. Чужие мобы внутри исчезают (были там или заспавнились), снаружи — не пускает купол. */
+    private static void clearMobs(ServerLevel lvl, Vec3 c, double R) {
+        for (Mob m : lvl.getEntitiesOfClass(Mob.class, new AABB(c, c).inflate(R + 2, 12, R + 2))) {
+            if (m instanceof CivBoss || !m.isAlive() || m.getTags().contains(TAG)) continue;
+            if (m.getTags().stream().anyMatch(t -> t.equals("boss_minion") || t.equals("don_goon") || t.equals("king_rat") || t.equals("kumiho_court"))) continue;
+            if (!(m instanceof net.minecraft.world.entity.monster.Enemy) && com.pvpciv.combat.Mobs.level(m) <= 0) continue;   // NPC, питомцы, звери
+            if (m instanceof net.minecraft.world.entity.TamableAnimal ta && ta.isTame()) continue;
+            double r = flat(m.position(), c);
+            if (r < R - 1.5) {
+                lvl.sendParticles(ParticleTypes.POOF, m.getX(), m.getY() + 0.8, m.getZ(), 12, 0.3, 0.5, 0.3, 0.02);
+                m.discard();
+            } else if (r < R + 0.8) {
+                Vec3 v = new Vec3(m.getX() - c.x, 0, m.getZ() - c.z).normalize();
+                m.teleportTo(c.x + v.x * (R + 1.6), m.getY(), c.z + v.z * (R + 1.6));
+                m.getNavigation().stop();
             }
         }
     }
