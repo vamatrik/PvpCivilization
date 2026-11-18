@@ -108,6 +108,7 @@ public final class ClientInit {
         });
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.RenderLivingEvent.Post<?, ?> e) -> MobBars.onRender(e));
         NeoForge.EVENT_BUS.addListener(Lines::render);
+        NeoForge.EVENT_BUS.addListener(ArenaFx::render);   // 1.0.1: купола арен, алтари
         NeoForge.EVENT_BUS.addListener(EnchModulesRenderer::render);
         NeoForge.EVENT_BUS.addListener(Cutscene::camera);   // 0.12: кат-сцены (ракета)
         NeoForge.EVENT_BUS.addListener(Cutscene::fov);   // 1.0: отъезд камеры (червь)
@@ -180,6 +181,7 @@ public final class ClientInit {
         });
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> onTick());
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> ClientCombat.tick());
+        NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> BossMusic.tick());   // 1.0.1
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> {   // 0.11: во рту Лианы — каждый пробел на сервер
             var mc = net.minecraft.client.Minecraft.getInstance();
             if (mc.player == null) { ClientState.grabOn = false; return; }

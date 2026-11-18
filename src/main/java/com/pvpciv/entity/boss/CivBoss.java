@@ -73,6 +73,8 @@ public abstract class CivBoss extends Monster implements GeoEntity {
     /** id в BossManager: brute, keeper. */
     public abstract String defId();
     public abstract String model();
+    /** Текстура (по умолчанию — как модель). */
+    public String texture() { return model(); }
     public float renderScale() { return 1f; }
     /** Разовые анимации (запускаются сервером через triggerAnim). */
     protected abstract String[] actions();

@@ -46,5 +46,19 @@ public final class InvLock {
         for (int i = 0; i < 9; i++) if (isPlug(inv.getItem(i))) inv.setItem(i, ItemStack.EMPTY);
         if (isPlug(p.getOffhandItem())) p.getInventory().offhand.set(0, ItemStack.EMPTY);
         if (isPlug(p.containerMenu.getCarried())) p.containerMenu.setCarried(ItemStack.EMPTY);
+        // 1.0.1: заглушку перетащили шифт-кликом в сумку/сундук — её место занимала новая, и так без конца. Чистим всё, кроме слотов 9–35.
+        var menu = p.containerMenu;
+        boolean dirty = false;
+        for (var slot : menu.slots) {
+            if (slot.container == inv && slot.getContainerSlot() >= FROM && slot.getContainerSlot() <= TO) continue;
+            if (isPlug(slot.getItem())) { slot.set(ItemStack.EMPTY); dirty = true; }
+        }
+        if (dirty) menu.broadcastChanges();
+        if (p.tickCount % 10 == 0) {
+            var bag = Bag.get(p);
+            for (int i = 0; i < bag.getSlots(); i++) if (isPlug(bag.getStackInSlot(i))) bag.setStackInSlot(i, ItemStack.EMPTY);
+            var ender = p.getEnderChestInventory();
+            for (int i = 0; i < ender.getContainerSize(); i++) if (isPlug(ender.getItem(i))) ender.setItem(i, ItemStack.EMPTY);
+        }
     }
 }

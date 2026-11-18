@@ -235,7 +235,7 @@ public final class GameEvents {
         if (Rocket.onUse(p, pos)) { e.setCanceled(true); return; }   // 0.12: ракета «Заря-5»
         if (com.pvpciv.floor.Belt.onUse(p, pos)) { e.setCanceled(true); return; }   // 1.0: шлюз к поясу астероидов
         if (SkyLift.onF5Console(p, pos)) { e.setCanceled(true); return; }   // 1.0: лифт станции (ремонт адским следом)
-        if (p.level().getBlockState(pos).is(net.minecraft.world.level.block.Blocks.RESPAWN_ANCHOR) && com.pvpciv.floor.BossManager.onAltarUse(p, pos)) {
+        if (com.pvpciv.floor.BossManager.isAltar(p.level().getBlockState(pos)) && com.pvpciv.floor.BossManager.onAltarUse(p, pos)) {
             e.setCanceled(true);   // 0.11.2: алтарь босса (ванильный якорь вне Незера ещё и взрывается — не даём)
             return;
         }

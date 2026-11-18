@@ -127,6 +127,8 @@ public class WormBoss extends CivBoss {
         Vec3 c = c();
         Vec3 to = c.add(Math.cos(orbitA) * 24, 7 + Math.sin(orbitA * 2.3) * 4, Math.sin(orbitA) * 24);
         hover(to, speed * 1.4);
+        // 1.0.1: в полёте не бездельничает — очереди сгустков пустоты по случайному бойцу
+        if (t % (enraged ? 16 : 24) == 0) volley(lvl);
         if (t > (enraged ? 70 : 100)) {
             t = 0;
             actions++;
@@ -137,6 +139,23 @@ public class WormBoss extends CivBoss {
             else if (random.nextBoolean()) startSwallow(lvl, vs);
             else spheres(lvl, vs);
         }
+    }
+
+    private void volley(ServerLevel lvl) {
+        List<ServerPlayer> vs = victims(lvl, 60);
+        if (vs.isEmpty()) return;
+        ServerPlayer p = vs.get(random.nextInt(vs.size()));
+        int n = enraged ? 3 : 2;
+        for (int i = 0; i < n; i++) later(i * 4, () -> {
+            if (!isAlive() || !p.isAlive()) return;
+            Vec3 from = position().add(0, 1.2, 0);
+            Vec3 lead = p.getEyePosition().add(p.getDeltaMovement().scale(6)).subtract(from);
+            BossShot s = new BossShot(lvl, this, dmg() * 0.55f, new net.minecraft.world.item.ItemStack(com.pvpciv.registry.ModF5.VOID_SHARD.get()));
+            s.setPos(from.x, from.y, from.z);
+            s.shoot(lead.x, lead.y, lead.z, 1.35f, 3f);
+            lvl.addFreshEntity(s);
+            lvl.playSound(null, blockPosition(), SoundEvents.SHULKER_SHOOT, SoundSource.HOSTILE, 1.5f, 0.6f + random.nextFloat() * 0.3f);
+        });
     }
 
     // ---- глотает астероид

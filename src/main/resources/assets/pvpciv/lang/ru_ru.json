@@ -288,5 +288,6 @@
   "entity.pvpciv.contract": "Контракт",
   "entity.pvpciv.worm": "Галактический червь",
   "entity.pvpciv.worm_segment": "Галактический червь",
-  "entity.pvpciv.void_demon": "Демоница Пустоты"
+  "entity.pvpciv.void_demon": "Демоница Пустоты",
+  "block.pvpciv.boss_altar": "Алтарь босса"
 }

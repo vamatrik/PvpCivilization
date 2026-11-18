@@ -98,6 +98,8 @@ public final class ClientPayloads {
                 ClientState.grabOn = j.get("on").getAsBoolean();
                 if (ClientState.grabOn) { ClientState.grabBar = j.get("bar").getAsFloat(); ClientState.grabT = j.get("t").getAsInt(); }
             }
+            case 24 -> BossMusic.sync(j);   // 1.0.1: музыка босса (общий цикл)
+            case 25 -> ArenaFx.sync(j);     // 1.0.1: купола арен и алтари
             case 23 -> {   // 1.0: классы
                 ClientState.classes = j;
                 ClientState.dancer = false;

@@ -83,13 +83,16 @@ public class NoelBoss extends CivBoss {
         return super.hurt(src, amount);
     }
 
+    private int nextHoles = 200;
+
     @Override
     protected void ability(ServerLevel lvl, ServerPlayer target) {
         LianaBoss pet = pet(lvl);
         if (pet != null && pet.chewing()) { cooldown = 10; return; }   // пока Лиана жуёт — не стреляет
         int r = random.nextInt(10);
-        if (r < 6) plasma(lvl, target, petDead);
-        else holes(lvl, petDead ? 3 : 2);
+        // 1.0.1: чёрные дыры — не чаще раза в 22 с (в ярости — в 15 с) и меньше штук: стягивали слишком часто
+        if (r < 6 || tickCount < nextHoles) plasma(lvl, target, petDead);
+        else { holes(lvl, petDead ? 2 : 1); nextHoles = tickCount + (petDead ? 300 : 440); }
         cooldown = petDead ? 40 + random.nextInt(15) : 70 + random.nextInt(25);
     }
 

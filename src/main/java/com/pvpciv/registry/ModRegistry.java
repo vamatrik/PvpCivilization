@@ -76,6 +76,12 @@ public final class ModRegistry {
                     .attributes(SwordItem.createAttributes(Tiers.STONE, 4, -2.3F))
                     .component(DataComponents.UNBREAKABLE, new Unbreakable(true))
                     .rarity(Rarity.UNCOMMON)));
+    /** 1.0.1: алтарь босса (своя модель; над ним клиент рисует парящую фигуру босса и руны). */
+    public static final DeferredBlock<net.minecraft.world.level.block.Block> BOSS_ALTAR = BLOCKS.register("boss_altar",
+            () -> new net.minecraft.world.level.block.Block(BlockBehaviour.Properties.ofFullCopy(Blocks.OBSIDIAN).strength(-1.0F, 3600000.0F).lightLevel(s -> 12).noLootTable().noOcclusion()) {
+                private final net.minecraft.world.phys.shapes.VoxelShape SHAPE = net.minecraft.world.level.block.Block.box(0, 0, 0, 16, 13, 16);
+                @Override public net.minecraft.world.phys.shapes.VoxelShape getShape(net.minecraft.world.level.block.state.BlockState s, net.minecraft.world.level.BlockGetter g, net.minecraft.core.BlockPos p, net.minecraft.world.phys.shapes.CollisionContext c) { return SHAPE; }
+            });
     public static final DeferredBlock<com.pvpciv.block.ForgeBlock> FORGE = BLOCKS.register("forge",
             () -> new com.pvpciv.block.ForgeBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.SMITHING_TABLE).strength(-1.0F, 3600000.0F).lightLevel(s -> 9).noLootTable().noOcclusion()));
     public static final DeferredBlock<com.pvpciv.block.StashBlock> STASH = BLOCKS.register("stash",

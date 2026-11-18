@@ -28,6 +28,7 @@ public class LunaBoss extends CivBoss {
 
     @Override public String defId() { return "luna_trial"; }
     @Override public String model() { return "luna"; }
+    @Override public String texture() { return "luna_hd"; }
     @Override protected String[] actions() { return new String[]{"attack", "slash", "cast", "dash"}; }
 
     @Override

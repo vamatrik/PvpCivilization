@@ -22,6 +22,7 @@ public class AnimeNpc extends GeoNpc {
     }
 
     @Override public String model() { return kind.model; }
+    @Override public String texture() { return kind == Kind.LUNA ? "luna_hd" : kind.model; }   // 1.0.1: у Луны HD-текстура (была прозрачная голова)
     @Override protected String idleAnim() { return kind == Kind.YUKI ? "cross" : "idle"; }
 
     @Override

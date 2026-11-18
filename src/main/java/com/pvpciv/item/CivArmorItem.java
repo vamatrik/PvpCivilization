@@ -38,14 +38,15 @@ public class CivArmorItem extends ArmorItem {
 
     /** Броня (очки) и бонус к здоровью за предмет. Полный комплект тира 1+ обычной редкости ≈ 8 брони и +5 HP. */
     public double armor(ItemStack st) { return com.pvpciv.combat.Balance.armorDef(tier) * part() * Gear.rarity(st).mult * com.pvpciv.game.ArmorUp.mult(Gear.stars(st)); }
-    public double health(ItemStack st) { return com.pvpciv.combat.Balance.armorHp(tier) * part() * Gear.rarity(st).mult * com.pvpciv.game.ArmorUp.mult(Gear.stars(st)); }
+    /** Доля к максимальному здоровью (0.06 = +6%). */
+    public double health(ItemStack st) { return com.pvpciv.combat.Balance.armorHpPct(tier) * part() * Gear.rarity(st).mult * com.pvpciv.game.ArmorUp.mult(Gear.stars(st)); }
 
     @Override
     public ItemAttributeModifiers getDefaultAttributeModifiers(ItemStack st) {
         EquipmentSlotGroup g = EquipmentSlotGroup.bySlot(type.getSlot());
         ResourceLocation id = PvpCiv.id("armor." + type.getName());
         return ItemAttributeModifiers.builder()
-                .add(Attributes.MAX_HEALTH, new AttributeModifier(id, health(st), AttributeModifier.Operation.ADD_VALUE), g)
+                .add(Attributes.MAX_HEALTH, new AttributeModifier(id, health(st), AttributeModifier.Operation.ADD_MULTIPLIED_BASE), g)
                 .build();
     }
 
@@ -64,7 +65,7 @@ public class CivArmorItem extends ArmorItem {
         int rc = r.color;
         String t = tier == Math.floor(tier) ? String.valueOf((int) tier) : (int) Math.floor(tier) + "+";
         tip.add(Component.literal(r.title + " • " + set + " • Тир " + t).withStyle(x -> x.withColor(rc)));
-        tip.add(Component.literal(String.format("Броня: +%.1f   Здоровье: +%.1f", armor(st), health(st))).withStyle(ChatFormatting.GRAY));
+        tip.add(Component.literal(String.format("Броня: +%.1f   Здоровье: +%.1f%%", armor(st), health(st) * 100)).withStyle(ChatFormatting.GRAY));
         if (set.startsWith("Самурай")) tip.add(Component.literal("Полный комплект: +5% шанс крита").withStyle(ChatFormatting.DARK_AQUA));
         if (set.startsWith("Экзокостюм")) tip.add(Component.literal("Полный комплект: −10% урона от пуль и плазмы").withStyle(ChatFormatting.DARK_AQUA));
         if (set.startsWith("Лисий")) tip.add(Component.literal("Полный комплект: прыжок и скорость").withStyle(ChatFormatting.DARK_AQUA));

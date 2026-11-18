@@ -71,9 +71,16 @@ public final class VoidRift {
     private static final Set<UUID> FINISHED = new HashSet<>();
     private static final List<UUID> MOBS = new ArrayList<>();
     private static int endT = -1;
+    private static long started;
     private static final Map<UUID, List<ItemStack>> PENDING = new HashMap<>();
 
     public static boolean active() { return active; }
+    /** 1.0.1: музыка разлома — бойцам. */
+    public static void music(MinecraftServer server, Map<UUID, String[]> out) {
+        if (!active) return;
+        long gt = server.overworld().getGameTime();
+        for (UUID u : FIGHTERS) out.put(u, new String[]{"demon", String.valueOf((gt - started) / 20.0)});
+    }
     /** Отладка: /civ admin rift <мана>. */
     public static void setMana(ServerPlayer p, int m) {
         if (!active) { debug = true; begin(p.serverLevel(), List.of(p.getUUID())); debug = false; }
@@ -93,6 +100,7 @@ public final class VoidRift {
         }
         if (FIGHTERS.isEmpty()) return;
         active = true; t = 0; stage = 0; sub = 0; round = 0; mana = 100; endT = -1;
+        started = s.overworld().getGameTime();
         LASERS.clear(); PATH.clear(); LAP_T.clear(); FINISHED.clear(); MOBS.clear();
         bar = new ServerBossEvent(Component.literal("Демоница Пустоты · мана"), BossEvent.BossBarColor.PURPLE, BossEvent.BossBarOverlay.NOTCHED_20);
         bar.setProgress(1f);

@@ -288,5 +288,6 @@
   "entity.pvpciv.contract": "Contract",
   "entity.pvpciv.worm": "Galactic Worm",
   "entity.pvpciv.worm_segment": "Galactic Worm",
-  "entity.pvpciv.void_demon": "Void Demoness"
+  "entity.pvpciv.void_demon": "Void Demoness",
+  "block.pvpciv.boss_altar": "Boss Altar"
 }

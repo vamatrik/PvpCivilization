@@ -95,6 +95,7 @@ public final class BossManager {
         UUID id; ServerBossEvent bar; int alive; boolean w5, w1, scanned;
         /** 0.11.2: арена закрыта после первого удара; внутри — те, кто был там в этот момент. */
         boolean locked; final Set<UUID> inside = new HashSet<>();
+        long fightStart;   // 1.0.1: игровое время пробуждения — общий отсчёт музыки
         final Map<UUID, Float> dmg = new HashMap<>();
     }
     private static final Map<String, St> ST = new HashMap<>();
@@ -123,6 +124,59 @@ public final class BossManager {
 
     public static void tick(MinecraftServer server) {
         for (Def d : DEFS) tick(server, d);
+        if (server.getTickCount() % 10 == 0) arenaSync(server);
+    }
+
+    // ------------------------------------------------------------------ 1.0.1: купола арен, алтари и музыка
+    private static final Map<UUID, String> MUSIC = new HashMap<>();
+
+    private static void arenaSync(MinecraftServer server) {
+        long gt = server.overworld().getGameTime();
+        Map<UUID, com.google.gson.JsonArray> arenas = new HashMap<>();
+        Map<UUID, String[]> music = new HashMap<>();
+        for (Def d : DEFS) {
+            ServerLevel lvl = lvl(server, d);
+            St s = st(d);
+            Vec3 c = center(d);
+            boolean alive = s.id != null;
+            BlockPos ap = altarPos(d);
+            boolean lit = !alive && lvl.isLoaded(ap) && isAltar(lvl.getBlockState(ap));
+            for (ServerPlayer p : lvl.players()) {
+                double r = flat(p.position(), c);
+                if (r > d.lairR() + 70) continue;
+                com.google.gson.JsonObject o = new com.google.gson.JsonObject();
+                o.addProperty("id", d.id());
+                o.addProperty("x", c.x); o.addProperty("y", c.y); o.addProperty("z", c.z);
+                o.addProperty("r", d.lairR());
+                o.addProperty("lock", s.locked);
+                o.addProperty("lit", lit);
+                Integer col = d.chat().getColor();
+                o.addProperty("col", col == null ? 0x60C0FF : col);
+                BlockPos a = altarPos(d);
+                o.addProperty("type", net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(d.type().get()).toString());
+                o.addProperty("ax", a.getX()); o.addProperty("ay", a.getY()); o.addProperty("az", a.getZ());
+                arenas.computeIfAbsent(p.getUUID(), k -> new com.google.gson.JsonArray()).add(o);
+                // музыка — тем, кто на арене, пока босс бодрствует
+                if (alive && (r <= d.lairR() + 1 || s.inside.contains(p.getUUID()))) music.put(p.getUUID(), new String[]{d.id(), String.valueOf((gt - s.fightStart) / 20.0)});
+            }
+        }
+        com.pvpciv.game.LunaTrial.music(server, music);
+        com.pvpciv.game.VoidRift.music(server, music);
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            com.google.gson.JsonArray arr = arenas.get(p.getUUID());
+            if (arr != null) { com.google.gson.JsonObject j = new com.google.gson.JsonObject(); j.add("a", arr); net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.pvpciv.net.Network.PhoneData(25, j.toString())); }
+            String[] m = music.get(p.getUUID());
+            String was = MUSIC.get(p.getUUID());
+            if (m != null && (server.getTickCount() % 40 == 0 || !m[0].equals(was))) {
+                com.google.gson.JsonObject j = new com.google.gson.JsonObject();
+                j.addProperty("m", m[0]); j.addProperty("t", Double.parseDouble(m[1]));
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.pvpciv.net.Network.PhoneData(24, j.toString()));
+                MUSIC.put(p.getUUID(), m[0]);
+            } else if (m == null && was != null) {
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.pvpciv.net.Network.PhoneData(24, "{\"m\":\"\",\"t\":0}"));
+                MUSIC.remove(p.getUUID());
+            }
+        }
     }
 
     /** Реальное время в тиках: таймеры боссов идут, даже когда сервер выключен (бета 12.11). */
@@ -211,6 +265,7 @@ public final class BossManager {
         CivBoss b = d.type().get().create(lvl);
         if (b == null) return null;
         St s = st(d);
+        s.fightStart = lvl.getServer().overworld().getGameTime();
         Vec3 c = center(d), at = c.add(d.spawnOffset());
         b.moveTo(at.x, at.y, at.z, 180, 0);
         b.setHome(c);
@@ -278,6 +333,7 @@ public final class BossManager {
             St s = st(d);
             s.dmg.merge(p.getUUID(), dmg, Float::sum);
             if (!s.locked && mob.level() instanceof ServerLevel lvl) lock(lvl, d, s);
+            if (s.locked && !s.inside.contains(p.getUUID()) && flat(p.position(), center(d)) < d.lairR() + 8) s.inside.add(p.getUUID());   // 1.0.1: ударил с края — тоже в бою
         }
     }
 
@@ -293,7 +349,7 @@ public final class BossManager {
             for (int dy = -2; dy <= 4; dy++) {
                 BlockPos q = c.offset(dx, dy, dz);
                 var st = lvl.getBlockState(q);
-                if ((st.isAir() || st.is(net.minecraft.world.level.block.Blocks.RESPAWN_ANCHOR)) && lvl.getFluidState(q).isEmpty()
+                if ((st.isAir() || isAltar(st)) && lvl.getFluidState(q).isEmpty()
                         && lvl.getBlockState(q.below()).isFaceSturdy(lvl, q.below(), net.minecraft.core.Direction.UP) && lvl.getFluidState(q.below()).isEmpty()) return q;
             }
         }
@@ -301,26 +357,36 @@ public final class BossManager {
     }
     private static final java.util.Map<String, Boolean> ALTAR_LIT = new java.util.HashMap<>();
 
+    /** 1.0.1: алтарь — рамка портала с оком (над ней клиент рисует парящую модель босса и руны). Старые якоря заменяются. */
+    private static net.minecraft.world.level.block.state.BlockState altarBlock() {
+        return com.pvpciv.registry.ModRegistry.BOSS_ALTAR.get().defaultBlockState();
+    }
+    public static boolean isAltar(net.minecraft.world.level.block.state.BlockState st) {
+        return st.is(com.pvpciv.registry.ModRegistry.BOSS_ALTAR.get()) || st.is(net.minecraft.world.level.block.Blocks.END_PORTAL_FRAME) || st.is(net.minecraft.world.level.block.Blocks.RESPAWN_ANCHOR);
+    }
+
     private static void altar(ServerLevel lvl, Def d, boolean on) {
         BlockPos a = ALTAR_AT.computeIfAbsent(d.id(), k -> findAltar(lvl, d));
-        boolean has = lvl.getBlockState(a).is(net.minecraft.world.level.block.Blocks.RESPAWN_ANCHOR);
+        var st = lvl.getBlockState(a);
+        boolean has = st.is(com.pvpciv.registry.ModRegistry.BOSS_ALTAR.get());
+        if (!has && isAltar(st)) { lvl.setBlock(a, on ? altarBlock() : net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3); has = on; }
         if (on && !has) {
-            lvl.setBlock(a, net.minecraft.world.level.block.Blocks.RESPAWN_ANCHOR.defaultBlockState().setValue(net.minecraft.world.level.block.RespawnAnchorBlock.CHARGE, 4), 3);
+            lvl.setBlock(a, altarBlock(), 3);
             if (!Boolean.TRUE.equals(ALTAR_LIT.get(d.id()))) {
                 broadcast(lvl.getServer(), "Алтарь «" + d.name() + "» горит: " + d.where() + ". ПКМ по алтарю — разбудить.", d.chat());
-                lvl.playSound(null, a, SoundEvents.RESPAWN_ANCHOR_CHARGE, SoundSource.HOSTILE, 2f, 0.6f);
+                lvl.playSound(null, a, SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.HOSTILE, 2f, 0.6f);
             }
             ALTAR_LIT.put(d.id(), true);
         } else if (!on && has) lvl.setBlock(a, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
         if (on && lvl.getGameTime() % 10 == 0)
-            lvl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, a.getX() + 0.5, a.getY() + 1.2, a.getZ() + 0.5, 6, 0.3, 0.3, 0.3, 0.02);
+            lvl.sendParticles(ParticleTypes.END_ROD, a.getX() + 0.5, a.getY() + 1.4, a.getZ() + 0.5, 3, 0.4, 0.5, 0.4, 0.01);
     }
 
     /** ПКМ по блоку: если это горящий алтарь босса — будим. */
     public static boolean onAltarUse(ServerPlayer p, BlockPos pos) {
         for (Def d : DEFS) {
             if (!altarPos(d).equals(pos) || lvl(p.server, d) != p.level()) continue;
-            if (!p.level().getBlockState(pos).is(net.minecraft.world.level.block.Blocks.RESPAWN_ANCHOR)) return false;
+            if (!isAltar(p.level().getBlockState(pos))) return false;
             St s = st(d);
             if (s.id != null || secondsLeft(p.server, d.id()) > 0) return true;
             altar((ServerLevel) p.level(), d, false);
@@ -352,17 +418,17 @@ public final class BossManager {
         double R = d.lairR();
         s.inside.removeIf(u -> { ServerPlayer p = lvl.getServer().getPlayerList().getPlayer(u); return p == null || !p.isAlive() || p.level() != lvl; });
         if (s.inside.isEmpty()) { s.locked = false; return; }
-        if (lvl.getGameTime() % 6 == 0) for (int i = 0; i < 48; i++) {
-            double a = Math.PI * 2 * i / 48 + lvl.getGameTime() * 0.01;
-            lvl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, c.x + Math.cos(a) * R, c.y + 0.2 + (i % 4) * 0.9, c.z + Math.sin(a) * R, 1, 0, 0.2, 0, 0);
-        }
         for (ServerPlayer p : lvl.players()) {
             if (p.isSpectator() || p.isCreative()) continue;
             double r = flat(p.position(), c);
             boolean in = s.inside.contains(p.getUUID());
             if (in && r > R + 8) { s.inside.remove(p.getUUID()); continue; }   // ушёл телепортом (врата, лифт) — выпускаем
             if (in && r > R - 0.6) push(p, c, -1, R - 1.2);
-            else if (!in && r < R + 0.6 && r > 0.01) push(p, c, 1, R + 1.2);
+            else if (!in && r < R - 0.8) {   // 1.0.1: войти можно — выйти нельзя
+                s.inside.add(p.getUUID());
+                p.displayClientMessage(Component.literal("Ты вошёл на арену — выхода нет до конца боя").withStyle(ChatFormatting.RED, ChatFormatting.BOLD), true);
+                lvl.playSound(null, p.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.HOSTILE, 1f, 1.4f);
+            }
         }
     }
 
@@ -373,7 +439,8 @@ public final class BossManager {
         p.teleportTo(at.x, at.y, at.z);
         p.setDeltaMovement(v.scale(0.35 * dir).add(0, 0.1, 0));
         p.hurtMarked = true;
-        if (p.tickCount % 20 == 0) p.displayClientMessage(Component.literal(dir < 0 ? "Арена закрыта — бой до конца" : "Арена закрыта: бой уже идёт").withStyle(ChatFormatting.RED), true);
+        if (p.tickCount % 20 == 0) p.displayClientMessage(Component.literal(dir < 0 ? "Купол не выпускает — бой до конца" : "Арена закрыта: бой уже идёт").withStyle(ChatFormatting.RED), true);
+        if (p.tickCount % 8 == 0) p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.AMETHYST_BLOCK_HIT, SoundSource.HOSTILE, 1f, 0.6f);
     }
 
     public static void onDeath(LivingDeathEvent e) {

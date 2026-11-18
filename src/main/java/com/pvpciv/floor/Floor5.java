@@ -157,11 +157,11 @@ public final class Floor5 extends Builder {
             Mobs.Kind[] k = switch (m.type) {
                 case HABITAT -> new Mobs.Kind[]{Mobs.Kind.ROGUE_ASTRO, Mobs.Kind.ROGUE_ASTRO, Mobs.Kind.COLLECTOR};
                 case HYDRO -> new Mobs.Kind[]{Mobs.Kind.XENO, Mobs.Kind.VOID_CRAWLER, Mobs.Kind.VOID_CRAWLER};
-                case LAB -> new Mobs.Kind[]{Mobs.Kind.XENO, Mobs.Kind.ANDROID, Mobs.Kind.VOID_CRAWLER};
-                case CARGO -> new Mobs.Kind[]{Mobs.Kind.COLLECTOR, Mobs.Kind.ANDROID, Mobs.Kind.ROGUE_ASTRO};
-                case ENGINE -> new Mobs.Kind[]{Mobs.Kind.DRONE, Mobs.Kind.ANDROID, Mobs.Kind.DRONE};
-                case OBSERVATORY -> new Mobs.Kind[]{Mobs.Kind.VOID_CRAWLER, Mobs.Kind.XENO, Mobs.Kind.DRONE};
-                case MEDBAY -> new Mobs.Kind[]{Mobs.Kind.ROGUE_ASTRO, Mobs.Kind.XENO, Mobs.Kind.ANDROID};
+                case LAB -> new Mobs.Kind[]{Mobs.Kind.XENO, Mobs.Kind.XENO, Mobs.Kind.VOID_CRAWLER, Mobs.Kind.ANDROID};   // 1.0.1: стрелков меньше
+                case CARGO -> new Mobs.Kind[]{Mobs.Kind.COLLECTOR, Mobs.Kind.ROGUE_ASTRO, Mobs.Kind.ROGUE_ASTRO, Mobs.Kind.ANDROID};
+                case ENGINE -> new Mobs.Kind[]{Mobs.Kind.DRONE, Mobs.Kind.ROGUE_ASTRO, Mobs.Kind.VOID_CRAWLER, Mobs.Kind.ANDROID};
+                case OBSERVATORY -> new Mobs.Kind[]{Mobs.Kind.VOID_CRAWLER, Mobs.Kind.XENO, Mobs.Kind.VOID_CRAWLER, Mobs.Kind.DRONE};
+                case MEDBAY -> new Mobs.Kind[]{Mobs.Kind.ROGUE_ASTRO, Mobs.Kind.XENO, Mobs.Kind.COLLECTOR};
                 default -> null;
             };
             if (k == null) continue;
@@ -175,7 +175,7 @@ public final class Floor5 extends Builder {
         int i = 0;
         for (Module m : MODULES) {
             if (m.type.zone != Zones.Type.PVE || m.level < 27 || i >= 5) continue;
-            Mobs.Kind k = switch (m.type) { case ENGINE -> Mobs.Kind.ANDROID; case HYDRO, OBSERVATORY -> Mobs.Kind.XENO; case CARGO -> Mobs.Kind.COLLECTOR; default -> Mobs.Kind.ROGUE_ASTRO; };
+            Mobs.Kind k = switch (m.type) { case ENGINE -> Mobs.Kind.VOID_CRAWLER; case HYDRO, OBSERVATORY -> Mobs.Kind.XENO; case CARGO -> Mobs.Kind.COLLECTOR; default -> Mobs.Kind.ROGUE_ASTRO; };
             String[] names = {"Старпом-зомби", "Королева улья", "Главный коллектор", "Прототип «Страж»", "Капитан без шлема"};
             l.add(new EliteSpots.Spot("f5e_" + i, m.center().offset(6, 0, 6), k, m.level + 1, names[i % names.length], "floor5_mob", true));
             i++;

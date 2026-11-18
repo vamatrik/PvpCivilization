@@ -42,6 +42,7 @@ public final class LunaTrial {
 
     private static final class Session {
         final int slot; int stage; int t; UUID boss; int phase;   // 0 — отсчёт, 1 — бой, 2 — передышка
+        long started;   // 1.0.1: начало испытания (музыка)
         final List<ItemStack> pending = new ArrayList<>();   // награды выдаются на станции (на арене при полной сумке они бы выпали в пустоту)
         final ServerBossEvent bar = new ServerBossEvent(Component.literal("Луна"), BossEvent.BossBarColor.PURPLE, BossEvent.BossBarOverlay.NOTCHED_10);
         Session(int slot, int stage) { this.slot = slot; this.stage = stage; }
@@ -78,6 +79,12 @@ public final class LunaTrial {
 
     public static void cmd(ServerPlayer p, String cmd) {}
 
+    /** 1.0.1: музыка испытания — тому, кто на арене. */
+    public static void music(MinecraftServer server, Map<UUID, String[]> out) {
+        long gt = server.overworld().getGameTime();
+        S.forEach((u, s) -> out.put(u, new String[]{"luna", String.valueOf((gt - s.started) / 20.0)}));
+    }
+
     // ------------------------------------------------------------------ старт / стадии
     public static void start(ServerPlayer p, int stage) {
         if (in(p) || Rocket.flying(p)) return;
@@ -87,6 +94,7 @@ public final class LunaTrial {
         for (Session s : S.values()) used.add(s.slot);
         while (used.contains(slot)) slot++;
         Session s = new Session(slot, Math.max(1, stage));
+        s.started = p.server.overworld().getGameTime();
         S.put(p.getUUID(), s);
         ServerLevel l = CivWorld.f5(p.server);
         build(l, center(slot));
@@ -141,7 +149,7 @@ public final class LunaTrial {
                 Vec3 back = com.pvpciv.floor.Floor5.LUNA().add(-2, 0, 2);
                 p.teleportTo(back.x, back.y, back.z);
                 p.sendSystemMessage(Component.literal("☾ Испытание прервано — Луна вернула тебя на станцию.").withStyle(ChatFormatting.LIGHT_PURPLE));
-            } else if (p.getZ() > VoidRift.C.getZ() - 200 && !VoidRift.inRift(p)) {
+            } else if (p.getX() < AX - 200 && p.getZ() > VoidRift.C.getZ() - 200 && !VoidRift.inRift(p)) {
                 BlockPos pad = com.pvpciv.floor.Belt.PAD;
                 p.teleportTo(pad.getX() + 0.5, pad.getY(), pad.getZ() + 0.5);
                 p.sendSystemMessage(Component.literal("Разлом Пустоты закрылся — тебя выбросило на шлюзовую площадку.").withStyle(ChatFormatting.DARK_PURPLE));

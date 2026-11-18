@@ -437,7 +437,7 @@ public final class Library {
                 o.addProperty("set", a.set);
                 o.addProperty("tier", a.tier);
                 o.addProperty("armor", String.format("%.1f", a.armor(st)));
-                o.addProperty("hp", String.format("%.1f", a.health(st)));
+                o.addProperty("hp", String.format("%.1f%%", a.health(st) * 100));
                 o.addProperty("core", "в центре алтаря — " + (a.tier < 2 ? "Медальон инея" : a.tier < 3 ? "Фильтр противогаза" : "Нефритовая печать") + ", по краям — звёзды (ядро подходит только к броне своего этажа и ниже)");
                 o.addProperty("junk", "любой хлам, родной ×1,5 — " + (a.set.startsWith("Инеевый") ? "Инеевый осколок" : a.set.contains("ликвидатора") ? "Обрезки резины" : a.set.startsWith("Самурай") ? "Обрезки шёлка" : a.set.startsWith("Лисий") ? "Лисий мех" : "—"));
                 o.add("src", sources(id.toString()));

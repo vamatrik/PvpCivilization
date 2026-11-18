@@ -22,11 +22,14 @@ public final class Balance {
 
     // ------------------------------------------------------------ игрок
     /** Полное базовое HP игрока на уровне (включая ванильные 20). */
-    public static double playerHp(int lvl) { return 30 * Math.pow(1.18, lvl - 1); }
-    public static double weaponDmg(double tier) { return 7 * Math.pow(2.4, tier - 1); }
+    public static double playerHp(int lvl) { return 30 * Math.pow(1.17, lvl - 1); }   // 1.0.1: было 1.18 — часть здоровья теперь даёт броня (в %)
+    /** 1.0.1: тир 5 ×1.4 — мобы этажа 5 (ур. 23–32) растут быстрее тира; при +5..+7 мобов станции ~как этажа 4 при тех же звёздах. */
+    public static double weaponDmg(double tier) { return 7 * Math.pow(2.4, tier - 1) * (1 + 0.4 * Math.max(0, Math.min(1, tier - 4))); }
     /** Броня (число) и HP за полный комплект тира (части делят по долям). 0.10.2: броня — вычитается из удара. */
     public static double armorDef(double tier) { return 1.7 * Math.pow(2.4, tier - 1); }
     public static double armorHp(double tier) { return 12 * Math.pow(2.2, tier - 1.5); }
+    /** 1.0.1: броня даёт здоровье в процентах от уровня — комплект тира t обычной редкости: +(8 + 3t)% (тир 5 — +23%). */
+    public static double armorHpPct(double tier) { return 0.08 + 0.03 * tier; }
     /** Прибавка брони игрока за уровень. */
     public static double levelArmor(int lvl) { return 0.4 * Math.pow(1.17, lvl - 1); }
     /** Броня моба уровня L (обычного типа). */

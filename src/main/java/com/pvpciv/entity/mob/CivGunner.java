@@ -56,6 +56,8 @@ public class CivGunner extends CivSkeleton {
     }
 
     public boolean elite() { return com.pvpciv.combat.Mobs.lootKind(this).endsWith("_elite"); }
+    /** 1.0.1: стрелки станции (андроид, дрон): обычные не отталкивают, перезарядка дольше; элиты — отталкивают. */
+    boolean f5() { var t = getType(); return t == com.pvpciv.registry.ModMobs.ANDROID.get() || t == com.pvpciv.registry.ModMobs.DRONE.get(); }
 
     static final class GunGoal extends Goal {
         private final CivGunner g;
@@ -96,7 +98,7 @@ public class CivGunner extends CivSkeleton {
                 if (t != null) aim = turn(aim, target(t).subtract(eye).normalize(), g.elite() ? 0.05 : 0.035);
                 if ((++fireTick & 1) == 0) return;   // бета 0.10: пуля раз в 2 тика (≈600 в минуту)
                 fire(lvl, eye);
-                if (--shots <= 0) { state = 0; timer = (g.elite() ? 50 : 40) + g.random.nextInt(25); }
+                if (--shots <= 0) { state = 0; timer = (g.f5() ? (g.elite() ? 85 : 75) : g.elite() ? 50 : 40) + g.random.nextInt(g.f5() ? 35 : 25); }
             }
         }
 
@@ -131,7 +133,8 @@ public class CivGunner extends CivSkeleton {
                 try { hitP.hurt(g.damageSources().mobAttack(g), (float) dmg); } finally { com.pvpciv.combat.Balance.PEN = 0; }
                 // 0.11.1: отдача от пуль — четверть ванильной (очередь больше не «сдувает» игрока)
                 var v1 = hitP.getDeltaMovement();
-                hitP.setDeltaMovement(v0.add(v1.subtract(v0).scale(0.25)));
+                double kb = g.f5() ? (g.elite() ? 0.45 : 0) : 0.25;
+                hitP.setDeltaMovement(v0.add(v1.subtract(v0).scale(kb)));
                 hitP.hurtMarked = true;
                 hitP.invulnerableTime = 0;
             }

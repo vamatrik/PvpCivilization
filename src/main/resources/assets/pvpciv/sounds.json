@@ -68,5 +68,104 @@
     "sounds": [
       "pvpciv:fx/aim"
     ]
+  },
+  "music.brute": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/brute",
+        "stream": true
+      }
+    ]
+  },
+  "music.keeper": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/keeper",
+        "stream": true
+      }
+    ]
+  },
+  "music.don": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/don",
+        "stream": true
+      }
+    ]
+  },
+  "music.rat_king": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/rat_king",
+        "stream": true
+      }
+    ]
+  },
+  "music.kappa": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/kappa",
+        "stream": true
+      }
+    ]
+  },
+  "music.kumiho": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/kumiho",
+        "stream": true
+      }
+    ]
+  },
+  "music.noel": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/noel",
+        "stream": true
+      }
+    ]
+  },
+  "music.luna": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/luna",
+        "stream": true
+      }
+    ]
+  },
+  "music.diplomat": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/diplomat",
+        "stream": true
+      }
+    ]
+  },
+  "music.worm": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/worm",
+        "stream": true
+      }
+    ]
+  },
+  "music.demon": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/demon",
+        "stream": true
+      }
+    ]
   }
 }
