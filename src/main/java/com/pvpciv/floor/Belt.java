@@ -83,7 +83,7 @@ public final class Belt {
         }
         for (int[] o : new int[][]{{-5, -3}, {5, -3}, {-5, 3}, {5, 3}}) for (int y = 0; y < 4; y++) l.setBlock(PAD.offset(o[0], y, o[1]), y == 3 ? Blocks.SEA_LANTERN.defaultBlockState() : Blocks.IRON_BARS.defaultBlockState(), 2);
         BlockPos k = CONSOLE();
-        l.setBlock(k, Blocks.LODESTONE.defaultBlockState(), 2);
+        l.setBlock(k, com.pvpciv.block.ConsoleBlock.of(com.pvpciv.block.ConsoleBlock.Kind.STATION, Direction.NORTH), 2);
         sign(l, k.above(2), "ШЛЮЗ «ОРБИТА»", "ПКМ по пульту —", "назад в ангар", "");
         sign(l, PAD.offset(0, 1, -6), "ПОЯС АСТЕРОИДОВ", "низкая гравитация", "червь — в центре", "(алтарь, ПКМ)");
     }
@@ -92,8 +92,8 @@ public final class Belt {
 
     private static void sign(ServerLevel l, BlockPos at, String... lines) {
         l.setBlock(at.below(), Blocks.POLISHED_DEEPSLATE.defaultBlockState(), 2);
-        l.setBlock(at, Blocks.OAK_SIGN.defaultBlockState(), 2);
-        if (l.getBlockEntity(at) instanceof net.minecraft.world.level.block.entity.SignBlockEntity s) {
+        com.pvpciv.world.Signs.place(l, at, Direction.SOUTH, 5, true, net.minecraft.world.item.DyeColor.LIGHT_BLUE.getTextColor(), lines);
+        if (false && l.getBlockEntity(at) instanceof net.minecraft.world.level.block.entity.SignBlockEntity s) {
             var text = s.getFrontText();
             for (int i = 0; i < 4 && i < lines.length; i++) text = text.setMessage(i, Component.literal(lines[i]));
             s.setText(text.setColor(net.minecraft.world.item.DyeColor.LIGHT_BLUE).setHasGlowingText(true), true);

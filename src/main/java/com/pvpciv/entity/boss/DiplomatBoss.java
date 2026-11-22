@@ -31,7 +31,7 @@ import java.util.*;
  *  • Дальний бой — веер документов.
  *  • «Подпиши здесь!» — летящий контракт: сбей его (3 удара), иначе он прилипнет: обездвиживает на 3 с и забирает искры.
  *  • «Аудит» — зона: 6 с нельзя пить зелья, есть и торговать (кошелёк заморожен).
- *  • «Встреча на высшем уровне» — зовёт охрану; пока охрана жива, он почти неуязвим (−75% урона).
+ *  • «Встреча на высшем уровне» — зовёт охрану; пока охрана жива, он получает вдвое меньше урона.
  */
 public class DiplomatBoss extends CivBoss {
     private static final Vector3f PAPER = new Vector3f(0.95f, 0.93f, 0.8f), AUDIT = new Vector3f(0.3f, 0.85f, 1f), RED = new Vector3f(1f, 0.25f, 0.2f);
@@ -74,7 +74,7 @@ public class DiplomatBoss extends CivBoss {
     @Override
     protected void ability(ServerLevel lvl, ServerPlayer t) {
         int r = random.nextInt(10);
-        if (--summonCd <= 0 && guardsAlive(lvl) == 0 && r < 4) { summit(lvl); summonCd = enraged ? 5 : 7; }
+        if (--summonCd <= 0 && guardsAlive(lvl) == 0 && r < 4) { summit(lvl); summonCd = enraged ? 8 : 9; }   // 1.1: охрану зовёт реже
         else if (r < 4) papers(lvl, t);
         else if (r < 7) contract(lvl, t);
         else audit(lvl, t);
@@ -161,8 +161,9 @@ public class DiplomatBoss extends CivBoss {
         guards.clear();
         Vec3 c = home != null ? home : position();
         int lvlM = com.pvpciv.combat.Mobs.level(this);
-        for (int i = 0; i < (enraged ? 4 : 3); i++) {
-            double a = Math.PI * 2 * i / (enraged ? 4 : 3);
+        int n = enraged ? 3 : 2;   // 1.1: было 3/4
+        for (int i = 0; i < n; i++) {
+            double a = Math.PI * 2 * i / n;
             Vec3 at = safeSpot(lvl, c.add(Math.cos(a) * 6, 0, Math.sin(a) * 6), c);
             Mob g = com.pvpciv.registry.ModMobs.ANDROID.get().create(lvl);
             if (g == null) continue;
@@ -170,6 +171,8 @@ public class DiplomatBoss extends CivBoss {
             com.pvpciv.combat.Mobs.setupDefault(g);
             com.pvpciv.combat.Mobs.setup(g, Math.max(1, lvlM - 1), false, "Охрана посольства", "floor5_mob");
             g.addTag("boss_minion");
+            var mh = g.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);   // 1.1: охрана вдвое хрупче
+            if (mh != null) { mh.setBaseValue(mh.getBaseValue() * 0.5); g.setHealth(g.getMaxHealth()); }
             g.setCustomName(Component.literal("[" + (lvlM - 1) + "] Охрана посольства").withStyle(ChatFormatting.AQUA));
             lvl.addFreshEntity(g);
             guards.add(g.getUUID());
@@ -186,7 +189,7 @@ public class DiplomatBoss extends CivBoss {
     @Override
     public boolean hurt(DamageSource src, float amount) {
         if (!level().isClientSide && level() instanceof ServerLevel lvl && src.getEntity() instanceof Player && guardsAlive(lvl) > 0) {
-            amount *= 0.25f;
+            amount *= 0.5f;   // 1.1: было 0.25 — «резисты бешеные»
             if (tickCount % 6 == 0) com.pvpciv.combat.DamageNumbers.show(lvl, this, Component.literal("ДИПЛОМАТИЧЕСКИЙ ИММУНИТЕТ").withStyle(x -> x.withColor(0x40D0FF).withBold(true)));
         }
         return super.hurt(src, amount);
@@ -200,7 +203,7 @@ public class DiplomatBoss extends CivBoss {
 
     @Override
     protected void onEnrage(ServerLevel lvl) {
-        summonCd = 0;
+        summonCd = 2;
         for (ServerPlayer p : victims(lvl, 32))
             p.sendSystemMessage(Component.literal("✉ Дипломат: «Переговоры окончены. Начинаются САНКЦИИ.»").withStyle(ChatFormatting.RED));
     }

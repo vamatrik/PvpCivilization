@@ -14,12 +14,15 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 
 import java.util.function.BooleanSupplier;
 
-/** Общая основа меню: сумка 9×7 + хотбар, синхронизация числа открытых слотов. */
+/** Общая основа меню: сумка 9×7 (листается колесом) + хотбар, синхронизация числа открытых слотов. */
 public abstract class CivMenu extends AbstractContainerMenu {
     public final Player player;
     public final ItemStackHandler bag;
     protected final DataSlot unlocked = DataSlot.standalone();
-    public int bagStart = -1, hotStart = -1;
+    public int bagStart = -1, hotStart = -1, bagX, bagY;
+    /** прокрутка сумки в строках (клиент и сервер синхронны через кнопку SCROLL_BTN+row) */
+    public int scroll;
+    public static final int SCROLL_BTN = 900;
 
     protected CivMenu(MenuType<?> type, int id, Inventory inv) {
         super(type, id);
@@ -33,8 +36,34 @@ public abstract class CivMenu extends AbstractContainerMenu {
 
     protected void addBag(int x, int y, BooleanSupplier visible) {
         bagStart = slots.size();
-        for (int i = 0; i < Bag.MAX; i++)
-            addSlot(new BagSlot(bag, i, x + (i % 9) * 18, y + (i / 9) * 18, unlocked::get, visible));
+        bagX = x; bagY = y;
+        var view = new com.pvpciv.inv.BagView(bag, () -> scroll * 9);
+        for (int i = 0; i < Bag.VIEW; i++)
+            addSlot(new BagSlot(view, i, x + (i % 9) * 18, y + (i / 9) * 18, unlocked::get, () -> scroll * 9, visible));
+    }
+
+    /** всего строк, доступных к прокрутке (открытые + одна закрытая «на вырост») */
+    public int bagRows() { return Math.min(Bag.MAX / 9, (unlocked.get() + 8) / 9 + 1); }
+    public int maxScroll() { return Math.max(0, bagRows() - Bag.VIEW / 9); }
+
+    /** обработка кнопки прокрутки; вызывать первой строкой clickMenuButton подклассов */
+    protected boolean scrollButton(int id) {
+        if (id < SCROLL_BTN || id > SCROLL_BTN + Bag.MAX / 9) return false;
+        scroll = Math.max(0, Math.min(maxScroll(), id - SCROLL_BTN));
+        broadcastChanges();
+        return true;
+    }
+
+    @Override
+    public boolean clickMenuButton(Player p, int id) { return scrollButton(id) || super.clickMenuButton(p, id); }
+
+    /** Положить в сумку целиком (не только видимую часть). */
+    protected boolean toBag(ItemStack st) {
+        int before = st.getCount();
+        int n = unlocked.get();
+        for (int i = 0; i < n && !st.isEmpty(); i++) if (!bag.getStackInSlot(i).isEmpty() && ItemStack.isSameItemSameComponents(bag.getStackInSlot(i), st)) st.setCount(bag.insertItem(i, st.copy(), false).getCount());
+        for (int i = 0; i < n && !st.isEmpty(); i++) if (bag.getStackInSlot(i).isEmpty()) st.setCount(bag.insertItem(i, st.copy(), false).getCount());
+        return st.getCount() != before;
     }
 
     protected void addHotbar(Inventory inv, int x, int y) {
@@ -42,7 +71,7 @@ public abstract class CivMenu extends AbstractContainerMenu {
         for (int i = 0; i < 9; i++) addSlot(new Slot(inv, i, x + i * 18, y));
     }
 
-    public boolean isBagSlot(int idx) { return bagStart >= 0 && idx >= bagStart && idx < bagStart + Bag.MAX; }
+    public boolean isBagSlot(int idx) { return bagStart >= 0 && idx >= bagStart && idx < bagStart + Bag.VIEW; }
     public boolean isHotbarSlot(int idx) { return hotStart >= 0 && idx >= hotStart && idx < hotStart + 9; }
 
     @Override
@@ -59,13 +88,13 @@ public abstract class CivMenu extends AbstractContainerMenu {
         ItemStack copy = st.copy();
         boolean moved;
         if (extraStart >= 0 && index >= extraStart && index < extraEnd) {
-            moved = moveItemStackTo(st, bagStart, bagStart + unlocked.get(), false) || moveItemStackTo(st, hotStart, hotStart + 9, false);
+            moved = toBag(st) || moveItemStackTo(st, hotStart, hotStart + 9, false);
         } else if (extraStart >= 0 && moveItemStackTo(st, extraStart, extraEnd, false)) {
             moved = true;
         } else if (isBagSlot(index)) {
             moved = moveItemStackTo(st, hotStart, hotStart + 9, false);
         } else {
-            moved = moveItemStackTo(st, bagStart, bagStart + unlocked.get(), false);
+            moved = toBag(st);
         }
         if (!moved) return ItemStack.EMPTY;
         if (st.isEmpty()) slot.setByPlayer(ItemStack.EMPTY); else slot.setChanged();

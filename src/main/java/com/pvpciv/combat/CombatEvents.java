@@ -227,7 +227,10 @@ public final class CombatEvents {
             boolean pvp = killer instanceof ServerPlayer k && k != p;
             if (pvp) com.pvpciv.game.Assassin.onKill((ServerPlayer) killer, com.pvpciv.game.Assassin.PLAYER);
             long xpBefore = Progress.d(p).xp;
-            long lost = Progress.deathPenalty(p, pvp ? 0.25 : 0.10);
+            // 1.1: на арене босса, в разломе Демоницы и у Луны смерть — уже наказание: штраф вдвое мягче
+            boolean arena = com.pvpciv.game.VoidRift.inRift(p) || com.pvpciv.game.LunaTrial.in(p)
+                    || com.pvpciv.floor.BossManager.inLockedArena(p.serverLevel(), p.position());
+            long lost = Progress.deathPenalty(p, pvp ? 0.25 : arena ? 0.05 : 0.10, pvp ? 1.5 : arena ? 0.5 : 1.0);
             String killerName = killer == null ? "" : killer.getName().getString();
             net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.pvpciv.net.Network.DeathInfo(lost, xpBefore - Progress.d(p).xp, pvp, killerName));
             if (pvp && lost > 0) {
@@ -235,8 +238,8 @@ public final class CombatEvents {
                 p.level().addFreshEntity(drop);
             }
             p.sendSystemMessage(Component.literal(pvp
-                    ? "Ты выронил " + lost + " ✦ — их можно подобрать. Половина опыта до уровня сгорела."
-                    : "Сгорело " + lost + " ✦ и 15% опыта до следующего уровня.").withStyle(ChatFormatting.RED));
+                    ? "Ты выронил " + lost + " ✦ — их можно подобрать. Сгорело 15% опыта до уровня."
+                    : "Сгорело " + lost + " ✦ (не больше " + Progress.penaltyCap(Progress.d(p).level) + " на твоём уровне) и 15% опыта до уровня.").withStyle(ChatFormatting.RED));
             return;
         }
         if (dead instanceof Mob mob && Mobs.level(mob) > 0 && e.getSource().getEntity() instanceof ServerPlayer p && !BossManager.isBoss(mob)) {
@@ -245,8 +248,8 @@ public final class CombatEvents {
             // бета 0.9.6: призванные боссом мобы опыта не дают
             boolean minion = mob.getTags().stream().anyMatch(t -> t.equals("boss_minion") || t.equals("don_goon") || t.equals("king_rat") || t.equals("kumiho_court"));
             // бета 0.9.8: уровень игрока выше потолка этажа (5/10/15) → опыт ×0.5
-            int fl = Math.max(1, com.pvpciv.world.CivWorld.floor(mob.level()));
-            if (Progress.d(p).level > fl * 5) mult *= 0.5;
+            // 1.1: убран «потолок этажа» (уровень > этаж×5 → ×0.5): он остался с 3 этажей и резал опыт вдвое на этажах 4–5.
+            //      Перекач и так гасится в xpForMob (моб ниже тебя на 3+ — опыта нет).
             long xp = minion ? 0 : Progress.xpForMob(Progress.d(p).level, Mobs.level(mob), mult);
             if (xp > 0) Progress.addXp(p, xp);
             com.pvpciv.game.Vampire.onKill(p, mob, kind.endsWith("_elite"));

@@ -15,15 +15,33 @@ public final class Cutscene {
     private static long start;
     private static int len;
 
-    public static void start(String k, int ticks) { kind = k; len = ticks; start = System.currentTimeMillis(); }
+    public static void start(String k, int ticks) { kind = k; len = ticks; start = System.currentTimeMillis(); look = null; }
+
+    /** 1.1: камера смотрит на взлетающую ракету (x,y,z — точка на ракете, t0/acc — закон подъёма). */
+    private static double[] look;
+    public static void start(com.google.gson.JsonObject j) {
+        int skip = j.has("skip") ? j.get("skip").getAsInt() : 0;
+        start(j.get("cut").getAsString(), j.get("len").getAsInt() - skip);
+        if (j.has("x")) look = new double[]{j.get("x").getAsDouble(), j.get("y").getAsDouble(), j.get("z").getAsDouble(), j.get("t0").getAsDouble() - skip, j.get("acc").getAsDouble()};
+    }
 
     private static float ticks() { return (System.currentTimeMillis() - start) / 50f; }
 
     public static void camera(ViewportEvent.ComputeCameraAngles e) {
         float t = ticks();
         if (kind.equals("launch") || kind.equals("airlock") || kind.equals("rift")) {
-            if (t > len + 5) { kind = ""; return; }
+            if (t > len + 5) { kind = ""; look = null; return; }
             float amp = kind.equals("launch") ? (t < 55 ? 0.15f : Math.min(3.5f, (t - 55) / 14f)) : kind.equals("rift") ? Math.max(0, 3f - t / 12f) : 0.6f;
+            if (look != null && kind.equals("launch")) {
+                double tt = t - look[3];
+                double ry = look[1] + (tt > 0 ? look[4] * tt * tt * 0.85 : 0);   // чуть отстаём — ракета «уходит» вверх по кадру
+                var cam = e.getCamera().getPosition();
+                double dx = look[0] - cam.x, dy = ry - cam.y, dz = look[2] - cam.z;
+                double h = Math.sqrt(dx * dx + dz * dz);
+                e.setYaw((float) (Math.toDegrees(Math.atan2(dz, dx)) - 90));
+                e.setPitch((float) -Math.toDegrees(Math.atan2(dy, h)));
+                amp = tt < -15 ? 0.05f : Math.min(0.9f, (float) (tt + 15) / 40f);
+            }
             double s = System.nanoTime() / 1e7;
             e.setPitch(e.getPitch() + (float) Math.sin(s * 0.9) * amp);
             e.setYaw(e.getYaw() + (float) Math.cos(s * 1.3) * amp * 0.6f);

@@ -56,7 +56,7 @@ public final class ModF5 {
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> DARK_MATTER = simple("dark_matter", 0, true, 64,
             "Тёмная материя. Тяжелее, чем выглядит.", "Первое прохождение стадии испытания Луны.", "Тратится в дереве классов (Навыки → «Класс»).");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> DARK_STAR = simple("dark_star", 0, true, 16,
-            "Тёмная звезда. Свет вокруг неё гнётся.", "Кузница: заточка +10 → +11 (шанс 35%).", "Неудача — звезда сгорает, оружие цело.");
+            "Тёмная звезда. Свет вокруг неё гнётся.", "Ритуал тьмы (зал за Луной, этаж 5): +10 → +11.", "Касанием зажигает инжекторы; при запуске сгорает.", "50 на 50: неудача — оружие рассыпается.");
     public static final DeferredItem<com.pvpciv.item.ForgetScrollItem> FORGET_SCROLL = ITEMS.register("forget_scroll",
             () -> new com.pvpciv.item.ForgetScrollItem(new Item.Properties().stacksTo(4).rarity(net.minecraft.world.item.Rarity.EPIC)));
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> HELL_TRAIL = simple("hell_trail", 0, true, 16,

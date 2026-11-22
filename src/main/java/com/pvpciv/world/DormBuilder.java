@@ -86,12 +86,12 @@ public final class DormBuilder {
     private Block pick(Block... blocks) { return blocks[rnd.nextInt(blocks.length)]; }
 
     private void sign(BlockPos pos, Direction facing, DyeColor color, String... lines) {
-        level.setBlock(pos, Blocks.DARK_OAK_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, facing), Block.UPDATE_ALL);
-        writeSign(level, pos, color, lines);
+        Signs.place(level, pos, facing, Signs.styleAt(level, pos), false, Signs.color(color), lines);
     }
 
     public static void writeSign(ServerLevel level, BlockPos pos, DyeColor color, String... lines) {
         BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof com.pvpciv.block.CivSignBlockEntity cs) { cs.set(Signs.color(color), lines); return; }
         if (be instanceof SignBlockEntity sbe) {
             SignText t = new SignText().setColor(color).setHasGlowingText(true);
             for (int i = 0; i < Math.min(4, lines.length); i++) t = t.setMessage(i, Component.literal(lines[i]));
@@ -415,7 +415,7 @@ public final class DormBuilder {
 
     /** Комната Луны: дневник на кафедре, шкатулка у окна, плюшевые игрушки. */
     private void lunaRoom() {
-        level.setBlock(LUNA_DIARY, Blocks.LECTERN.defaultBlockState().setValue(LecternBlock.FACING, Direction.WEST), Block.UPDATE_ALL);
+        level.setBlock(LUNA_DIARY, com.pvpciv.block.ConsoleBlock.of(com.pvpciv.block.ConsoleBlock.Kind.STAND, Direction.WEST), Block.UPDATE_ALL);
         level.setBlock(LUNA_BOX, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.WEST), Block.UPDATE_ALL);
         set(LUNA_BOX.getX(), Y0 + 1, LUNA_BOX.getZ(), Blocks.AIR);
         set(-6, Y0, -27, Blocks.PINK_WOOL);

@@ -176,7 +176,7 @@ public final class Floor4 extends Builder {
         sign(new BlockPos(3, Y + 1, -16), Direction.SOUTH, DyeColor.RED, "N a Z a", "НАЗАД", "дороги нет", "© уборщица");
         // уголок Чарователя (восток): молекулярный стол — стол зачарований на кварцевом постаменте, гнёзда модулей по кругу
         set(ENCH_TABLE.getX(), Y - 1, ENCH_TABLE.getZ(), Blocks.CRYING_OBSIDIAN);
-        set(ENCH_TABLE.getX(), Y, ENCH_TABLE.getZ(), Blocks.ENCHANTING_TABLE);
+        set(ENCH_TABLE.getX(), Y, ENCH_TABLE.getZ(), com.pvpciv.block.ConsoleBlock.of(com.pvpciv.block.ConsoleBlock.Kind.LAB, net.minecraft.core.Direction.SOUTH));
         for (int i = 0; i < 8; i++) {
             double a = Math.PI * 2 * i / 8;
             int mx = ENCH_TABLE.getX() + (int) Math.round(Math.cos(a) * 3), mz = ENCH_TABLE.getZ() + (int) Math.round(Math.sin(a) * 3);
@@ -234,6 +234,35 @@ public final class Floor4 extends Builder {
     }
 
     // ------------------------------------------------------------------ 0.11.2: космодром
+    /** Начало ракеты (низ по центру) — от него считаются {@link #rocketVoxels()}. */
+    public static BlockPos ROCKET() { return new BlockPos(COSMO.getX(), Y, COSMO.getZ() + 2); }
+
+    /** 1.1: блоки ракеты «Заря-5» относительно {@link #ROCKET()} — и для стройки, и для анимации взлёта. */
+    public static java.util.Map<BlockPos, BlockState> rocketVoxels() {
+        java.util.Map<BlockPos, BlockState> m = new java.util.LinkedHashMap<>();
+        for (int y = 0; y < 30; y++) for (int x = -3; x <= 3; x++) for (int z = -3; z <= 3; z++) {
+            double r = Math.hypot(x, z), rr = y < 22 ? 3.2 : 3.2 * (1 - (y - 21) / 9.0);
+            if (r > rr) continue;
+            boolean shell = r > rr - 1.1;
+            if (!shell && y > 1 && y < 28) continue;
+            Block b = y >= 27 ? Blocks.RED_CONCRETE : y % 7 == 3 ? Blocks.BLACK_CONCRETE : (y == 14 && x == 0 && z < 0) ? Blocks.LIGHT_BLUE_STAINED_GLASS : Blocks.WHITE_CONCRETE;
+            m.put(new BlockPos(x, 3 + y, z), b.defaultBlockState());
+        }
+        for (int[] o : new int[][]{{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}) {   // сопла
+            m.put(new BlockPos(o[0], 2, o[1]), Blocks.POLISHED_BLACKSTONE.defaultBlockState());
+            m.put(new BlockPos(o[0], 1, o[1]), Blocks.BLACKSTONE_WALL.defaultBlockState());
+        }
+        for (int[] o : new int[][]{{4, 0}, {-4, 0}, {0, 4}, {0, -4}}) for (int y = 0; y < 7; y++) {   // стабилизаторы
+            m.put(new BlockPos(o[0], 3 + y, o[1]), Blocks.RED_CONCRETE.defaultBlockState());
+            if (y < 3) m.put(new BlockPos(o[0] + Integer.signum(o[0]), 3 + y, o[1] + Integer.signum(o[1])), Blocks.RED_CONCRETE.defaultBlockState());
+        }
+        // «рана»: пробитый борт с дымом
+        m.remove(new BlockPos(3, 12, 0)); m.remove(new BlockPos(3, 13, 0));
+        m.put(new BlockPos(3, 12, 1), Blocks.BLACK_CONCRETE.defaultBlockState());
+        m.put(new BlockPos(3, 13, -1), Blocks.CAMPFIRE.defaultBlockState());
+        return m;
+    }
+
     private void cosmodrome() {
         int cx = COSMO.getX(), cz = COSMO.getZ();
         // туннель из Реактора на юг: тёмный металл, красные огни — служебный ход
@@ -256,26 +285,7 @@ public final class Floor4 extends Builder {
         for (int w = -2; w <= 2; w++) set(w, Y, cz - COSMO_R, Blocks.AIR);   // проход из туннеля
         // ракета «Заря-5» (сломана): корпус, обтекатель, сопла, стабилизаторы
         int rx = cx, rz = cz + 2;
-        for (int y = 0; y < 30; y++) for (int x = -3; x <= 3; x++) for (int z = -3; z <= 3; z++) {
-            double r = Math.hypot(x, z), rr = y < 22 ? 3.2 : 3.2 * (1 - (y - 21) / 9.0);
-            if (r > rr) continue;
-            boolean shell = r > rr - 1.1;
-            if (!shell && y > 1 && y < 28) continue;
-            Block b = y >= 27 ? Blocks.RED_CONCRETE : y % 7 == 3 ? Blocks.BLACK_CONCRETE : (y == 14 && x == 0 && z < 0) ? Blocks.LIGHT_BLUE_STAINED_GLASS : Blocks.WHITE_CONCRETE;
-            set(rx + x, Y + 3 + y, rz + z, b);
-        }
-        for (int[] o : new int[][]{{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}) {   // сопла
-            set(rx + o[0], Y + 2, rz + o[1], Blocks.POLISHED_BLACKSTONE);
-            set(rx + o[0], Y + 1, rz + o[1], Blocks.BLACKSTONE_WALL);
-        }
-        for (int[] o : new int[][]{{4, 0}, {-4, 0}, {0, 4}, {0, -4}}) for (int y = 0; y < 7; y++) {   // стабилизаторы
-            int k = y < 3 ? 1 : 0;
-            set(rx + o[0], Y + 3 + y, rz + o[1], Blocks.RED_CONCRETE);
-            if (k == 1) set(rx + o[0] + Integer.signum(o[0]), Y + 3 + y, rz + o[1] + Integer.signum(o[1]), Blocks.RED_CONCRETE);
-        }
-        // «рана»: пробитый борт с дымом
-        set(rx + 3, Y + 12, rz, Blocks.AIR); set(rx + 3, Y + 13, rz, Blocks.AIR); set(rx + 3, Y + 12, rz + 1, Blocks.BLACK_CONCRETE);
-        set(rx + 3, Y + 13, rz - 1, Blocks.CAMPFIRE);
+        for (var e : rocketVoxels().entrySet()) set(rx + e.getKey().getX(), Y + e.getKey().getY(), rz + e.getKey().getZ(), e.getValue());
         // фермы обслуживания
         for (int y = 0; y < 34; y++) for (int[] o : new int[][]{{8, -2}, {8, 2}, {12, -2}, {12, 2}}) set(rx + o[0], Y + y, rz + o[1], y % 4 == 0 ? Blocks.IRON_BLOCK : Blocks.IRON_BARS);
         for (int y = 6; y < 34; y += 7) for (int x = 4; x <= 12; x++) for (int z = -2; z <= 2; z++) set(rx + x, Y + y, rz + z, Blocks.IRON_TRAPDOOR);

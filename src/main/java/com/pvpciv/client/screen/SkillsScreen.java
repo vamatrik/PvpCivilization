@@ -29,6 +29,10 @@ public class SkillsScreen extends PlainScreen {
     protected void drawContent(GuiGraphics g, int mx, int my, float pt) {
         g.drawString(font, "Щёлкни по навыку, чтобы поставить его в слот", left + 12, top + 18, Skin.DIM, false);
         Skin.button(g, font, left + w - 74, top + 12, 64, "Класс ▸", mx, my, true, true);
+        if (ClientState.classes != null) {   // 1.1: тёмная материя — баланс
+            String dm = "◆ " + ClientState.classes.get("dm").getAsInt();
+            g.drawString(font, dm, left + w - 82 - font.width(dm), top + 16, 0xFFC090FF, false);
+        }
         for (int i = 0; i < 3; i++) {
             int x = left + 10 + i * (COL + 3), y = top + 32;
             boolean open = ClientState.level >= LVL[i];

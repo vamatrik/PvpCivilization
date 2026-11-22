@@ -30,7 +30,7 @@ public class ForgeMenu extends CivMenu {
     public static final int BTN_ENHANCE = 0, BTN_UPGRADE = 1;
     public static final int RITUAL = 44;
     /** 1.0: тёмная звезда — +10 → +11. */
-    public static final double DARK_CHANCE = 0.35;
+    public static final double DARK_CHANCE = 0.5;   // 1.1: 50 на 50
     private boolean pendingDark;
     public final SimpleContainer box = new SimpleContainer(2);
     private final DataSlot level = DataSlot.standalone(), progress = DataSlot.standalone(), result = DataSlot.standalone();
@@ -53,7 +53,7 @@ public class ForgeMenu extends CivMenu {
             @Override public int getMaxStackSize() { return 1; }
         });
         addSlot(new Slot(box, 1, 25, 51) {
-            @Override public boolean mayPlace(ItemStack st) { return (st.is(ModRegistry.STAR_W1.get()) || st.is(ModRegistry.BLESSED_STAR_W1.get()) || st.is(ModRegistry.BLOOD_STAR_W1.get()) || st.is(com.pvpciv.registry.ModF5.DARK_STAR.get())) && progress.get() == 0; }
+            @Override public boolean mayPlace(ItemStack st) { return (st.is(ModRegistry.STAR_W1.get()) || st.is(ModRegistry.BLESSED_STAR_W1.get()) || st.is(ModRegistry.BLOOD_STAR_W1.get())) && progress.get() == 0; }   // 1.1: тёмная звезда — в ритуальном зале
             @Override public boolean mayPickup(Player p) { return progress.get() == 0; }
         });
         addBag(169, 37, () -> true);
@@ -74,6 +74,7 @@ public class ForgeMenu extends CivMenu {
 
     @Override
     public boolean clickMenuButton(Player p, int id) {
+        if (scrollButton(id)) return true;
         if (!(p instanceof ServerPlayer sp)) return true;
         if (id == BTN_UPGRADE) {
             if (Stations.upgrade(sp, Stations.FORGE)) level.set(Progress.d(sp).forgeLvl);
@@ -89,7 +90,7 @@ public class ForgeMenu extends CivMenu {
             return true;
         }
         if (s > Gear.MAX_STARS || (s == Gear.MAX_STARS && !dark)) {
-            sp.displayClientMessage(Component.literal(s > Gear.MAX_STARS ? "Это +11 — предел." : "Это +10. Дальше — только тёмная звезда (испытания Луны, Демоница Пустоты).").withStyle(ChatFormatting.DARK_PURPLE), true);
+            sp.displayClientMessage(Component.literal(s > Gear.MAX_STARS ? "Это +11 — предел." : "Это +10. Дальше — ритуал тьмы: зал за Луной на этаже 5 (после Демоницы).").withStyle(ChatFormatting.DARK_PURPLE), true);
             return true;
         }
         pendingDark = dark;

@@ -99,7 +99,7 @@ public final class EliteSpots {
             List<Mob> alive = lvl.getEntitiesOfClass(Mob.class, new AABB(s.pos()).inflate(40), m -> m.getTags().contains(tag(s)) && m.isAlive());
             for (int i = 1; i < alive.size(); i++) alive.get(i).discard();
             long at = RESPAWN.getOrDefault(s.id(), 0L);
-            if (alive.isEmpty() && at <= now) {
+            if (alive.isEmpty() && at <= now && !BossManager.inLockedArena(lvl, Vec3.atCenterOf(s.pos()))) {
                 int y = s.f2() ? s.pos().getY() : lvl.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, s.pos().getX(), s.pos().getZ());
                 Vec3 sp = s.f2() ? ground(lvl, BlockPos.containing(c.x, y, c.z)) : com.pvpciv.game.Taxi.safe(lvl, BlockPos.containing(c.x, y, c.z));   // бета 0.8.7: элитка в камне
                 Mob m = Mobs.spawn(lvl, s.kind(), s.level(), true, sp, s.loot(), tag(s));

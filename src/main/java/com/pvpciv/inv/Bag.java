@@ -11,13 +11,23 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 
 import java.util.function.Predicate;
 
-/** Сумка игрока: до 63 слотов, открываются уровнем и пряжками. Ванильные 27 слотов не используются. */
+/** Сумка игрока: до 162 слотов (листается), открываются уровнем и пряжками. Ванильные 27 слотов не используются. */
 public final class Bag {
-    public static final int MAX = 63, BASE = 18;
-    public static final int[] LEVEL_MILESTONES = {10, 20, 30, 40, 50};   // 0.9.0: строка раз в 10 уровней (было 4/8/12/16/20)
+    /** 1.1: сумка листается колесом; ограничение — только уровень и расширители. VIEW — сколько слотов видно разом. */
+    public static final int MAX = 162, BASE = 18, VIEW = 63;
+    public static final int[] LEVEL_MILESTONES = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100};   // 0.9.0: строка раз в 10 уровней (было 4/8/12/16/20)
     static final int[] OLD_MILESTONES = {4, 8, 12, 16, 20};
 
-    public static ItemStackHandler get(Player p) { return p.getData(ModRegistry.BAG.get()); }
+    public static ItemStackHandler get(Player p) {
+        ItemStackHandler h = p.getData(ModRegistry.BAG.get());
+        if (h.getSlots() < MAX) {   // старые сохранения: 63 слота → расширяем без потерь
+            ItemStackHandler n = new ItemStackHandler(MAX);
+            for (int i = 0; i < h.getSlots(); i++) n.setStackInSlot(i, h.getStackInSlot(i));
+            p.setData(ModRegistry.BAG.get(), n);
+            h = n;
+        }
+        return h;
+    }
 
     public static int unlocked(int level, int extra) {
         int n = BASE;

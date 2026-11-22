@@ -79,6 +79,7 @@ public final class BossMusic {
 
         @Override
         public void tick() {
+            if (isStopped()) return;
             if (fading) { vol -= 0.025f; if (vol <= 0) { stop(); return; } }
             else if (vol < 1f) vol = Math.min(1f, vol + 0.05f);
             volume = vol;
@@ -98,7 +99,7 @@ public final class BossMusic {
                         if (b == null || !b.hasRemaining()) break;
                         bytes -= b.remaining();
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception ex) { com.mojang.logging.LogUtils.getLogger().error("[PvpCiv] music stream", ex); }
                 return s;
             });
         }

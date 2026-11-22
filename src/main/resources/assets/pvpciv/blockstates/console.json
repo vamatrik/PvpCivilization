@@ -1,0 +1,64 @@
+{
+ "variants": {
+  "facing=north,kind=station": {
+   "model": "pvpciv:block/console/station"
+  },
+  "facing=east,kind=station": {
+   "model": "pvpciv:block/console/station",
+   "y": 90
+  },
+  "facing=south,kind=station": {
+   "model": "pvpciv:block/console/station",
+   "y": 180
+  },
+  "facing=west,kind=station": {
+   "model": "pvpciv:block/console/station",
+   "y": 270
+  },
+  "facing=north,kind=lab": {
+   "model": "pvpciv:block/console/lab"
+  },
+  "facing=east,kind=lab": {
+   "model": "pvpciv:block/console/lab",
+   "y": 90
+  },
+  "facing=south,kind=lab": {
+   "model": "pvpciv:block/console/lab",
+   "y": 180
+  },
+  "facing=west,kind=lab": {
+   "model": "pvpciv:block/console/lab",
+   "y": 270
+  },
+  "facing=north,kind=stand": {
+   "model": "pvpciv:block/console/stand"
+  },
+  "facing=east,kind=stand": {
+   "model": "pvpciv:block/console/stand",
+   "y": 90
+  },
+  "facing=south,kind=stand": {
+   "model": "pvpciv:block/console/stand",
+   "y": 180
+  },
+  "facing=west,kind=stand": {
+   "model": "pvpciv:block/console/stand",
+   "y": 270
+  },
+  "facing=north,kind=teleport": {
+   "model": "pvpciv:block/console/teleport"
+  },
+  "facing=east,kind=teleport": {
+   "model": "pvpciv:block/console/teleport",
+   "y": 90
+  },
+  "facing=south,kind=teleport": {
+   "model": "pvpciv:block/console/teleport",
+   "y": 180
+  },
+  "facing=west,kind=teleport": {
+   "model": "pvpciv:block/console/teleport",
+   "y": 270
+  }
+ }
+}

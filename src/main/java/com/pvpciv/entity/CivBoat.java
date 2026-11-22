@@ -46,6 +46,13 @@ public class CivBoat extends Boat implements GeoEntity {
     @Override protected void readAdditionalSaveData(CompoundTag t) { super.readAdditionalSaveData(t); setTier(Math.max(2, t.getInt("civTier"))); }
     @Override public Item getDropItem() { return Items.AIR; }
 
+    /** 1.1: лисья лодка по земле — как по льду (~×4 к скорости на суше). */
+    @Override
+    public float getGroundFriction() {
+        float f = super.getGroundFriction();
+        return tier() >= 4 && f > 0 ? Math.max(f, 0.9f) : f;
+    }
+
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar c) {
         c.add(new AnimationController<>(this, "main", 4, st -> st.setAndContinue(getDeltaMovement().horizontalDistanceSqr() > 0.002 ? MOVE : IDLE)));

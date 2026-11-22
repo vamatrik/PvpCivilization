@@ -87,7 +87,7 @@ public final class SpawnZones {
                 Vec3 pos = new Vec3(x + 0.5, y, zz + 0.5);
                 boolean tooClose = false;
                 for (ServerPlayer p : lvl.players()) if (p.position().distanceTo(pos) < 12) { tooClose = true; break; }
-                if (tooClose) continue;
+                if (tooClose || BossManager.inLockedArena(lvl, pos)) continue;   // 1.1: на закрытой арене никто не спавнится
                 Mobs.Kind kind = z.kinds()[lvl.random.nextInt(z.kinds().length)];
                 int level = z.minLvl() + lvl.random.nextInt(z.maxLvl() - z.minLvl() + 1);
                 boolean elite = lvl.random.nextFloat() < z.elite();

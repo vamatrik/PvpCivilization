@@ -95,6 +95,7 @@ public class InfusionMenu extends CivMenu {
 
     @Override
     public boolean clickMenuButton(Player p, int id) {
+        if (scrollButton(id)) return true;
         if (!(p instanceof ServerPlayer sp) || id != BTN_GO) return true;
         Level lvl = sp.level();
         if (!(lvl.getBlockEntity(altar) instanceof PedestalBlockEntity cbe)) return true;

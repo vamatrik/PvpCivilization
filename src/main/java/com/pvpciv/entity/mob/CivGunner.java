@@ -57,6 +57,8 @@ public class CivGunner extends CivSkeleton {
 
     public boolean elite() { return com.pvpciv.combat.Mobs.lootKind(this).endsWith("_elite"); }
     /** 1.0.1: стрелки станции (андроид, дрон): обычные не отталкивают, перезарядка дольше; элиты — отталкивают. */
+    /** 1.1: выстрел без отдачи — отменяет ванильный knockback (см. GameEvents). */
+    public static boolean NO_KB;
     boolean f5() { var t = getType(); return t == com.pvpciv.registry.ModMobs.ANDROID.get() || t == com.pvpciv.registry.ModMobs.DRONE.get(); }
 
     static final class GunGoal extends Goal {
@@ -130,12 +132,15 @@ public class CivGunner extends CivSkeleton {
                 if (exo(hitP)) dmg *= 0.9;   // 0.11: экзокостюм держит пули
                 com.pvpciv.combat.Balance.PEN = 0.5;   // 0.10.2: пули пробивают половину брони
                 var v0 = hitP.getDeltaMovement();
-                try { hitP.hurt(g.damageSources().mobAttack(g), (float) dmg); } finally { com.pvpciv.combat.Balance.PEN = 0; }
-                // 0.11.1: отдача от пуль — четверть ванильной (очередь больше не «сдувает» игрока)
-                var v1 = hitP.getDeltaMovement();
                 double kb = g.f5() ? (g.elite() ? 0.45 : 0) : 0.25;
-                hitP.setDeltaMovement(v0.add(v1.subtract(v0).scale(kb)));
-                hitP.hurtMarked = true;
+                NO_KB = kb == 0;   // 1.1: обычные стрелки станции — ни отдачи, ни «рывка» скорости (ощущалось как стан)
+                try { hitP.hurt(g.damageSources().mobAttack(g), (float) dmg); } finally { com.pvpciv.combat.Balance.PEN = 0; NO_KB = false; }
+                if (kb > 0) {
+                    // 0.11.1: отдача от пуль — четверть ванильной (очередь больше не «сдувает» игрока)
+                    var v1 = hitP.getDeltaMovement();
+                    hitP.setDeltaMovement(v0.add(v1.subtract(v0).scale(kb)));
+                    hitP.hurtMarked = true;
+                }
                 hitP.invulnerableTime = 0;
             }
             line(lvl, from, end, g.tracer(), g.getType() == com.pvpciv.registry.ModMobs.LAB_TECH.get() ? 0.05f : 0.025f, 90, false);

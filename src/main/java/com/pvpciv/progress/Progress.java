@@ -22,11 +22,12 @@ public final class Progress {
     public static StoryData d(ServerPlayer p) { return p.getData(ModRegistry.STORY.get()); }
     private static void save(ServerPlayer p, StoryData d) { p.setData(ModRegistry.STORY.get(), d); }
 
+    /** 1.1: рост опыта к уровню (1.12) теперь почти вровень с опытом за моба (1.115): ~25–30 мобов своего уровня на уровень на любом этаже. */
     public static long xpToNext(int level) { return Math.round(150 * Math.pow(1.12, level - 1)); }
 
     /** Опыт за моба уровня mobLevel с учётом разницы уровней. */
     public static long xpFor(int playerLevel, int mobLevel, double mult) {
-        double base = 6 * Math.pow(1.08, mobLevel - 1) * mult;
+        double base = 6 * Math.pow(1.115, mobLevel - 1) * mult;
         int below = playerLevel - mobLevel;
         double k = below <= 3 ? 1.0 : below <= 5 ? 0.5 : below <= 8 ? 0.2 : 0.05;
         return Math.max(1, Math.round(base * k));
@@ -34,7 +35,7 @@ public final class Progress {
 
     /** Опыт за обычного моба. */
     public static long xpForMob(int playerLevel, int mobLevel, double mult) {
-        double base = 6 * Math.pow(1.08, mobLevel - 1) * mult;
+        double base = 6 * Math.pow(1.115, mobLevel - 1) * mult;
         int below = playerLevel - mobLevel;
         // бета 0.9.8: моб ниже на 1 → −50%, на 2 → −75%, на 3+ → опыта нет
         double k = below <= 0 ? 1.0 : below == 1 ? 0.5 : below == 2 ? 0.25 : 0.0;
@@ -100,10 +101,29 @@ public final class Progress {
         if (p.getHealth() > p.getMaxHealth()) p.setHealth(p.getMaxHealth());
     }
 
-    /** Штраф смерти: деньги и 15% опыта до следующего уровня. Возвращает потерянные Искры. */
-    public static long deathPenalty(ServerPlayer p, double moneyFraction) {
+    /** Средние искры с моба своего уровня (по таблицам лута этажей) — для «потолка» штрафа. */
+    public static double sparksPerMob(int lvl) {
+        int[][] pts = {{1, 4}, {8, 6}, {13, 10}, {19, 17}, {27, 31}, {40, 42}};
+        if (lvl <= pts[0][0]) return pts[0][1];
+        for (int i = 1; i < pts.length; i++) if (lvl <= pts[i][0]) {
+            double t = (lvl - pts[i - 1][0]) / (double) (pts[i][0] - pts[i - 1][0]);
+            return pts[i - 1][1] + t * (pts[i][1] - pts[i - 1][1]);
+        }
+        return pts[pts.length - 1][1] * (1 + 0.03 * (lvl - 40));
+    }
+
+    /** 1.1: потолок потери искр — примерно 10–15 минут фарма на своём уровне (≈80 мобов вместе с хламом). */
+    public static long penaltyCap(int lvl) { return Math.round(80 * sparksPerMob(lvl)); }
+
+    /**
+     * Штраф смерти: доля искр, но не больше потолка по уровню (×capMul), и 15% опыта до следующего уровня.
+     * Возвращает потерянные Искры.
+     */
+    public static long deathPenalty(ServerPlayer p, double moneyFraction) { return deathPenalty(p, moneyFraction, 1.0); }
+
+    public static long deathPenalty(ServerPlayer p, double moneyFraction, double capMul) {
         StoryData d = d(p);
-        long lost = (long) Math.floor(d.money * moneyFraction);
+        long lost = Math.min((long) Math.floor(d.money * moneyFraction), Math.round(penaltyCap(d.level) * capMul));
         d.money -= lost;
         d.xp = Math.round(d.xp * 0.85);   // бета 12.11: при смерти теряется 15% опыта (было 50%)
         save(p, d);

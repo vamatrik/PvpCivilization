@@ -108,6 +108,18 @@ public final class Floor5 extends Builder {
 
     public static Module at(int gx, int gz) { for (Module m : MODULES) if (m.gx == gx && m.gz == gz) return m; return null; }
 
+    /** 1.1: малая ракета ангара — низ по центру и блоки относительно него. */
+    public static BlockPos ROCKET() { return HANGAR_M.center().offset(0, 0, 4); }
+    public static java.util.Map<BlockPos, BlockState> rocketVoxels() {
+        java.util.Map<BlockPos, BlockState> m = new java.util.LinkedHashMap<>();
+        for (int y = 0; y < 12; y++) for (int x = -2; x <= 2; x++) for (int z = -2; z <= 2; z++) {
+            double r = Math.hypot(x, z), rr = y < 8 ? 2.4 : 2.4 * (1 - (y - 7) / 5.0);
+            if (r > rr || (r < rr - 1.1 && y > 0 && y < 11)) continue;
+            m.put(new BlockPos(x, y, z), (y >= 10 ? Blocks.RED_CONCRETE : y % 4 == 2 ? Blocks.BLACK_CONCRETE : Blocks.WHITE_CONCRETE).defaultBlockState());
+        }
+        return m;
+    }
+
     public static Vec3 HANGAR_ARRIVE() { BlockPos c = HANGAR_M.center(); return new Vec3(c.getX() + 0.5, Y, c.getZ() - 6.5); }
     /** Кнопка-пульт ракеты в ангаре. */
     public static BlockPos HANGAR_CONSOLE() { return HANGAR_M.center().offset(5, 0, -9); }
@@ -127,10 +139,13 @@ public final class Floor5 extends Builder {
         for (int[] l : LINKS) b.doors(l[0], l[1]);
         b.fixShapes();
         Belt.build(level);   // 1.0: пояс астероидов
+        com.pvpciv.game.Ritual.build(level);   // 1.1: ритуальный зал
+        com.pvpciv.game.StationTeleport.build(level);   // 1.1: телепорты
     }
 
     // ------------------------------------------------------------------ зоны и спавн
     public static final Zones.Zone CORRIDOR = new Zones.Zone("Этаж 5 · Коридор", Zones.Type.PVE);
+    public static final Zones.Zone RITUAL_Z = new Zones.Zone("Ритуальный зал", Zones.Type.SAFE);
     public static final Zones.Zone OUTSIDE = new Zones.Zone("Открытый космос", Zones.Type.SAFE);
     private static final Map<Type, Zones.Zone> ZONE_BY = new EnumMap<>(Type.class);
     static { for (Type t : Type.values()) ZONE_BY.put(t, new Zones.Zone("Этаж 5 · " + t.title, t.zone)); }
@@ -141,6 +156,7 @@ public final class Floor5 extends Builder {
         if (p.x > com.pvpciv.game.LunaTrial.AX - 200) return LUNA_ARENA;
         if (p.z > com.pvpciv.game.VoidRift.C.getZ() - 200) return RIFT_Z;
         if (p.z > Belt.CENTER.getZ() - 140) return BELT_Z;
+        if (p.x > com.pvpciv.game.Ritual.X0 - 0.5 && p.x < com.pvpciv.game.Ritual.X1 + 1 && p.z > com.pvpciv.game.Ritual.Z0 && p.z < com.pvpciv.game.Ritual.Z1 + 1 && p.y > Y - 3 && p.y < Y + 12) return RITUAL_Z;
         int gx = (int) Math.round(p.x / CELL) + C, gz = (int) Math.round(p.z / CELL) + C;
         Module m = at(gx, gz);
         if (m != null) {
@@ -309,7 +325,7 @@ public final class Floor5 extends Builder {
         for (int y = 0; y < 13; y++) for (int[] o : new int[][]{{-3, -3}, {3, -3}, {-3, 3}, {3, 3}}) set(cx + o[0], Y + y, cz + o[1], Blocks.IRON_BARS.defaultBlockState());
         sign(new BlockPos(cx, Y + 1, cz - 4), Direction.NORTH, DyeColor.RED, "НЕБЕСНЫЙ ЛИФТ", "ПКМ по пульту", "ремонт: нужен", "«адский след»");
         BlockPos lk = LIFT_CONSOLE();
-        set(lk.getX(), Y, lk.getZ(), Blocks.LODESTONE.defaultBlockState());
+        set(lk.getX(), Y, lk.getZ(), com.pvpciv.block.ConsoleBlock.of(com.pvpciv.block.ConsoleBlock.Kind.STATION, Direction.NORTH));
         // уголок Луны: диванчик, витрина, неоновая вывеска
         for (int x = 5; x <= 11; x++) set(cx + x, Y, cz - 11, Blocks.PURPLE_WOOL.defaultBlockState());
         for (int x = 6; x <= 10; x++) { set(cx + x, Y, cz - 6, Blocks.SMOOTH_QUARTZ.defaultBlockState()); set(cx + x, Y + 1, cz - 6, Blocks.PINK_STAINED_GLASS_PANE.defaultBlockState()); }
@@ -327,20 +343,16 @@ public final class Floor5 extends Builder {
             set(cx + x, Y - 1, cz + z + 2, Math.abs(r - 9) < 0.6 || Math.abs(r - 4) < 0.6 ? Blocks.YELLOW_CONCRETE.defaultBlockState() : Blocks.GRAY_CONCRETE.defaultBlockState());
         }
         int rz = cz + 4;
-        for (int y = 0; y < 12; y++) for (int x = -2; x <= 2; x++) for (int z = -2; z <= 2; z++) {
-            double r = Math.hypot(x, z), rr = y < 8 ? 2.4 : 2.4 * (1 - (y - 7) / 5.0);
-            if (r > rr || (r < rr - 1.1 && y > 0 && y < 11)) continue;
-            set(cx + x, Y + y, rz + z, (y >= 10 ? Blocks.RED_CONCRETE : y % 4 == 2 ? Blocks.BLACK_CONCRETE : Blocks.WHITE_CONCRETE).defaultBlockState());
-        }
+        for (var e : rocketVoxels().entrySet()) set(cx + e.getKey().getX(), Y + e.getKey().getY(), rz + e.getKey().getZ(), e.getValue());
         // шлюз наружу (на юг): двойные ворота из решёток — в 0.15 отсюда полёт на пояс астероидов
         for (int x = -3; x <= 3; x++) for (int y = 0; y < 6; y++) set(cx + x, Y + y, cz + ROOM, y == 5 ? lamp(Blocks.REDSTONE_LAMP) : Blocks.IRON_BARS.defaultBlockState());
         // 1.0: пульт шлюза
         BlockPos al = AIRLOCK();
-        set(al.getX(), Y, al.getZ(), Blocks.LODESTONE.defaultBlockState());
+        set(al.getX(), Y, al.getZ(), com.pvpciv.block.ConsoleBlock.of(com.pvpciv.block.ConsoleBlock.Kind.STATION, Direction.NORTH));
         sign(al.above(2), Direction.NORTH, DyeColor.LIGHT_BLUE, "ШЛЮЗ", "ПКМ по пульту —", "пояс астероидов", "(ключ: Дипломат)");
         // пульт ракеты
         BlockPos k = HANGAR_CONSOLE();
-        set(k.getX(), Y, k.getZ(), Blocks.LODESTONE.defaultBlockState());
+        set(k.getX(), Y, k.getZ(), com.pvpciv.block.ConsoleBlock.of(com.pvpciv.block.ConsoleBlock.Kind.STATION, Direction.NORTH));
         set(k.getX() - 1, Y, k.getZ(), Blocks.POLISHED_DEEPSLATE.defaultBlockState());
         set(k.getX() + 1, Y, k.getZ(), Blocks.POLISHED_DEEPSLATE.defaultBlockState());
         sign(k.above(2), Direction.NORTH, DyeColor.ORANGE, "РАКЕТА «ЗАРЯ-5»", "ПКМ по пульту —", "полёт на этаж 4", "(космодром NaZa)");

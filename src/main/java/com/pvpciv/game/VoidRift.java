@@ -1,5 +1,6 @@
 package com.pvpciv.game;
 
+import net.minecraft.resources.ResourceLocation;
 import com.pvpciv.combat.Mobs;
 import com.pvpciv.data.StoryData;
 import com.pvpciv.entity.boss.VoidDemon;
@@ -49,7 +50,7 @@ import java.util.*;
 public final class VoidRift {
     private VoidRift() {}
     public static final BlockPos C = new BlockPos(0, 150, 1600);
-    private static final int R = 14, GRID = 7, TILE = 4;
+    private static final int R = 14, GRID = 10, TILE = 4;
     private static final Block[] COLORS = {Blocks.RED_CONCRETE, Blocks.BLUE_CONCRETE, Blocks.YELLOW_CONCRETE, Blocks.LIME_CONCRETE};
     private static final String[] COLOR_NAMES = {"КРАСНЫЙ", "СИНИЙ", "ЖЁЛТЫЙ", "ЗЕЛЁНЫЙ"};
     private static final ChatFormatting[] COLOR_FMT = {ChatFormatting.RED, ChatFormatting.BLUE, ChatFormatting.YELLOW, ChatFormatting.GREEN};
@@ -63,7 +64,6 @@ public final class VoidRift {
     private static final int[][] grid = new int[GRID][GRID];
     private static int safeColor = -1;
     private static boolean tilesOff;
-    private record Laser(boolean alongX, double pos, double speed) {}
     private static final List<Laser> LASERS = new ArrayList<>();
     private static final Map<UUID, Long> LASER_CD = new HashMap<>();
     private static final List<BlockPos> PATH = new ArrayList<>();
@@ -144,6 +144,7 @@ public final class VoidRift {
 
     // ------------------------------------------------------------------ ход
     public static void tick(MinecraftServer server) {
+        gravSync(server);
         if (!active) return;
         ServerLevel l = CivWorld.f5(server);
         t++;
@@ -173,14 +174,14 @@ public final class VoidRift {
         if (want != stage) { stage = want; setupStage(l, d); }
         sub++;
         switch (stage) {
-            case 1 -> { mana -= 25f / (45 * 20); colorFloor(l, d); }
-            case 2 -> { mana -= 25f / (40 * 20); lasers(l, d); }
-            case 3 -> { mana -= 25f / (150 * 20); parkour(l, d); }
-            case 4 -> { mana -= 25f / (45 * 20); waves(l, d); }
+            case 1 -> { mana -= 25f / (80 * 20); colorFloor(l, d); }
+            case 2 -> { mana -= 25f / (80 * 20); lasers(l, d); }
+            case 3 -> { mana -= 25f / (300 * 20); parkour(l, d); }
+            case 4 -> { mana -= 25f / (70 * 20); waves(l, d); }
             default -> {}
         }
         if (d != null) {
-            Vec3 at = Vec3.atBottomCenterOf(C).add(Math.cos(t * 0.02) * 2, stage == 3 ? 8 : 4 + Math.sin(t * 0.05), Math.sin(t * 0.02) * 2);
+            Vec3 at = Vec3.atBottomCenterOf(C).add(Math.cos(t * 0.02) * 2, stage == 3 ? 14 : 4 + Math.sin(t * 0.05), Math.sin(t * 0.02) * 2);
             d.teleportTo(at.x, at.y, at.z);
         }
     }
@@ -192,12 +193,14 @@ public final class VoidRift {
         if (d != null) d.anim("cast");
         l.playSound(null, C, SoundEvents.WITHER_AMBIENT, SoundSource.HOSTILE, 3f, 1.4f);
         String[] names = {"", "ЦВЕТНОЙ ПОЛ", "ЛАЗЕРЫ", "ПАРКУР", "ВОЛНЫ"};
-        String[] hints = {"", "стой на плите названного цвета", "перепрыгивай лучи", "к золотой цели · жёлтая кромка — «прыгай отсюда»", "мобы неуязвимы — продержись"};
+        String[] hints = {"", "стой на плите названного цвета", "низкие лучи — прыгай, высокие (белые) — пригнись", "низкая гравитация · голубая кромка — нужен рывок · фонари — чекпоинты", "мобы неуязвимы — продержись"};
         for (ServerPlayer p : fighters(l.getServer())) {
             p.connection.send(new ClientboundSetTitleTextPacket(Component.literal(names[stage]).withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD)));
             p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("Стадия " + stage + "/4 · " + hints[stage]).withStyle(ChatFormatting.GRAY)));
         }
         clearLayer(l, C.getY());
+        clearPath(l);
+        HALF = false;
         switch (stage) {
             case 1 -> { round = 0; rollGrid(); drawGrid(l, -1); say(l, "«Любимые цвета? У меня — все. Но стоять можно только на одном.»"); }
             case 2 -> { disc(l, C.getY(), Blocks.BLACK_CONCRETE.defaultBlockState(), Blocks.MAGENTA_STAINED_GLASS.defaultBlockState()); say(l, "«Попрыгаем? Скакалку я принесла.»"); }
@@ -265,36 +268,46 @@ public final class VoidRift {
         }
     }
 
-    // ---- стадия 2: лазеры
+    // ---- стадия 2: лазеры (низкие — прыгать, высокие белые — приседать; к концу — чаще, быстрее, крест-накрест)
+    private record Laser(boolean alongX, double pos, double speed, boolean high) {}
+
     private static void lasers(ServerLevel l, VoidDemon d) {
         float frac = Math.max(0, Math.min(1, (75 - mana) / 25f));   // 0 в начале стадии → 1 в конце
-        int maxN = 1 + Math.round(frac * 2);
-        int every = Math.max(30, 70 - (int) (frac * 40));
+        int maxN = 1 + Math.round(frac * 4);
+        int every = Math.max(16, 66 - (int) (frac * 50));
+        Random rnd = new Random();
         if (sub % every == 0 && LASERS.size() < maxN) {
-            boolean alongX = new Random().nextBoolean(), fromNeg = new Random().nextBoolean();
-            double speed = (0.18 + frac * 0.14) * (fromNeg ? 1 : -1);
-            LASERS.add(new Laser(alongX, fromNeg ? -R - 1 : R + 1, speed));
+            int burst = frac > 0.75f && rnd.nextFloat() < 0.5f ? 2 : 1;
+            boolean alongX = rnd.nextBoolean();
+            for (int k = 0; k < burst; k++) {
+                boolean ax = burst == 2 ? (k == 0) : alongX, fromNeg = rnd.nextBoolean();
+                boolean high = frac > 0.3f && rnd.nextFloat() < 0.25f + frac * 0.2f;
+                double speed = (0.17 + frac * 0.2) * (fromNeg ? 1 : -1);
+                LASERS.add(new Laser(ax, fromNeg ? -R - 1 : R + 1, speed, high));
+            }
             if (d != null) d.anim("point");
             l.playSound(null, C, SoundEvents.BEACON_ACTIVATE, SoundSource.HOSTILE, 2f, 1.6f);
         }
-        double y = C.getY() + 1.35;
         for (int i = LASERS.size() - 1; i >= 0; i--) {
             Laser z = LASERS.get(i);
-            Laser n = new Laser(z.alongX, z.pos + z.speed, z.speed);
+            Laser n = new Laser(z.alongX, z.pos + z.speed, z.speed, z.high);
             if (Math.abs(n.pos) > R + 2) { LASERS.remove(i); continue; }
             LASERS.set(i, n);
+            double y = C.getY() + (z.high ? 2.65 : 1.35);
             Vec3 a = z.alongX ? new Vec3(C.getX() + 0.5 + n.pos, y, C.getZ() - R) : new Vec3(C.getX() - R, y, C.getZ() + 0.5 + n.pos);
             Vec3 b = z.alongX ? new Vec3(C.getX() + 0.5 + n.pos, y, C.getZ() + R + 1) : new Vec3(C.getX() + R + 1, y, C.getZ() + 0.5 + n.pos);
-            if (sub % 2 == 0) line(l, a, b, 0xFF30E0, 0.12f, 140);
+            if (sub % 2 == 0) line(l, a, b, z.high ? 0xFFF0FF : 0xFF30E0, z.high ? 0.16f : 0.12f, 140);
             for (ServerPlayer p : fighters(l.getServer())) {
                 double along = z.alongX ? p.getX() - C.getX() - 0.5 : p.getZ() - C.getZ() - 0.5;
-                if (Math.abs(along - n.pos) > 0.55 || p.getY() > y - 0.1 || p.getY() < C.getY()) continue;
+                if (Math.abs(along - n.pos) > 0.55 || p.getY() < C.getY()) continue;
+                boolean hit = z.high ? (p.getY() < y && p.getY() + p.getBbHeight() > y) : p.getY() <= y - 0.1;
+                if (!hit) continue;
                 long now = l.getGameTime();
                 if (LASER_CD.getOrDefault(p.getUUID(), 0L) > now) continue;
                 LASER_CD.put(p.getUUID(), now + 12);
                 p.invulnerableTime = 0;
-                p.hurt(l.damageSources().magic(), p.getMaxHealth() * 0.22f);
-                p.setDeltaMovement(p.getDeltaMovement().add(0, 0.5, 0));
+                p.hurt(l.damageSources().magic(), p.getMaxHealth() * (0.18f + frac * 0.1f));
+                p.setDeltaMovement(p.getDeltaMovement().add(0, z.high ? -0.2 : 0.5, 0));
                 p.hurtMarked = true;
                 l.sendParticles(ParticleTypes.FLASH, p.getX(), p.getY() + 0.5, p.getZ(), 1, 0, 0, 0, 0);
             }
@@ -306,43 +319,84 @@ public final class VoidRift {
         for (ServerPlayer p : fighters(l.getServer())) PacketDistributor.sendToPlayer(p, new Network.PhoneData(16, js));
     }
 
-    // ---- стадия 3: паркур на время
-    private static final int LAP = 45 * 20;
+    // ---- стадия 3: длинный паркур-спираль вверх; низкая гравитация, участки под рывок, чекпоинты
+    private static final int LAP = 150 * 20;
+    private static final List<BlockPos> PATH_BLOCKS = new ArrayList<>();
+    private static final List<Integer> CHECKS = new ArrayList<>();          // индексы платформ-чекпоинтов
+    private static final Map<UUID, Integer> AT_CHECK = new HashMap<>();
+    private static final ResourceLocation RIFT_GRAV = com.pvpciv.PvpCiv.id("rift_gravity");
+
+    private static void put(ServerLevel l, BlockPos q, Block b) { l.setBlock(q, b.defaultBlockState(), 2); PATH_BLOCKS.add(q); }
 
     private static void buildPath(ServerLevel l) {
-        PATH.clear();
+        clearPath(l);
+        PATH.clear(); CHECKS.clear(); AT_CHECK.clear();
         Random r = new Random(1001);
-        int x = C.getX() - 20, y = C.getY(), z = C.getZ();
-        platform(l, new BlockPos(x, y, z), 2, Blocks.WARPED_WART_BLOCK, null);   // старт
-        PATH.add(new BlockPos(x, y, z));
-        for (int i = 0; i < 9; i++) {
-            int nx = x + 4, ny = y + (r.nextInt(3) - 1), nz = z + (r.nextInt(3) - 1) * 2;
-            nz = Math.max(C.getZ() - 6, Math.min(C.getZ() + 6, nz));
-            ny = Math.max(C.getY() - 1, Math.min(C.getY() + 2, ny));
-            // кромка «прыгай отсюда» на прошлой платформе — в сторону следующей
-            for (int k = -1; k <= 1; k++) l.setBlock(new BlockPos(x + 1, y, z + k), Blocks.GLOWSTONE.defaultBlockState(), 2);
-            x = nx; y = ny; z = nz;
-            platform(l, new BlockPos(x, y, z), 1, Blocks.PURPUR_BLOCK, null);
-            PATH.add(new BlockPos(x, y, z));
+        double ang = 0, rad = 20; int y = C.getY();
+        BlockPos start = at(ang, rad, y);
+        platform(l, start, 2, Blocks.WARPED_WART_BLOCK);
+        PATH.add(start); CHECKS.add(0);
+        int sinceDash = 0;
+        for (int i = 1; i <= 30; i++) {
+            boolean dash = sinceDash >= 4 && i % 5 == 0 && i < 30;
+            boolean check = i % 8 == 0;
+            int dy = dash ? 0 : r.nextInt(3);                        // 0..+2 (в низкой гравитации — спокойно)
+            double gap = dash ? 9 : dy == 2 ? 3.5 : 4 + r.nextInt(2);   // от кромки до кромки (3×3 платформа → +3); подъём — короче
+            double nrad = Math.max(16, Math.min(24, rad + (r.nextInt(3) - 1) * 2));
+            BlockPos prev = PATH.get(PATH.size() - 1);
+            // кромка у края прошлой платформы в сторону следующей
+            double nang = ang + (gap + 3) / ((rad + nrad) / 2);
+            BlockPos next = at(nang, nrad, y + dy);
+            Vec3 dir = new Vec3(next.getX() - prev.getX(), 0, next.getZ() - prev.getZ()).normalize();
+            BlockPos edge = prev.offset((int) Math.round(dir.x * 1.4), 0, (int) Math.round(dir.z * 1.4));
+            Block edgeB = dash ? Blocks.LIGHT_BLUE_STAINED_GLASS : Blocks.GLOWSTONE;
+            put(l, edge, edgeB);
+            if (dash) { put(l, edge.offset(dir.z > 0.5 || dir.z < -0.5 ? 1 : 0, 0, dir.x > 0.5 || dir.x < -0.5 ? 1 : 0), edgeB); sinceDash = 0; } else sinceDash++;
+            ang = nang; rad = nrad; y += dy;
+            platform(l, next, check ? 2 : 1, check ? Blocks.SEA_LANTERN : Blocks.PURPUR_BLOCK);
+            PATH.add(next);
+            if (check) CHECKS.add(PATH.size() - 1);
         }
-        for (int k = -1; k <= 1; k++) l.setBlock(new BlockPos(x + 1, y, z + k), Blocks.GLOWSTONE.defaultBlockState(), 2);
-        x += 5;
-        platform(l, new BlockPos(x, y, z), 2, Blocks.GOLD_BLOCK, null);   // цель
-        PATH.add(new BlockPos(x, y, z));
+        double nang = ang + 7.0 / rad;
+        BlockPos goal = at(nang, rad, y + 1);
+        platform(l, goal, 2, Blocks.GOLD_BLOCK);
+        PATH.add(goal);
     }
 
-    private static void platform(ServerLevel l, BlockPos c, int r, Block b, Block edge) {
-        for (int x = -r; x <= r; x++) for (int z = -r; z <= r; z++) l.setBlock(c.offset(x, 0, z), b.defaultBlockState(), 2);
+    private static BlockPos at(double ang, double rad, int y) { return new BlockPos(C.getX() + (int) Math.round(Math.cos(ang) * rad), y, C.getZ() + (int) Math.round(Math.sin(ang) * rad)); }
+
+    private static void platform(ServerLevel l, BlockPos c, int r, Block b) {
+        for (int x = -r; x <= r; x++) for (int z = -r; z <= r; z++) put(l, c.offset(x, 0, z), b);
     }
 
-    private static void toStart(ServerPlayer p) {
+    private static void clearPath(ServerLevel l) {
+        for (BlockPos q : PATH_BLOCKS) if (!l.getBlockState(q).isAir()) l.setBlock(q, Blocks.AIR.defaultBlockState(), 2);
+        PATH_BLOCKS.clear();
+    }
+
+    private static void toStart(ServerPlayer p) { AT_CHECK.put(p.getUUID(), 0); toCheck(p); LAP_T.put(p.getUUID(), 0); }
+
+    private static void toCheck(ServerPlayer p) {
         if (PATH.isEmpty()) return;
-        BlockPos s = PATH.get(0);
+        BlockPos s = PATH.get(CHECKS.isEmpty() ? 0 : CHECKS.get(AT_CHECK.getOrDefault(p.getUUID(), 0)));
+        BlockPos nx = PATH.get(Math.min(PATH.size() - 1, PATH.indexOf(s) + 1));
+        float yaw = (float) (Math.toDegrees(Math.atan2(nx.getZ() - s.getZ(), nx.getX() - s.getX())) - 90);
         p.teleportTo(s.getX() + 0.5, s.getY() + 1, s.getZ() + 0.5);
-        p.setYRot(-90);
-        p.connection.teleport(p.getX(), p.getY(), p.getZ(), -90, 0);
+        p.connection.teleport(p.getX(), p.getY(), p.getZ(), yaw, 0);
+        p.setDeltaMovement(Vec3.ZERO);
         p.resetFallDistance();
-        LAP_T.put(p.getUUID(), 0);
+    }
+
+    private static void gravSync(MinecraftServer server) {
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            var g = p.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.GRAVITY);
+            if (g == null) continue;
+            boolean want = active && stage == 3 && endT < 0 && FIGHTERS.contains(p.getUUID());
+            boolean on = g.getModifier(RIFT_GRAV) != null;
+            if (want && !on) g.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(RIFT_GRAV, -0.5, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+            else if (!want && on) g.removeModifier(RIFT_GRAV);
+            if (want) p.fallDistance = Math.min(p.fallDistance, 2f);
+        }
     }
 
     private static void parkour(ServerLevel l, VoidDemon d) {
@@ -351,7 +405,24 @@ public final class VoidRift {
         int n = Math.max(1, FIGHTERS.size());
         for (ServerPlayer p : fighters(l.getServer())) {
             int lt = LAP_T.merge(p.getUUID(), 1, Integer::sum);
-            if (lt % 20 == 0) p.connection.send(new ClientboundSetActionBarTextPacket(Component.literal("Время: " + Math.max(0, (LAP - lt) / 20) + " с · финишей: " + FINISHED.size() + "/" + n).withStyle(ChatFormatting.GOLD)));
+            int ci = AT_CHECK.getOrDefault(p.getUUID(), 0);
+            // чекпоинты
+            for (int k = ci + 1; k < CHECKS.size(); k++) {
+                BlockPos c = PATH.get(CHECKS.get(k));
+                if (Math.abs(p.getX() - c.getX() - 0.5) < 2.6 && Math.abs(p.getZ() - c.getZ() - 0.5) < 2.6 && Math.abs(p.getY() - c.getY() - 1) < 1.5) {
+                    AT_CHECK.put(p.getUUID(), k); ci = k;
+                    p.connection.send(new ClientboundSetActionBarTextPacket(Component.literal("✔ Чекпоинт " + k + "/" + (CHECKS.size() - 1)).withStyle(ChatFormatting.AQUA)));
+                    l.playSound(null, p.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1f, 1.5f);
+                }
+            }
+            // падение ниже текущего чекпоинта
+            int floorY = PATH.get(CHECKS.get(ci)).getY();
+            if (p.getY() < floorY - 7) {
+                p.hurt(l.damageSources().magic(), p.getMaxHealth() * 0.08f);
+                toCheck(p);
+                continue;
+            }
+            if (lt % 20 == 0) p.connection.send(new ClientboundSetActionBarTextPacket(Component.literal("Время: " + Math.max(0, (LAP - lt) / 20) + " с · чекпоинт " + ci + "/" + (CHECKS.size() - 1) + " · финишей: " + FINISHED.size() + "/" + n).withStyle(ChatFormatting.GOLD)));
             if (Math.abs(p.getX() - goal.getX() - 0.5) < 2.6 && Math.abs(p.getZ() - goal.getZ() - 0.5) < 2.6 && Math.abs(p.getY() - goal.getY() - 1) < 1.5) {
                 mana -= 25f / n * (FINISHED.add(p.getUUID()) ? 1f : 0.5f);
                 l.playSound(null, p.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1f, 1.4f);
@@ -366,29 +437,48 @@ public final class VoidRift {
         }
     }
 
-    // ---- стадия 4: волны неуязвимых
+    // ---- стадия 4: волны неуязвимых — тени мобов со всех этажей, много стрелков; с середины — ускорение
+    private static boolean HALF;
+    private static final Mobs.Kind[] RANGED = {Mobs.Kind.ASH_ARCHER, Mobs.Kind.FROST_ARCHER, Mobs.Kind.GUNNER, Mobs.Kind.ASHIGARU, Mobs.Kind.KITSUNE_ARCHER, Mobs.Kind.LAB_TECH, Mobs.Kind.POLICE};
+    private static final Mobs.Kind[] MELEE = {Mobs.Kind.XENO, Mobs.Kind.VOID_CRAWLER, Mobs.Kind.ROGUE_ASTRO, Mobs.Kind.WEREWOLF, Mobs.Kind.CHIMERA, Mobs.Kind.GHOUL, Mobs.Kind.FROST_SPIDER};
+
     private static void waves(ServerLevel l, VoidDemon d) {
-        if (sub % 160 != 1) return;
+        if (!HALF && mana <= 12.5f) {
+            HALF = true;
+            for (UUID u : MOBS) if (l.getEntity(u) instanceof Mob m) haste(m);
+            say(l, "«Скучно. Детки, побыстрее!»");
+            for (ServerPlayer p : fighters(l.getServer())) p.connection.send(new ClientboundSetTitleTextPacket(Component.literal("ТЕНИ УСКОРИЛИСЬ").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD)));
+            l.playSound(null, C, SoundEvents.WITHER_SPAWN, SoundSource.HOSTILE, 2f, 1.6f);
+        }
+        if (sub % (HALF ? 130 : 160) != 1) return;
         Random r = new Random();
         int n = 2 + FIGHTERS.size() + sub / 300;
         for (int i = 0; i < n; i++) {
             double a = r.nextDouble() * Math.PI * 2;
-            Vec3 at = new Vec3(C.getX() + 0.5 + Math.cos(a) * (R - 2), C.getY() + 1, C.getZ() + 0.5 + Math.sin(a) * (R - 2));
-            var type = switch (r.nextInt(3)) { case 0 -> com.pvpciv.registry.ModMobs.XENO.get(); case 1 -> com.pvpciv.registry.ModMobs.VOID_CRAWLER.get(); default -> com.pvpciv.registry.ModMobs.ROGUE_ASTRO.get(); };
-            Mob m = type.create(l);
+            boolean ranged = r.nextFloat() < 0.45f;
+            double dist = ranged ? R - 1 : R - 3;
+            Vec3 at = new Vec3(C.getX() + 0.5 + Math.cos(a) * dist, C.getY() + 1, C.getZ() + 0.5 + Math.sin(a) * dist);
+            Mobs.Kind k = ranged ? RANGED[r.nextInt(RANGED.length)] : MELEE[r.nextInt(MELEE.length)];
+            Mob m = k.type().create(l);
             if (m == null) continue;
             m.moveTo(at.x, at.y, at.z, 0, 0);
             Mobs.setupDefault(m);
-            Mobs.setup(m, demonLevel - 2, false, "Тень Пустоты", "floor5_mob");
+            Mobs.setup(m, demonLevel - (ranged ? 4 : 2), false, "Тень: " + k.title, "floor5_mob");
             m.setInvulnerable(true);
             m.addTag("boss_minion");
-            m.setCustomName(Component.literal("Тень Пустоты (неуязвима)").withStyle(ChatFormatting.DARK_PURPLE));
+            m.setCustomName(Component.literal("Тень: " + k.title + " (неуязвима)").withStyle(ChatFormatting.DARK_PURPLE));
+            if (HALF) haste(m);
             l.addFreshEntity(m);
             MOBS.add(m.getUUID());
             l.sendParticles(ParticleTypes.REVERSE_PORTAL, at.x, at.y + 1, at.z, 30, 0.4, 0.8, 0.4, 0.1);
         }
         if (d != null) d.anim("cast");
         l.playSound(null, C, SoundEvents.EVOKER_PREPARE_SUMMON, SoundSource.HOSTILE, 3f, 0.8f);
+    }
+
+    private static void haste(Mob m) {
+        m.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED, 20 * 120, 1, false, true));
+        m.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.DIG_SPEED, 20 * 120, 1, false, false));
     }
 
     private static void clearMobs(ServerLevel l) {
@@ -400,7 +490,7 @@ public final class VoidRift {
     private static void fallCheck(ServerLevel l, ServerPlayer p) {
         if (p.getY() > C.getY() - 12) return;
         p.resetFallDistance();
-        if (stage == 3) { p.hurt(l.damageSources().magic(), p.getMaxHealth() * 0.15f); toStart(p); return; }
+        if (stage == 3) { p.hurt(l.damageSources().magic(), p.getMaxHealth() * 0.08f); toCheck(p); return; }
         p.hurt(l.damageSources().magic(), p.getMaxHealth() * 0.3f);
         Vec3 to = Vec3.atBottomCenterOf(C).add(0, 1, 0);
         if (stage == 0) to = new Vec3(C.getX() + 0.5 + 5, C.getY() + 1, C.getZ() + 0.5 + 5);
@@ -447,7 +537,8 @@ public final class VoidRift {
                 sd.trophies |= 512;
                 p.setData(ModRegistry.STORY.get(), sd);
                 loot.add(new ItemStack(ModF5.DARK_STAR.get()));
-                loot.add(new ItemStack(ModF5.DARK_MATTER.get(), 2));
+                loot.add(new ItemStack(com.pvpciv.registry.ModV11.DEMON_TROPHY.get()));
+                Classes.giveMatter(p, 2);
             }
             for (ItemStack st : loot) Story.announceRareDrop(l, st, p.getGameProfile().getName());
             PENDING.put(p.getUUID(), loot);   // выдаём на площадке (здесь при полной сумке выпало бы в пустоту)
@@ -512,13 +603,14 @@ public final class VoidRift {
     }
 
     private static void clearLayer(ServerLevel l, int y) {
-        for (int x = -26; x <= 26; x++) for (int z = -R - 2; z <= R + 2; z++) {
+        for (int x = -26; x <= 26; x++) for (int z = -26; z <= 26; z++) {
             BlockPos q = new BlockPos(C.getX() + x, y, C.getZ() + z);
             if (!l.getBlockState(q).isAir()) l.setBlock(q, Blocks.AIR.defaultBlockState(), 2);
         }
     }
 
     private static void clearArena(ServerLevel l) {
+        clearPath(l);
         for (int y = C.getY() - 3; y <= C.getY() + 4; y++) clearLayer(l, y);
     }
 

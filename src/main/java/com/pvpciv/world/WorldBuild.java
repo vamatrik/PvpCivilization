@@ -12,7 +12,7 @@ import java.util.Map;
 
 /** Полная сборка мира 1 в его измерении: общежитие, подвал, обе локации этажа 1, трассы. */
 public final class WorldBuild {
-    public static final int VERSION = 42;
+    public static final int VERSION = 43;
 
     /** Мелкие правки уже построенного мира (без полной перестройки). */
     public static void patch(MinecraftServer server, int from) {
@@ -36,6 +36,12 @@ public final class WorldBuild {
         if (from < 35) com.pvpciv.floor.Floor3Areas.fixPlants(CivWorld.f3(server));   // 0.9.9: осыпавшиеся цветы и грибы
         if (from < 41) com.pvpciv.floor.Floor4.build(CivWorld.f4(server));
         if (from < 42) com.pvpciv.floor.Floor5.build(CivWorld.f5(server));   // 1.0: шлюз, пульт лифта, пояс астероидов   // 0.12: станция «Орбита»   // 0.11: этаж 4 — НТЦ «NaZa» (0.11.1: пол лифта, галереи впритык)
+        if (from < 43 && from >= 19) com.pvpciv.game.Showcases.build(lvl, CivData.get(server));   // 1.1: витрины трофеев по этажам
+        if (from < 43 && from >= 42) {   // 1.1: ритуальный зал, телепорты и пульты станции
+            com.pvpciv.game.Ritual.build(CivWorld.f5(server));
+            com.pvpciv.game.StationTeleport.build(CivWorld.f5(server));
+        }
+        if (from < 43 && from >= 18) com.pvpciv.game.StationTeleport.convertConsoles(server);
         if (from < 27 && from >= 24) { RoofBuilder.collar(lvl); com.pvpciv.floor.Floor2.fixDen(CivWorld.f2(server)); }   // 0.8.8: рамка проёма монорельса, негорючий пол у контрабандиста
         if (from < 26 && from >= 18) DormBuilder.lunaPouf(lvl);   // 0.8.6: пуф-укрытие в комнате Луны
         if (from < 25 && from >= 24) com.pvpciv.floor.Floor2.build(CivWorld.f2(server));   // 0.8.5: канализация (торцы туннелей, лава, лестницы люков), выход на крышу «Альтаира»
@@ -83,6 +89,7 @@ public final class WorldBuild {
         com.pvpciv.floor.Floor4.build(CivWorld.f4(server));
         com.pvpciv.floor.Floor5.build(CivWorld.f5(server));
         com.pvpciv.game.Library.placeBooks(server);
+        com.pvpciv.game.Showcases.build(lvl, data);
         // при стройке отрываются цветы/свечи/ковры — убрать выпавшие предметы, чтобы не лагало
         java.util.List<net.minecraft.world.entity.Entity> drops = new java.util.ArrayList<>();
         for (var e : lvl.getAllEntities()) if (e instanceof net.minecraft.world.entity.item.ItemEntity) drops.add(e);

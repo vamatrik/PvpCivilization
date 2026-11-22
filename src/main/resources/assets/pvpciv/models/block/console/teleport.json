@@ -1,0 +1,143 @@
+{
+ "parent": "minecraft:block/block",
+ "render_type": "minecraft:cutout",
+ "textures": {
+  "body": "minecraft:block/polished_deepslate",
+  "glass": "minecraft:block/light_blue_stained_glass",
+  "top": "pvpciv:block/teleport_top",
+  "scr": "pvpciv:block/console_screen",
+  "particle": "minecraft:block/polished_deepslate"
+ },
+ "elements": [
+  {
+   "from": [
+    4,
+    0,
+    4
+   ],
+   "to": [
+    12,
+    2,
+    12
+   ],
+   "faces": {
+    "north": {
+     "texture": "#body"
+    },
+    "south": {
+     "texture": "#body"
+    },
+    "east": {
+     "texture": "#body"
+    },
+    "west": {
+     "texture": "#body"
+    },
+    "up": {
+     "texture": "#body"
+    },
+    "down": {
+     "texture": "#body"
+    }
+   }
+  },
+  {
+   "from": [
+    5,
+    2,
+    5
+   ],
+   "to": [
+    11,
+    12,
+    11
+   ],
+   "faces": {
+    "north": {
+     "texture": "#glass"
+    },
+    "south": {
+     "texture": "#glass"
+    },
+    "east": {
+     "texture": "#glass"
+    },
+    "west": {
+     "texture": "#glass"
+    },
+    "up": {
+     "texture": "#glass"
+    },
+    "down": {
+     "texture": "#glass"
+    }
+   }
+  },
+  {
+   "from": [
+    4,
+    12,
+    4
+   ],
+   "to": [
+    12,
+    16,
+    12
+   ],
+   "faces": {
+    "north": {
+     "texture": "#body"
+    },
+    "south": {
+     "texture": "#body"
+    },
+    "east": {
+     "texture": "#body"
+    },
+    "west": {
+     "texture": "#body"
+    },
+    "up": {
+     "texture": "#body"
+    },
+    "down": {
+     "texture": "#body"
+    }
+   }
+  },
+  {
+   "from": [
+    4.5,
+    16,
+    4.5
+   ],
+   "to": [
+    11.5,
+    16.01,
+    11.5
+   ],
+   "faces": {
+    "up": {
+     "texture": "#top"
+    }
+   }
+  },
+  {
+   "from": [
+    5,
+    13,
+    3.9
+   ],
+   "to": [
+    11,
+    15,
+    4
+   ],
+   "faces": {
+    "north": {
+     "texture": "#scr"
+    }
+   }
+  }
+ ]
+}

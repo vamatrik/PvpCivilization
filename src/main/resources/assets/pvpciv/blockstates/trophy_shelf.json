@@ -1,0 +1,304 @@
+{
+ "variants": {
+  "facing=north,part=single,style=1": {
+   "model": "pvpciv:block/trophy_shelf/s1_single"
+  },
+  "facing=east,part=single,style=1": {
+   "model": "pvpciv:block/trophy_shelf/s1_single",
+   "y": 90
+  },
+  "facing=south,part=single,style=1": {
+   "model": "pvpciv:block/trophy_shelf/s1_single",
+   "y": 180
+  },
+  "facing=west,part=single,style=1": {
+   "model": "pvpciv:block/trophy_shelf/s1_single",
+   "y": 270
+  },
+  "facing=north,part=left,style=1": {
+   "model": "pvpciv:block/trophy_shelf/s1_left"
+  },
+  "facing=east,part=left,style=1": {
+   "model": "pvpciv:block/trophy_shelf/s1_left",
+   "y": 90
+  },
+  "facing=south,part=left,style=1": {
+   "model": "pvpciv:block/trophy_shelf/s1_left",
+   "y": 180
+  },
+  "facing=west,part=left,style=1": {
+   "model": "pvpciv:block/trophy_shelf/s1_left",
+   "y": 270
+  },
+  "facing=north,part=middle,style=1": {
+   "model": "pvpciv:block/trophy_shelf/s1_middle"
+  },
+  "facing=east,part=middle,style=1": {
+   "model": "pvpciv:block/trophy_shelf/s1_middle",
+   "y": 90
+  },
+  "facing=south,part=middle,style=1": {
+   "model": "pvpciv:block/trophy_shelf/s1_middle",
+   "y": 180
+  },
+  "facing=west,part=middle,style=1": {
+   "model": "pvpciv:block/trophy_shelf/s1_middle",
+   "y": 270
+  },
+  "facing=north,part=right,style=1": {
+   "model": "pvpciv:block/trophy_shelf/s1_right"
+  },
+  "facing=east,part=right,style=1": {
+   "model": "pvpciv:block/trophy_shelf/s1_right",
+   "y": 90
+  },
+  "facing=south,part=right,style=1": {
+   "model": "pvpciv:block/trophy_shelf/s1_right",
+   "y": 180
+  },
+  "facing=west,part=right,style=1": {
+   "model": "pvpciv:block/trophy_shelf/s1_right",
+   "y": 270
+  },
+  "facing=north,part=single,style=2": {
+   "model": "pvpciv:block/trophy_shelf/s2_single"
+  },
+  "facing=east,part=single,style=2": {
+   "model": "pvpciv:block/trophy_shelf/s2_single",
+   "y": 90
+  },
+  "facing=south,part=single,style=2": {
+   "model": "pvpciv:block/trophy_shelf/s2_single",
+   "y": 180
+  },
+  "facing=west,part=single,style=2": {
+   "model": "pvpciv:block/trophy_shelf/s2_single",
+   "y": 270
+  },
+  "facing=north,part=left,style=2": {
+   "model": "pvpciv:block/trophy_shelf/s2_left"
+  },
+  "facing=east,part=left,style=2": {
+   "model": "pvpciv:block/trophy_shelf/s2_left",
+   "y": 90
+  },
+  "facing=south,part=left,style=2": {
+   "model": "pvpciv:block/trophy_shelf/s2_left",
+   "y": 180
+  },
+  "facing=west,part=left,style=2": {
+   "model": "pvpciv:block/trophy_shelf/s2_left",
+   "y": 270
+  },
+  "facing=north,part=middle,style=2": {
+   "model": "pvpciv:block/trophy_shelf/s2_middle"
+  },
+  "facing=east,part=middle,style=2": {
+   "model": "pvpciv:block/trophy_shelf/s2_middle",
+   "y": 90
+  },
+  "facing=south,part=middle,style=2": {
+   "model": "pvpciv:block/trophy_shelf/s2_middle",
+   "y": 180
+  },
+  "facing=west,part=middle,style=2": {
+   "model": "pvpciv:block/trophy_shelf/s2_middle",
+   "y": 270
+  },
+  "facing=north,part=right,style=2": {
+   "model": "pvpciv:block/trophy_shelf/s2_right"
+  },
+  "facing=east,part=right,style=2": {
+   "model": "pvpciv:block/trophy_shelf/s2_right",
+   "y": 90
+  },
+  "facing=south,part=right,style=2": {
+   "model": "pvpciv:block/trophy_shelf/s2_right",
+   "y": 180
+  },
+  "facing=west,part=right,style=2": {
+   "model": "pvpciv:block/trophy_shelf/s2_right",
+   "y": 270
+  },
+  "facing=north,part=single,style=3": {
+   "model": "pvpciv:block/trophy_shelf/s3_single"
+  },
+  "facing=east,part=single,style=3": {
+   "model": "pvpciv:block/trophy_shelf/s3_single",
+   "y": 90
+  },
+  "facing=south,part=single,style=3": {
+   "model": "pvpciv:block/trophy_shelf/s3_single",
+   "y": 180
+  },
+  "facing=west,part=single,style=3": {
+   "model": "pvpciv:block/trophy_shelf/s3_single",
+   "y": 270
+  },
+  "facing=north,part=left,style=3": {
+   "model": "pvpciv:block/trophy_shelf/s3_left"
+  },
+  "facing=east,part=left,style=3": {
+   "model": "pvpciv:block/trophy_shelf/s3_left",
+   "y": 90
+  },
+  "facing=south,part=left,style=3": {
+   "model": "pvpciv:block/trophy_shelf/s3_left",
+   "y": 180
+  },
+  "facing=west,part=left,style=3": {
+   "model": "pvpciv:block/trophy_shelf/s3_left",
+   "y": 270
+  },
+  "facing=north,part=middle,style=3": {
+   "model": "pvpciv:block/trophy_shelf/s3_middle"
+  },
+  "facing=east,part=middle,style=3": {
+   "model": "pvpciv:block/trophy_shelf/s3_middle",
+   "y": 90
+  },
+  "facing=south,part=middle,style=3": {
+   "model": "pvpciv:block/trophy_shelf/s3_middle",
+   "y": 180
+  },
+  "facing=west,part=middle,style=3": {
+   "model": "pvpciv:block/trophy_shelf/s3_middle",
+   "y": 270
+  },
+  "facing=north,part=right,style=3": {
+   "model": "pvpciv:block/trophy_shelf/s3_right"
+  },
+  "facing=east,part=right,style=3": {
+   "model": "pvpciv:block/trophy_shelf/s3_right",
+   "y": 90
+  },
+  "facing=south,part=right,style=3": {
+   "model": "pvpciv:block/trophy_shelf/s3_right",
+   "y": 180
+  },
+  "facing=west,part=right,style=3": {
+   "model": "pvpciv:block/trophy_shelf/s3_right",
+   "y": 270
+  },
+  "facing=north,part=single,style=4": {
+   "model": "pvpciv:block/trophy_shelf/s4_single"
+  },
+  "facing=east,part=single,style=4": {
+   "model": "pvpciv:block/trophy_shelf/s4_single",
+   "y": 90
+  },
+  "facing=south,part=single,style=4": {
+   "model": "pvpciv:block/trophy_shelf/s4_single",
+   "y": 180
+  },
+  "facing=west,part=single,style=4": {
+   "model": "pvpciv:block/trophy_shelf/s4_single",
+   "y": 270
+  },
+  "facing=north,part=left,style=4": {
+   "model": "pvpciv:block/trophy_shelf/s4_left"
+  },
+  "facing=east,part=left,style=4": {
+   "model": "pvpciv:block/trophy_shelf/s4_left",
+   "y": 90
+  },
+  "facing=south,part=left,style=4": {
+   "model": "pvpciv:block/trophy_shelf/s4_left",
+   "y": 180
+  },
+  "facing=west,part=left,style=4": {
+   "model": "pvpciv:block/trophy_shelf/s4_left",
+   "y": 270
+  },
+  "facing=north,part=middle,style=4": {
+   "model": "pvpciv:block/trophy_shelf/s4_middle"
+  },
+  "facing=east,part=middle,style=4": {
+   "model": "pvpciv:block/trophy_shelf/s4_middle",
+   "y": 90
+  },
+  "facing=south,part=middle,style=4": {
+   "model": "pvpciv:block/trophy_shelf/s4_middle",
+   "y": 180
+  },
+  "facing=west,part=middle,style=4": {
+   "model": "pvpciv:block/trophy_shelf/s4_middle",
+   "y": 270
+  },
+  "facing=north,part=right,style=4": {
+   "model": "pvpciv:block/trophy_shelf/s4_right"
+  },
+  "facing=east,part=right,style=4": {
+   "model": "pvpciv:block/trophy_shelf/s4_right",
+   "y": 90
+  },
+  "facing=south,part=right,style=4": {
+   "model": "pvpciv:block/trophy_shelf/s4_right",
+   "y": 180
+  },
+  "facing=west,part=right,style=4": {
+   "model": "pvpciv:block/trophy_shelf/s4_right",
+   "y": 270
+  },
+  "facing=north,part=single,style=5": {
+   "model": "pvpciv:block/trophy_shelf/s5_single"
+  },
+  "facing=east,part=single,style=5": {
+   "model": "pvpciv:block/trophy_shelf/s5_single",
+   "y": 90
+  },
+  "facing=south,part=single,style=5": {
+   "model": "pvpciv:block/trophy_shelf/s5_single",
+   "y": 180
+  },
+  "facing=west,part=single,style=5": {
+   "model": "pvpciv:block/trophy_shelf/s5_single",
+   "y": 270
+  },
+  "facing=north,part=left,style=5": {
+   "model": "pvpciv:block/trophy_shelf/s5_left"
+  },
+  "facing=east,part=left,style=5": {
+   "model": "pvpciv:block/trophy_shelf/s5_left",
+   "y": 90
+  },
+  "facing=south,part=left,style=5": {
+   "model": "pvpciv:block/trophy_shelf/s5_left",
+   "y": 180
+  },
+  "facing=west,part=left,style=5": {
+   "model": "pvpciv:block/trophy_shelf/s5_left",
+   "y": 270
+  },
+  "facing=north,part=middle,style=5": {
+   "model": "pvpciv:block/trophy_shelf/s5_middle"
+  },
+  "facing=east,part=middle,style=5": {
+   "model": "pvpciv:block/trophy_shelf/s5_middle",
+   "y": 90
+  },
+  "facing=south,part=middle,style=5": {
+   "model": "pvpciv:block/trophy_shelf/s5_middle",
+   "y": 180
+  },
+  "facing=west,part=middle,style=5": {
+   "model": "pvpciv:block/trophy_shelf/s5_middle",
+   "y": 270
+  },
+  "facing=north,part=right,style=5": {
+   "model": "pvpciv:block/trophy_shelf/s5_right"
+  },
+  "facing=east,part=right,style=5": {
+   "model": "pvpciv:block/trophy_shelf/s5_right",
+   "y": 90
+  },
+  "facing=south,part=right,style=5": {
+   "model": "pvpciv:block/trophy_shelf/s5_right",
+   "y": 180
+  },
+  "facing=west,part=right,style=5": {
+   "model": "pvpciv:block/trophy_shelf/s5_right",
+   "y": 270
+  }
+ }
+}

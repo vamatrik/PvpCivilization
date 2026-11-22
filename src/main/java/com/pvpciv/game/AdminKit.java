@@ -140,4 +140,35 @@ public final class AdminKit {
     }
 
     private static void give(ServerPlayer p, Item it) { Bag.give(p, top(it)); }
+
+    /** 1.1: «полный» аккаунт этажа 5 — все боссы мира, ур. 40, скафандр «Орбита», оружие т5, лифт станции, тёмная материя. */
+    public static int full5(ServerPlayer p, CommandSourceStack src) {
+        full4(p, src);
+        StoryData d = Progress.d(p);
+        d.trophies |= 128 | 256 | 512;
+        d.level = Progress.levelCap(d); d.xp = 0;
+        d.gates.putInt("lift5", 1);
+        d.gates.putInt("luna5_met", 1);
+        d.gates.putInt("belt_seen", 1);
+        d.gates.putInt("ritual_open", 1);
+        com.pvpciv.game.Classes.addMatter(d, 9);
+        p.setData(ModRegistry.STORY.get(), d);
+        put(p, EquipmentSlot.HEAD, com.pvpciv.registry.ModF5.ORBIT_HELMET.get());
+        put(p, EquipmentSlot.CHEST, com.pvpciv.registry.ModF5.ORBIT_CHEST.get());
+        put(p, EquipmentSlot.LEGS, com.pvpciv.registry.ModF5.ORBIT_LEGS.get());
+        put(p, EquipmentSlot.FEET, com.pvpciv.registry.ModF5.ORBIT_BOOTS.get());
+        give(p, com.pvpciv.registry.ModF5.PHOTON_BLADE.get());
+        give(p, com.pvpciv.registry.ModF5.VOID_KNIFE.get()); give(p, com.pvpciv.registry.ModF5.VOID_KNIFE.get());
+        give(p, com.pvpciv.registry.ModF5.COMET_SABER.get());
+        give(p, com.pvpciv.registry.ModF5.METEOR_AXE.get());
+        give(p, com.pvpciv.registry.ModF5.SUPERNOVA.get());
+        Bag.give(p, new ItemStack(com.pvpciv.registry.ModF5.CMP_LAZURATRON.get(), 32));
+        Bag.give(p, new ItemStack(com.pvpciv.registry.ModF5.DARK_STAR.get(), 3));
+        Bag.give(p, new ItemStack(com.pvpciv.registry.ModF5.HELL_TRAIL.get(), 1));
+        Progress.applyStats(p);
+        p.setHealth(p.getMaxHealth());
+        Story.sync(p);
+        src.sendSuccess(() -> Component.literal("Аккаунт этажа 5: ур. " + Progress.d(p).level + ", «Орбита», оружие т5, лифт станции, 9 тёмной материи. Вернуть — /civ admin back").withStyle(ChatFormatting.GOLD), false);
+        return 1;
+    }
 }

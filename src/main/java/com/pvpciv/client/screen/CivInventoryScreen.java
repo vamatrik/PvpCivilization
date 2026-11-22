@@ -51,7 +51,7 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
         String[] f = {"Всё", Categories.NAMES[0], Categories.NAMES[1], Categories.NAMES[2], Categories.NAMES[3], Categories.NAMES[4]};
         for (int i = 0; i < f.length; i++) Skin.row(g, font, x + 183, y + 55 + i * 13, 82, f[i], filter == i - 1, mx, my);
         Skin.button(g, font, x + 184, y + 144, 80, "Сортировать", mx, my, true, false);
-        g.drawString(font, "Слоты " + menu.unlockedSlots() + "/" + Bag.MAX, x + 182, y + 170, Skin.DIM, false);
+        g.drawString(font, "Слоты " + menu.unlockedSlots() + (menu.maxScroll() > 0 ? " · колесо ↕" : ""), x + 182, y + 170, Skin.DIM, false);
         int next = 0;
         for (int m : Bag.LEVEL_MILESTONES) if (ClientState.level < m) { next = m; break; }
         if (next > 0) g.drawString(font, "+9 на ур. " + next, x + 182, y + 184, Skin.FAINT, false);

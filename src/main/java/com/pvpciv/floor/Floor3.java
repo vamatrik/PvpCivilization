@@ -203,7 +203,7 @@ public final class Floor3 extends Builder {
         signPost(-5, Y, 10, Direction.SOUTH, DyeColor.WHITE, Blocks.DARK_OAK_FENCE, "БИБЛИОТЕКАРЬ", "Хранитель", "свитков", "");
         // третья книга — в нише за полками
         set(BOOK3.getX(), BOOK3.getY() - 1, BOOK3.getZ(), Blocks.DARK_OAK_PLANKS);
-        set(BOOK3.getX(), BOOK3.getY(), BOOK3.getZ(), Blocks.LECTERN);
+        set(BOOK3.getX(), BOOK3.getY(), BOOK3.getZ(), com.pvpciv.block.ConsoleBlock.of(com.pvpciv.block.ConsoleBlock.Kind.STAND, Direction.EAST));
         for (int y = 0; y < 3; y++) set(BOOK3.getX() + 1, BOOK3.getY() + y, BOOK3.getZ(), Blocks.AIR);
     }
 

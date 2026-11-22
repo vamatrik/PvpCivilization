@@ -289,5 +289,12 @@
   "entity.pvpciv.worm": "Галактический червь",
   "entity.pvpciv.worm_segment": "Галактический червь",
   "entity.pvpciv.void_demon": "Демоница Пустоты",
-  "block.pvpciv.boss_altar": "Алтарь босса"
+  "block.pvpciv.boss_altar": "Алтарь босса",
+  "item.pvpciv.demon_trophy": "Трофей: Демоница Пустоты",
+  "item.pvpciv.dark_shard": "Осколок темноты",
+  "block.pvpciv.trophy_shelf": "Витрина трофеев",
+  "block.pvpciv.civ_sign": "Табличка",
+  "block.pvpciv.console": "Пульт",
+  "block.pvpciv.ritual_core": "Ядро ритуала",
+  "block.pvpciv.ritual_injector": "Инжектор тьмы"
 }

@@ -74,8 +74,7 @@ public abstract class Builder {
     }
 
     protected void sign(BlockPos pos, Direction facing, DyeColor c, String... lines) {
-        level.setBlock(pos, Blocks.DARK_OAK_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, facing), Block.UPDATE_ALL);
-        DormBuilder.writeSign(level, pos, c, lines);
+        Signs.place(level, pos, facing, Signs.styleAt(level, pos), false, Signs.color(c), lines);   // 1.1: стилизованная
     }
 
     protected void signPost(int x, int y, int z, Direction facing, DyeColor c, Block post, String... lines) {

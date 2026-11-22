@@ -84,7 +84,8 @@ public final class ClientPayloads {
             }
             case 7 -> mc.setScreen(new com.pvpciv.client.screen.GateScreen(j));
             case 9 -> mc.setScreen(new com.pvpciv.client.screen.AlmanacScreen(j));
-            case 22 -> Cutscene.start(j.get("cut").getAsString(), j.get("len").getAsInt());   // 0.12: кат-сцены
+            case 22 -> Cutscene.start(j);
+            case 26 -> mc.setScreen(new com.pvpciv.client.screen.NotesScreen(j));   // 1.1: заметки   // 0.12: кат-сцены
             case 21 -> {   // 0.11.2: только гнёзда модулей (без открытия экрана)
                 var a = j.getAsJsonArray("mods");
                 for (int i = 0; i < 8 && i < a.size(); i++) EnchModulesRenderer.MODS[i] = a.get(i).getAsInt();

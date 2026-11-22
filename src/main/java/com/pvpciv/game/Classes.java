@@ -102,11 +102,20 @@ public final class Classes {
     }
 
     // ------------------------------------------------------------------ тёмная материя
-    public static int matter(ServerPlayer p) { return com.pvpciv.inv.Bag.count(p, s -> s.is(com.pvpciv.registry.ModF5.DARK_MATTER.get())); }
+    /** 1.1: тёмная материя — баланс игрока (видно в навыках и в дереве), не предмет. */
+    public static int matter(ServerPlayer p) { return Progress.d(p).gates.getInt("dm"); }
+    public static void addMatter(StoryData d, int n) { d.gates.putInt("dm", Math.max(0, d.gates.getInt("dm") + n)); }
+    public static void giveMatter(ServerPlayer p, int n) {
+        StoryData d = Progress.d(p);
+        addMatter(d, n);
+        p.setData(ModRegistry.STORY.get(), d);
+        p.displayClientMessage(Component.literal("+" + n + " тёмной материи (всего " + matter(p) + ")").withStyle(ChatFormatting.LIGHT_PURPLE), false);
+        sync(p, false);
+    }
     private static boolean pay(ServerPlayer p, int n) {
         if (matter(p) < n) { p.displayClientMessage(Component.literal("Нужно тёмной материи: " + n + " (есть " + matter(p) + "). Её дают первые прохождения испытаний Луны.").withStyle(ChatFormatting.RED), true); return false; }
-        com.pvpciv.inv.Bag.take(p, s -> s.is(com.pvpciv.registry.ModF5.DARK_MATTER.get()), n);
         StoryData d = Progress.d(p);
+        addMatter(d, -n);
         d.gates.putInt("dm_spent", d.gates.getInt("dm_spent") + n);
         p.setData(ModRegistry.STORY.get(), d);
         return true;
@@ -176,7 +185,7 @@ public final class Classes {
         d.gates.putLong("forget_at", now + 24L * 3_600_000);
         if (Skills.byId(d.skill3) != null) d.skill3 = "";
         p.setData(ModRegistry.STORY.get(), d);
-        if (back > 0) com.pvpciv.inv.Bag.give(p, new ItemStack(com.pvpciv.registry.ModF5.DARK_MATTER.get(), back));
+        if (back > 0) { d = Progress.d(p); addMatter(d, back); p.setData(ModRegistry.STORY.get(), d); }
         Story.title(p, "Забвение", "Класс сброшен. Тёмная материя возвращена: " + back, 0xC0A0FF);
         p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.PLAYERS, 1f, 0.5f);
         sync(p, false);
@@ -360,6 +369,10 @@ public final class Classes {
                 if (steady && !on) kb.addTransientModifier(new AttributeModifier(STEADY_ID, 1.0, AttributeModifier.Operation.ADD_VALUE));
                 else if (!steady && on) kb.removeModifier(STEADY_ID);
             }
+        }
+        if (server.getTickCount() % 40 == 0) for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            int n = com.pvpciv.inv.Bag.count(p, s -> s.is(com.pvpciv.registry.ModF5.DARK_MATTER.get()));
+            if (n > 0) { com.pvpciv.inv.Bag.take(p, s -> s.is(com.pvpciv.registry.ModF5.DARK_MATTER.get()), n); giveMatter(p, n); }
         }
         long t = server.overworld().getGameTime();
         VENOM.values().removeIf(s -> s.until < t - 200);

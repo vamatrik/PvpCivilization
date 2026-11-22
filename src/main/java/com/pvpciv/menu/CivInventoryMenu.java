@@ -44,6 +44,7 @@ public class CivInventoryMenu extends CivMenu {
 
     @Override
     public boolean clickMenuButton(Player p, int id) {
+        if (scrollButton(id)) return true;
         if (id >= 0 && id <= 2) { tab.set(id); return true; }
         if (id == BTN_SORT && p instanceof ServerPlayer sp) { sort(sp); return true; }
         return false;
@@ -80,7 +81,7 @@ public class CivInventoryMenu extends CivMenu {
             Slot s = slots.get(index);
             if (!s.hasItem()) return ItemStack.EMPTY;
             ItemStack st = s.getItem(), copy = st.copy();
-            if (!moveItemStackTo(st, bagStart, bagStart + unlockedSlots(), false) && !moveItemStackTo(st, hotStart, hotStart + 9, false)) return ItemStack.EMPTY;
+            if (!toBag(st) && !moveItemStackTo(st, hotStart, hotStart + 9, false)) return ItemStack.EMPTY;
             s.setChanged();
             return copy;
         }

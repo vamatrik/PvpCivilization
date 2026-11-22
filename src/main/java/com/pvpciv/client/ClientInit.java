@@ -76,6 +76,9 @@ public final class ClientInit {
             e.registerBlockEntityRenderer(ModRegistry.STASH_BE.get(), ctx -> new StashRenderer());
             e.registerBlockEntityRenderer(ModRegistry.PEDESTAL_BE.get(), ctx -> new PedestalRenderer());
             e.registerBlockEntityRenderer(ModRegistry.SHOWCASE_BE.get(), ctx -> new ShowcaseRenderer());
+            e.registerBlockEntityRenderer(com.pvpciv.registry.ModV11.TROPHY_SHELF_BE.get(), ctx -> new TrophyShelfRenderer());
+            e.registerBlockEntityRenderer(com.pvpciv.registry.ModV11.SIGN_BE.get(), ctx -> new CivSignRenderer());
+            e.registerBlockEntityRenderer(com.pvpciv.registry.ModV11.RITUAL_BE.get(), ctx -> new RitualRenderer());
             e.registerEntityRenderer(ModRegistry.TRADER.get(), SorokaRenderer::new);
         });
         modBus.addListener((net.neoforged.neoforge.client.event.EntityRenderersEvent.AddLayers e) -> {

@@ -479,6 +479,7 @@ public final class ModRegistry {
         ModMobs.init();
         ModF4.init();
         ModF5.init();
+        ModV11.init();
         SOUNDS.register(bus);
         BLOCKS.register(bus);
         ITEMS.register(bus);

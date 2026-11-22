@@ -34,6 +34,7 @@ public class TraderMenu extends CivMenu {
 
     @Override
     public boolean clickMenuButton(Player p, int id) {
+        if (scrollButton(id)) return true;
         if (!(p instanceof ServerPlayer sp)) return true;
         if (id == BTN_SELL_JUNK) {
             for (Slot s : slots) {

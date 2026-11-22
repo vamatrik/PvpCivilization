@@ -39,6 +39,7 @@ public class ArmorBenchMenu extends CivMenu {
 
     @Override
     public boolean clickMenuButton(Player p, int id) {
+        if (scrollButton(id)) return true;
         if (!(p instanceof ServerPlayer sp)) return true;
         ItemStack armor = box.getItem(0);
         if (armor.isEmpty()) return true;

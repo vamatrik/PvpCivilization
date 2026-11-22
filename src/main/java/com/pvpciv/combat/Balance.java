@@ -31,7 +31,8 @@ public final class Balance {
     /** 1.0.1: броня даёт здоровье в процентах от уровня — комплект тира t обычной редкости: +(8 + 3t)% (тир 5 — +23%). */
     public static double armorHpPct(double tier) { return 0.08 + 0.03 * tier; }
     /** Прибавка брони игрока за уровень. */
-    public static double levelArmor(int lvl) { return 0.4 * Math.pow(1.17, lvl - 1); }
+    /** 1.1: природная броня растёт вровень с уроном мобов (~12% от удара моба своего уровня); было 0.4·1.17^(L−1) — к 35 ур. отставала вдвое. */
+    public static double levelArmor(int lvl) { return 0.5 * Math.pow(1.19, lvl - 1); }
     /** Броня моба уровня L (обычного типа). */
     public static double mobArmor(int lvl) { return 0.35 * Math.pow(1.2, lvl - 1); }
 

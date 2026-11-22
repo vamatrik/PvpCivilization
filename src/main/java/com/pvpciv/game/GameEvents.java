@@ -52,6 +52,10 @@ public final class GameEvents {
         bus.addListener(GameEvents::onLogout);
         bus.addListener(GameEvents::onRespawn);
         bus.addListener(GameEvents::onTick);
+        bus.addListener((net.neoforged.neoforge.event.entity.EntityJoinLevelEvent e) -> { if (!e.getLevel().isClientSide && Rocket.stale(e.getEntity())) e.setCanceled(true); });
+        bus.addListener((net.neoforged.neoforge.event.level.ChunkEvent.Load e) -> {
+            if (e.getLevel() instanceof net.minecraft.server.level.ServerLevel sl && e.getChunk() instanceof net.minecraft.world.level.chunk.LevelChunk ch) com.pvpciv.world.Signs.onChunkLoad(sl, ch);
+        });
         bus.addListener(GameEvents::onBreak);
         bus.addListener(GameEvents::onPlace);
         bus.addListener(GameEvents::onToss);
@@ -60,6 +64,7 @@ public final class GameEvents {
         bus.addListener(GameEvents::onAttack);
         bus.addListener(GameEvents::onBoatTick);
         bus.addListener(BossManager::onDeath);
+        bus.addListener((net.neoforged.neoforge.event.entity.living.LivingKnockBackEvent e) -> { if (com.pvpciv.entity.mob.CivGunner.NO_KB) e.setCanceled(true); });
         // 1.0: смерть на арене испытаний Луны — не смерть
         bus.addListener(net.neoforged.bus.api.EventPriority.HIGHEST, (net.neoforged.neoforge.event.entity.living.LivingDeathEvent e) -> {
             if (!(e.getEntity() instanceof ServerPlayer p) || p.level().isClientSide) return;
@@ -111,6 +116,8 @@ public final class GameEvents {
             com.mojang.logging.LogUtils.getLogger().info("[PvpCiv] Building world 1 in dimension pvpciv:world1 (v{} -> v{})", data.version, com.pvpciv.world.WorldBuild.VERSION);
             com.pvpciv.world.WorldBuild.buildAll(server, false);
         }
+        try { LiftShaft.startup(server); } catch (Exception ex) { com.mojang.logging.LogUtils.getLogger().warn("[PvpCiv] shaft startup", ex); }
+        try { Rocket.startup(server); } catch (Exception ex) { com.mojang.logging.LogUtils.getLogger().warn("[PvpCiv] rocket startup", ex); }
         GameRules r = lvl.getGameRules();
         r.getRule(GameRules.RULE_DOMOBSPAWNING).set(false, server);
         r.getRule(GameRules.RULE_DOINSOMNIA).set(false, server);
@@ -130,7 +137,7 @@ public final class GameEvents {
     }
 
     private static void onLogin(PlayerEvent.PlayerLoggedInEvent e) {
-        if (e.getEntity() instanceof ServerPlayer p) { Story.onLogin(p); Gates.sync(p); }
+        if (e.getEntity() instanceof ServerPlayer p) { Story.onLogin(p); Gates.sync(p); Classes.sync(p, false); Showcases.refresh(p); }
     }
 
     private static void onLogout(PlayerEvent.PlayerLoggedOutEvent e) {
@@ -171,7 +178,11 @@ public final class GameEvents {
         LunaTrial.tick(server);
         VoidRift.tick(server);
         com.pvpciv.floor.Belt.tick(server);
+        Ritual.tick(server);   // 1.1
+        LiftShaft.tick(server);
+        com.pvpciv.world.Signs.tick(server);
         if (ticks % 100 == 41) Gates.ensure(server);
+        if (ticks % 100 == 57) for (ServerPlayer p : server.getPlayerList().getPlayers()) Showcases.refreshNear(p);   // 1.1
         if (ticks % 100 == 0) {
             LunaEntity.ensure(server); TraderEntity.ensure(server);
             com.pvpciv.entity.CarmillaEntity.ensure(server); com.pvpciv.entity.EleonoraEntity.ensure(server);
@@ -223,6 +234,7 @@ public final class GameEvents {
     /** Из кабины лифта на ходу не выйти. */
     private static void onMount(net.neoforged.neoforge.event.entity.EntityMountEvent e) {
         if (e.isDismounting() && e.getEntityBeingMounted() instanceof com.pvpciv.entity.LiftCabin c && c.ride() && c.locked && c.isAlive()) e.setCanceled(true);
+        if (e.isDismounting() && e.getEntityBeingMounted() != null && e.getEntityBeingMounted().isAlive() && Rocket.lockSeat(e.getEntityMounting(), e.getEntityBeingMounted())) e.setCanceled(true);
         // мобов в лодки не сажаем (абуз с беты: мобы в лодке беспомощны)
         if (e.isMounting() && e.getEntityBeingMounted() instanceof net.minecraft.world.entity.vehicle.Boat
                 && e.getEntityMounting() instanceof net.minecraft.world.entity.Mob) e.setCanceled(true);
@@ -235,6 +247,7 @@ public final class GameEvents {
         if (Rocket.onUse(p, pos)) { e.setCanceled(true); return; }   // 0.12: ракета «Заря-5»
         if (com.pvpciv.floor.Belt.onUse(p, pos)) { e.setCanceled(true); return; }   // 1.0: шлюз к поясу астероидов
         if (SkyLift.onF5Console(p, pos)) { e.setCanceled(true); return; }   // 1.0: лифт станции (ремонт адским следом)
+        if (StationTeleport.onUse(p, pos)) { e.setCanceled(true); return; }   // 1.1: телепорты станции
         if (com.pvpciv.floor.BossManager.isAltar(p.level().getBlockState(pos)) && com.pvpciv.floor.BossManager.onAltarUse(p, pos)) {
             e.setCanceled(true);   // 0.11.2: алтарь босса (ванильный якорь вне Незера ещё и взрывается — не даём)
             return;
@@ -357,9 +370,15 @@ public final class GameEvents {
                             if (!l.isEmpty()) l.get(0).forceGrab(pl);
                             return l.size(); }))
                         .then(Commands.literal("full4").executes(c -> AdminKit.full4(c.getSource().getPlayerOrException(), c.getSource())))
+                        .then(Commands.literal("full5").executes(c -> AdminKit.full5(c.getSource().getPlayerOrException(), c.getSource())))
+                        .then(Commands.literal("shelves").executes(c -> { Showcases.build(com.pvpciv.world.CivWorld.level(c.getSource().getServer()), CivData.get(c.getSource().getServer())); Showcases.refresh(c.getSource().getPlayerOrException()); return 1; }))
+                        .then(Commands.literal("ritual").executes(c -> { Ritual.debugLight(c.getSource().getServer()); return 1; }))
+                        .then(Commands.literal("shaft").executes(c -> { LiftShaft.start(c.getSource().getPlayerOrException()); return 1; }))
+                        .then(Commands.literal("darkstars").executes(c -> { com.pvpciv.inv.Bag.give(c.getSource().getPlayerOrException(), new net.minecraft.world.item.ItemStack(com.pvpciv.registry.ModF5.DARK_STAR.get(), 2)); return 1; }))
+                        .then(Commands.literal("trophies").executes(c -> { var pl = c.getSource().getPlayerOrException(); for (var tr : Showcases.ALL) com.pvpciv.inv.Bag.give(pl, new net.minecraft.world.item.ItemStack(tr.item().get())); return 1; }))
                         .then(Commands.literal("rift").then(Commands.argument("mana", com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, 100)).executes(c -> { VoidRift.setMana(c.getSource().getPlayerOrException(), com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "mana")); return 1; })))
                         .then(Commands.literal("clearbag").executes(c -> { var h = com.pvpciv.inv.Bag.get(c.getSource().getPlayerOrException()); for (int i = 0; i < h.getSlots(); i++) h.setStackInSlot(i, net.minecraft.world.item.ItemStack.EMPTY); return 1; }))
-                        .then(Commands.literal("matter").executes(c -> { var p = c.getSource().getPlayerOrException(); com.pvpciv.inv.Bag.give(p, new net.minecraft.world.item.ItemStack(com.pvpciv.registry.ModF5.DARK_MATTER.get(), 9)); com.pvpciv.inv.Bag.give(p, new net.minecraft.world.item.ItemStack(com.pvpciv.registry.ModF5.DARK_STAR.get(), 2)); com.pvpciv.inv.Bag.give(p, new net.minecraft.world.item.ItemStack(com.pvpciv.registry.ModF5.HELL_TRAIL.get(), 1)); return 1; }))
+                        .then(Commands.literal("matter").executes(c -> { var p = c.getSource().getPlayerOrException(); com.pvpciv.game.Classes.giveMatter(p, 9); com.pvpciv.inv.Bag.give(p, new net.minecraft.world.item.ItemStack(com.pvpciv.registry.ModF5.DARK_STAR.get(), 2)); com.pvpciv.inv.Bag.give(p, new net.minecraft.world.item.ItemStack(com.pvpciv.registry.ModF5.HELL_TRAIL.get(), 1)); return 1; }))
                         .then(Commands.literal("back").executes(c -> AdminKit.back(c.getSource().getPlayerOrException(), c.getSource())))
                         .then(Commands.literal("resetgates").executes(c -> AdminKit.resetGates(c.getSource().getPlayerOrException(), c.getSource()))))
                 .then(Commands.literal("home").executes(c -> {

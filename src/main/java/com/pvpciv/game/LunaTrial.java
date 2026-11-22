@@ -197,7 +197,7 @@ public final class LunaTrial {
         if (first) {
             d.gates.putInt("luna_best", st);
             p.setData(ModRegistry.STORY.get(), d);
-            loot.add(new ItemStack(ModF5.DARK_MATTER.get(), st >= 4 ? 3 : 2));
+            Classes.giveMatter(p, st >= 4 ? 3 : 2);
             if (st == 2 || st == 4 || st >= 6) loot.add(new ItemStack(ModF5.DARK_STAR.get()));
             money *= 2;
         } else if (st >= 3 && p.getRandom().nextDouble() < 0.10) loot.add(new ItemStack(ModF5.DARK_STAR.get()));

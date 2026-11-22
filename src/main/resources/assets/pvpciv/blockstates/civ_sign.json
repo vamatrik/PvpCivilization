@@ -1,0 +1,184 @@
+{
+ "variants": {
+  "facing=north,standing=false,style=0": {
+   "model": "pvpciv:block/civ_sign/s0_wall"
+  },
+  "facing=east,standing=false,style=0": {
+   "model": "pvpciv:block/civ_sign/s0_wall",
+   "y": 90
+  },
+  "facing=south,standing=false,style=0": {
+   "model": "pvpciv:block/civ_sign/s0_wall",
+   "y": 180
+  },
+  "facing=west,standing=false,style=0": {
+   "model": "pvpciv:block/civ_sign/s0_wall",
+   "y": 270
+  },
+  "facing=north,standing=true,style=0": {
+   "model": "pvpciv:block/civ_sign/s0_post"
+  },
+  "facing=east,standing=true,style=0": {
+   "model": "pvpciv:block/civ_sign/s0_post",
+   "y": 90
+  },
+  "facing=south,standing=true,style=0": {
+   "model": "pvpciv:block/civ_sign/s0_post",
+   "y": 180
+  },
+  "facing=west,standing=true,style=0": {
+   "model": "pvpciv:block/civ_sign/s0_post",
+   "y": 270
+  },
+  "facing=north,standing=false,style=1": {
+   "model": "pvpciv:block/civ_sign/s1_wall"
+  },
+  "facing=east,standing=false,style=1": {
+   "model": "pvpciv:block/civ_sign/s1_wall",
+   "y": 90
+  },
+  "facing=south,standing=false,style=1": {
+   "model": "pvpciv:block/civ_sign/s1_wall",
+   "y": 180
+  },
+  "facing=west,standing=false,style=1": {
+   "model": "pvpciv:block/civ_sign/s1_wall",
+   "y": 270
+  },
+  "facing=north,standing=true,style=1": {
+   "model": "pvpciv:block/civ_sign/s1_post"
+  },
+  "facing=east,standing=true,style=1": {
+   "model": "pvpciv:block/civ_sign/s1_post",
+   "y": 90
+  },
+  "facing=south,standing=true,style=1": {
+   "model": "pvpciv:block/civ_sign/s1_post",
+   "y": 180
+  },
+  "facing=west,standing=true,style=1": {
+   "model": "pvpciv:block/civ_sign/s1_post",
+   "y": 270
+  },
+  "facing=north,standing=false,style=2": {
+   "model": "pvpciv:block/civ_sign/s2_wall"
+  },
+  "facing=east,standing=false,style=2": {
+   "model": "pvpciv:block/civ_sign/s2_wall",
+   "y": 90
+  },
+  "facing=south,standing=false,style=2": {
+   "model": "pvpciv:block/civ_sign/s2_wall",
+   "y": 180
+  },
+  "facing=west,standing=false,style=2": {
+   "model": "pvpciv:block/civ_sign/s2_wall",
+   "y": 270
+  },
+  "facing=north,standing=true,style=2": {
+   "model": "pvpciv:block/civ_sign/s2_post"
+  },
+  "facing=east,standing=true,style=2": {
+   "model": "pvpciv:block/civ_sign/s2_post",
+   "y": 90
+  },
+  "facing=south,standing=true,style=2": {
+   "model": "pvpciv:block/civ_sign/s2_post",
+   "y": 180
+  },
+  "facing=west,standing=true,style=2": {
+   "model": "pvpciv:block/civ_sign/s2_post",
+   "y": 270
+  },
+  "facing=north,standing=false,style=3": {
+   "model": "pvpciv:block/civ_sign/s3_wall"
+  },
+  "facing=east,standing=false,style=3": {
+   "model": "pvpciv:block/civ_sign/s3_wall",
+   "y": 90
+  },
+  "facing=south,standing=false,style=3": {
+   "model": "pvpciv:block/civ_sign/s3_wall",
+   "y": 180
+  },
+  "facing=west,standing=false,style=3": {
+   "model": "pvpciv:block/civ_sign/s3_wall",
+   "y": 270
+  },
+  "facing=north,standing=true,style=3": {
+   "model": "pvpciv:block/civ_sign/s3_post"
+  },
+  "facing=east,standing=true,style=3": {
+   "model": "pvpciv:block/civ_sign/s3_post",
+   "y": 90
+  },
+  "facing=south,standing=true,style=3": {
+   "model": "pvpciv:block/civ_sign/s3_post",
+   "y": 180
+  },
+  "facing=west,standing=true,style=3": {
+   "model": "pvpciv:block/civ_sign/s3_post",
+   "y": 270
+  },
+  "facing=north,standing=false,style=4": {
+   "model": "pvpciv:block/civ_sign/s4_wall"
+  },
+  "facing=east,standing=false,style=4": {
+   "model": "pvpciv:block/civ_sign/s4_wall",
+   "y": 90
+  },
+  "facing=south,standing=false,style=4": {
+   "model": "pvpciv:block/civ_sign/s4_wall",
+   "y": 180
+  },
+  "facing=west,standing=false,style=4": {
+   "model": "pvpciv:block/civ_sign/s4_wall",
+   "y": 270
+  },
+  "facing=north,standing=true,style=4": {
+   "model": "pvpciv:block/civ_sign/s4_post"
+  },
+  "facing=east,standing=true,style=4": {
+   "model": "pvpciv:block/civ_sign/s4_post",
+   "y": 90
+  },
+  "facing=south,standing=true,style=4": {
+   "model": "pvpciv:block/civ_sign/s4_post",
+   "y": 180
+  },
+  "facing=west,standing=true,style=4": {
+   "model": "pvpciv:block/civ_sign/s4_post",
+   "y": 270
+  },
+  "facing=north,standing=false,style=5": {
+   "model": "pvpciv:block/civ_sign/s5_wall"
+  },
+  "facing=east,standing=false,style=5": {
+   "model": "pvpciv:block/civ_sign/s5_wall",
+   "y": 90
+  },
+  "facing=south,standing=false,style=5": {
+   "model": "pvpciv:block/civ_sign/s5_wall",
+   "y": 180
+  },
+  "facing=west,standing=false,style=5": {
+   "model": "pvpciv:block/civ_sign/s5_wall",
+   "y": 270
+  },
+  "facing=north,standing=true,style=5": {
+   "model": "pvpciv:block/civ_sign/s5_post"
+  },
+  "facing=east,standing=true,style=5": {
+   "model": "pvpciv:block/civ_sign/s5_post",
+   "y": 90
+  },
+  "facing=south,standing=true,style=5": {
+   "model": "pvpciv:block/civ_sign/s5_post",
+   "y": 180
+  },
+  "facing=west,standing=true,style=5": {
+   "model": "pvpciv:block/civ_sign/s5_post",
+   "y": 270
+  }
+ }
+}

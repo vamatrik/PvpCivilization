@@ -77,12 +77,13 @@ public final class Library {
     public static void placeBooks(MinecraftServer s) {
         var d = com.pvpciv.data.CivData.get(s);
         BlockPos b1 = spot(s, TOMES[0]);
-        CivWorld.level(s).setBlock(b1, Blocks.LECTERN.defaultBlockState(), 3);
+        CivWorld.level(s).setBlock(b1, com.pvpciv.block.ConsoleBlock.of(com.pvpciv.block.ConsoleBlock.Kind.STAND, net.minecraft.core.Direction.SOUTH), 3);
         d.bossNext.put("book1", b1.asLong());
         d.setDirty();
-        CivWorld.f2(s).setBlock(spot(s, TOMES[1]), Blocks.LECTERN.defaultBlockState(), 3);
+        CivWorld.f2(s).setBlock(spot(s, TOMES[1]), com.pvpciv.block.ConsoleBlock.of(com.pvpciv.block.ConsoleBlock.Kind.STAND, net.minecraft.core.Direction.SOUTH), 3);
     }
 
+    public static BlockPos where(MinecraftServer s, Tome t) { return pos(s, t); }
     private static BlockPos pos(MinecraftServer s, Tome t) {
         // BlockPos.asLong() бывает отрицательным (отрицательные X/Z) — проверяем наличие ключа, а не знак
         if (t.floor == 1) { var m = com.pvpciv.data.CivData.get(s).bossNext; if (m.containsKey("book1")) return BlockPos.of(m.get("book1")); }

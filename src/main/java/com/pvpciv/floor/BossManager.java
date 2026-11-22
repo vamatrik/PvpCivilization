@@ -96,6 +96,7 @@ public final class BossManager {
         /** 0.11.2: арена закрыта после первого удара; внутри — те, кто был там в этот момент. */
         boolean locked; final Set<UUID> inside = new HashSet<>();
         long fightStart;   // 1.0.1: игровое время пробуждения — общий отсчёт музыки
+        int idle;          // 1.1: тики без боя — через минуту босс снова запечатывается в алтарь
         final Map<UUID, Float> dmg = new HashMap<>();
     }
     private static final Map<String, St> ST = new HashMap<>();
@@ -250,11 +251,39 @@ public final class BossManager {
         if (d == NOEL) s.bar.setName(Component.literal("Ноэль ▌ Лиана • ур. " + d.level() + (boss instanceof com.pvpciv.entity.boss.NoelBoss nb && nb.enraged() ? "  — ЯРОСТЬ" : "")));
         for (ServerPlayer p : new ArrayList<>(s.bar.getPlayers())) if (p.level() != lvl || p.isRemoved()) s.bar.removePlayer(p);   // 0.11: ушёл на другой этаж — полоса не висит
         lockTick(lvl, d, s, c);
+        // 1.1: минута без боя (арена открыта, рядом никого) — босс снова уходит в алтарь, алтарь горит сразу
+        boolean anyone = false;
+        for (ServerPlayer p : lvl.players()) if (!p.isSpectator() && flat(p.position(), c) <= d.lairR() + 4) { anyone = true; break; }
+        s.idle = s.locked || anyone ? 0 : s.idle + 1;
+        if (s.idle > 1200) { reseal(lvl, d, boss); return; }
         for (ServerPlayer p : lvl.players()) {
             boolean near = p.position().distanceTo(c) < d.lairR() + 34;
             if (near && !s.bar.getPlayers().contains(p)) s.bar.addPlayer(p);
             if (!near && s.bar.getPlayers().contains(p)) s.bar.removePlayer(p);
         }
+    }
+
+    private static void reseal(ServerLevel lvl, Def d, CivBoss boss) {
+        for (CivBoss b : lvl.getEntitiesOfClass(CivBoss.class, new AABB(d.lair().get()).inflate(d.lairR() + 60), b -> b.defId().equals(d.id()))) {
+            lvl.sendParticles(ParticleTypes.REVERSE_PORTAL, b.getX(), b.getY() + 1, b.getZ(), 60, 0.6, 1, 0.6, 0.2);
+            b.discard();
+        }
+        St s = st(d);
+        if (s.bar != null) { s.bar.removeAllPlayers(); s.bar = null; }
+        s.id = null; s.dmg.clear(); s.locked = false; s.inside.clear(); s.idle = 0;
+        CivData data = CivData.get(lvl.getServer());
+        data.bossNext.put(d.id(), now());   // алтарь загорается снова сразу
+        data.setDirty();
+        broadcast(lvl.getServer(), d.name() + " заскучал и снова запечатан в алтаре.", d.chat());
+    }
+
+    /** 1.1: идёт ли закрытый бой в этой точке (спавн мобов на арене выключен). */
+    public static boolean inLockedArena(ServerLevel lvl, Vec3 pos) {
+        for (Def d : DEFS) {
+            St s = st(d);
+            if (s.locked && lvl(lvl.getServer(), d) == lvl && flat(pos, center(d)) < d.lairR() + 4) return true;
+        }
+        return false;
     }
 
     private static ServerBossEvent bar(Def d) {
@@ -393,6 +422,8 @@ public final class BossManager {
             ALTAR_LIT.remove(d.id());
             broadcast(p.server, p.getGameProfile().getName() + " будит: " + d.name() + "!", d.chat());
             spawn((ServerLevel) p.level(), d);
+            lock((ServerLevel) p.level(), d, s);   // 1.1: бой — сразу с пробуждения
+            s.inside.add(p.getUUID());
             return true;
         }
         return false;
@@ -419,6 +450,17 @@ public final class BossManager {
         s.inside.removeIf(u -> { ServerPlayer p = lvl.getServer().getPlayerList().getPlayer(u); return p == null || !p.isAlive() || p.level() != lvl; });
         if (s.inside.isEmpty()) { s.locked = false; return; }
         if (lvl.getGameTime() % 5 == 0) clearMobs(lvl, c, R);
+        // 1.1: снаряды купол не пересекают — ни внутрь, ни наружу
+        for (net.minecraft.world.entity.projectile.Projectile pr : lvl.getEntitiesOfClass(net.minecraft.world.entity.projectile.Projectile.class, new AABB(c, c).inflate(R + 4, 20, R + 4))) {
+            double r0 = Math.hypot(pr.xo - c.x, pr.zo - c.z), r1 = flat(pr.position(), c);
+            Vec3 nx = pr.position().add(pr.getDeltaMovement());
+            double r2 = flat(nx, c);
+            if ((r0 < R) != (r1 < R) || (r1 < R) != (r2 < R)) {
+                lvl.sendParticles(ParticleTypes.ELECTRIC_SPARK, pr.getX(), pr.getY(), pr.getZ(), 8, 0.1, 0.1, 0.1, 0.1);
+                lvl.playSound(null, pr.blockPosition(), SoundEvents.AMETHYST_BLOCK_HIT, SoundSource.HOSTILE, 0.8f, 1.6f);
+                pr.discard();
+            }
+        }
         for (ServerPlayer p : lvl.players()) {
             if (p.isSpectator() || p.isCreative()) continue;
             double r = flat(p.position(), c);
@@ -437,7 +479,15 @@ public final class BossManager {
     private static void clearMobs(ServerLevel lvl, Vec3 c, double R) {
         for (Mob m : lvl.getEntitiesOfClass(Mob.class, new AABB(c, c).inflate(R + 2, 12, R + 2))) {
             if (m instanceof CivBoss || !m.isAlive() || m.getTags().contains(TAG)) continue;
-            if (m.getTags().stream().anyMatch(t -> t.equals("boss_minion") || t.equals("don_goon") || t.equals("king_rat") || t.equals("kumiho_court"))) continue;
+            if (m.getTags().stream().anyMatch(t -> t.equals("boss_minion") || t.equals("don_goon") || t.equals("king_rat") || t.equals("kumiho_court"))) {
+                double rm = flat(m.position(), c);   // 1.1: свита босса купол не покидает
+                if (rm > R - 0.8) {
+                    Vec3 v = new Vec3(m.getX() - c.x, 0, m.getZ() - c.z).normalize();
+                    m.teleportTo(c.x + v.x * (R - 2), m.getY(), c.z + v.z * (R - 2));
+                    m.getNavigation().stop();
+                }
+                continue;
+            }
             if (!(m instanceof net.minecraft.world.entity.monster.Enemy) && com.pvpciv.combat.Mobs.level(m) <= 0) continue;   // NPC, питомцы, звери
             if (m instanceof net.minecraft.world.entity.TamableAnimal ta && ta.isTame()) continue;
             double r = flat(m.position(), c);

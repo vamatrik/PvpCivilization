@@ -289,5 +289,12 @@
   "entity.pvpciv.worm": "Galactic Worm",
   "entity.pvpciv.worm_segment": "Galactic Worm",
   "entity.pvpciv.void_demon": "Void Demoness",
-  "block.pvpciv.boss_altar": "Boss Altar"
+  "block.pvpciv.boss_altar": "Boss Altar",
+  "item.pvpciv.demon_trophy": "Trophy: Void Demoness",
+  "item.pvpciv.dark_shard": "Shard of Darkness",
+  "block.pvpciv.trophy_shelf": "Trophy Shelf",
+  "block.pvpciv.civ_sign": "Sign",
+  "block.pvpciv.console": "Console",
+  "block.pvpciv.ritual_core": "Ritual Core",
+  "block.pvpciv.ritual_injector": "Dark Injector"
 }

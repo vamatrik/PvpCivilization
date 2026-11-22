@@ -138,10 +138,18 @@ public final class Vampire {
         var r = net.minecraft.util.RandomSource.create(p.getUUID().getLeastSignificantBits() ^ (now(p.server) / (20L * 60 * 10)));
         List<Mobs.Kind> known = new ArrayList<>();
         for (Mobs.Kind k : Mobs.Kind.values()) if (d.kills.getInt(k.name()) > 0) known.add(k);
-        Mobs.Kind top = known.stream().max(java.util.Comparator.comparingInt(k -> k.defLevel)).orElse(Mobs.Kind.ASH_ZOMBIE);
-        String group = r.nextFloat() < 0.7f ? top.loot : known.get(r.nextInt(known.size())).loot;
+        if (known.isEmpty()) known.add(Mobs.Kind.ASH_ZOMBIE);
+        // вес вида: сильно выше у мобов твоего уровня, падает с отклонением
+        int pl = d.level;
+        java.util.function.ToDoubleFunction<Mobs.Kind> w = k -> Math.exp(-Math.abs(k.defLevel - pl) / 2.5) + 0.01;
+        double tw = 0; for (Mobs.Kind k : known) tw += w.applyAsDouble(k);
+        double pick = r.nextDouble() * tw; Mobs.Kind anchor = known.get(0);
+        for (Mobs.Kind k : known) { pick -= w.applyAsDouble(k); if (pick <= 0) { anchor = k; break; } }
+        final Mobs.Kind a0 = anchor;
+        String group = a0.loot;
         List<Mobs.Kind> kinds = new ArrayList<>(known.stream().filter(k -> k.loot.equals(group)).toList());
-        java.util.Collections.shuffle(kinds, new java.util.Random(r.nextLong()));
+        kinds.sort(java.util.Comparator.comparingDouble(k -> -w.applyAsDouble(k) * (0.6 + 0.8 * r.nextDouble())));
+        kinds.remove(a0); kinds.add(0, a0);
         int n = kinds.size() <= 1 ? 1 : 2 + r.nextInt(Math.min(3, kinds.size() - 1));
         kinds = kinds.subList(0, Math.min(n, kinds.size()));
         int total = 16 + r.nextInt(8) * 4 + Math.min(16, d.questsDone * 2);
@@ -162,10 +170,23 @@ public final class Vampire {
     private static int tierOf(List<Pos> c) { return c.size() >= 4 ? 3 : c.size() - 1; }
 
     private static String rewardText(List<Pos> c, boolean elite) {
-        if (elite) return "500 ✦, 2 благословенные звезды и 40% на звезду крови";
+        if (elite) return "от 500 ✦ (растёт с уровнем), 2 благословенные звезды и 40% на звезду крови";
         int n = c.size(), total = c.stream().mapToInt(Pos::need).sum();
-        return (60 + total * 6 + n * 40) + " ✦, звёзды ×" + (1 + n / 2) + ", шанс " + (n * 12) + "% на благословенную";
+        return money(c) + " ✦, звёзды ×" + (1 + n / 2) + ", шанс " + (n * 12) + "% на благословенную";
     }
+
+    /** плата растёт с уровнем мобов контракта: ×(1 + 0.07·(ур−1)) */
+    static double levelMul(List<Pos> c) {
+        double sum = 0; int cnt = 0;
+        for (Pos x : c) { Mobs.Kind k = kindOf(x.kind()); if (k != null) { sum += k.defLevel * x.need(); cnt += x.need(); } }
+        double avg = cnt > 0 ? sum / cnt : 1;
+        return 1 + 0.07 * Math.max(0, avg - 1);
+    }
+    static int money(List<Pos> c) {
+        int n = c.size(), total = c.stream().mapToInt(Pos::need).sum();
+        return (int) Math.round((60 + total * 6 + n * 40) * levelMul(c));
+    }
+    private static Mobs.Kind kindOf(String s) { try { return Mobs.Kind.valueOf(s); } catch (Exception e) { return null; } }
 
     private static String describe(List<Pos> c) {
         StringBuilder sb = new StringBuilder();
@@ -293,7 +314,9 @@ public final class Vampire {
 
     private static void reward(ServerPlayer p) {
         StoryData d = Progress.d(p);
-        int tier = d.questTier, n = Math.max(1, parse(d).size()), total = d.questNeed;
+        var cur = parse(d);
+        int tier = d.questTier, n = Math.max(1, cur.size()), total = d.questNeed;
+        int lvMoney = money(cur);
         boolean elite = tier == 4;
         clearQuest(p);
         d = Progress.d(p);
@@ -302,7 +325,7 @@ public final class Vampire {
         d.cdFail = false;
         p.setData(ModRegistry.STORY.get(), d);
         var r = p.getRandom();
-        int money = elite ? 500 : 60 + total * 6 + n * 40;
+        int money = elite ? (int) Math.round(500 * Math.max(1, 1 + 0.07 * (d.level - 1) * 0.6)) : (cur.isEmpty() ? 60 + total * 6 + n * 40 : lvMoney);
         int stars = elite ? 0 : 1 + n / 2;
         int blessed = elite ? 2 : (r.nextFloat() < 0.12f * n ? 1 : 0);
         Progress.addMoney(p, money, true);

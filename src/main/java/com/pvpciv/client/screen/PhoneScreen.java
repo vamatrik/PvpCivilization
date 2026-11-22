@@ -135,6 +135,12 @@ public class PhoneScreen extends Screen {
             } else st = ClientState.taxiUntil > System.currentTimeMillis() ? "Такси ждёт тебя" : "Открыть карту";
             g.drawString(font, Skin.fit(font, st, tw), tx, ay + 39, sc, false);
         }
+        // 1.1: заметки — справка по открытым системам
+        int ny = sy + 22 + 3 * 56 + 2;
+        boolean nh = Skin.hover(mx, my, sx + 4, ny, sw - 8, 18);
+        g.fill(sx + 4, ny, sx + sw - 4, ny + 18, nh ? 0x40FFFFFF : 0x20FFFFFF);
+        g.fill(sx + 8, ny + 3, sx + 20, ny + 15, 0xFF8A6AD0);
+        g.drawString(font, "Заметки · что я знаю", sx + 26, ny + 5, 0xFFFFFFFF, false);
         g.drawCenteredString(font, "Esc — убрать телефон", sx + sw / 2, sy + sh - 12, 0xFF5A6480);
     }
 
@@ -351,6 +357,7 @@ public class PhoneScreen extends Screen {
                     } else cmd(i == 1 ? "food" : "taxi");
                     return true;
                 }
+                if (Skin.hover(mx, my, sx + 4, sy + 22 + 3 * 56 + 2, sw - 8, 18)) { click(); cmd("notes"); return true; }
             }
             case FOOD -> {
                 if (Skin.hover(mx, my, sx + 4, sy + sh - 13, 50, 12) || Skin.hover(mx, my, sx, sy + 14, 70, 16)) { click(); cmd("open"); return true; }

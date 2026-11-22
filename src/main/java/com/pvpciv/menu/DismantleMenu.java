@@ -91,6 +91,7 @@ public class DismantleMenu extends CivMenu {
 
     @Override
     public boolean clickMenuButton(Player p, int id) {
+        if (scrollButton(id)) return true;
         if (!(p instanceof ServerPlayer sp)) return true;
         if (id == BTN_UPGRADE) {
             if (Stations.upgrade(sp, Stations.DISMANTLE)) level.set(Progress.d(sp).dismLvl);

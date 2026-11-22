@@ -42,6 +42,30 @@ public abstract class CivScreen<M extends CivMenu> extends AbstractContainerScre
     }
 
     protected abstract void drawContent(GuiGraphics g, int mx, int my, float pt);
+
+    // ---- прокрутка сумки
+    private boolean bagShown() { return menu.bagStart >= 0 && menu.slots.get(menu.bagStart).isActive(); }
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double sx, double sy) {
+        if (bagShown() && menu.maxScroll() > 0 && in(mx, my, menu.bagX - 2, menu.bagY - 2, 9 * 18 + 10, Bag.VIEW / 9 * 18 + 4)) {
+            int ns = Math.max(0, Math.min(menu.maxScroll(), menu.scroll + (sy < 0 ? 1 : -1)));
+            if (ns != menu.scroll) click(com.pvpciv.menu.CivMenu.SCROLL_BTN + ns);
+            return true;
+        }
+        return super.mouseScrolled(mx, my, sx, sy);
+    }
+
+    private void drawBagScroll(GuiGraphics g) {
+        if (!bagShown() || menu.maxScroll() <= 0) return;
+        int x = leftPos + menu.bagX + 9 * 18 + 1, y = topPos + menu.bagY, h = Bag.VIEW / 9 * 18;
+        g.fill(x, y, x + 3, y + h, 0x60000000);
+        int rows = menu.bagRows(), vis = Bag.VIEW / 9;
+        int th = Math.max(10, h * vis / rows), ty = y + (h - th) * menu.scroll / Math.max(1, menu.maxScroll());
+        g.fill(x, ty, x + 3, ty + th, 0xFFB79CFF);
+        if (menu.scroll > 0) g.drawString(font, "▲", x - 2, y - 9, 0xFFB79CFF, false);
+        if (menu.scroll < menu.maxScroll()) g.drawString(font, "▼", x - 2, y + h + 1, 0xFFB79CFF, false);
+    }
     /** Поверх предметов (z=300): затемнения, плашки, эффекты. */
     protected void drawOverlay(GuiGraphics g, int mx, int my) {}
     /** Силуэт для пустого слота: weapon/star/helmet/chest/legs/boots/shield/artifact или null. */
@@ -73,6 +97,7 @@ public abstract class CivScreen<M extends CivMenu> extends AbstractContainerScre
         Skin.panel(g, leftPos, topPos, imageWidth, imageHeight);
         Skin.header(g, font, leftPos + imageWidth / 2, topPos - 8, title.getString());
         drawContent(g, mx, my, pt);
+        drawBagScroll(g);
         for (Slot s : menu.slots) {
             if (!s.isActive()) continue;
             int x = leftPos + s.x, y = topPos + s.y;
@@ -116,7 +141,7 @@ public abstract class CivScreen<M extends CivMenu> extends AbstractContainerScre
         if (hoveredSlot instanceof BagSlot b && b.locked() && menu.getCarried().isEmpty()) {
             int have = 0;
             for (int m : Bag.LEVEL_MILESTONES) if (ClientState.level >= m) have++;
-            int need = (b.bagIndex - menu.unlockedSlots()) / 9 + 1;
+            int need = (b.bagIndex() - menu.unlockedSlots()) / 9 + 1;
             String how = have + need <= Bag.LEVEL_MILESTONES.length ? "Откроется на уровне " + Bag.LEVEL_MILESTONES[have + need - 1] : "Нужна Пряжка рюкзака";
             g.renderComponentTooltip(font, List.of(Component.literal("Слот закрыт").withStyle(ChatFormatting.GOLD),
                     Component.literal(how).withStyle(ChatFormatting.GRAY),

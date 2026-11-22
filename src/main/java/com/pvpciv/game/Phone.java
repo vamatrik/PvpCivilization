@@ -61,6 +61,7 @@ public final class Phone {
                 case "food" -> FoodApp.open(p);
                 case "food_order" -> FoodApp.order(p, a[1], Integer.parseInt(a[2]), a.length > 3 ? a[3] : "door");
                 case "taxi" -> Taxi.open(p);
+                case "notes" -> Notes.open(p);
                 case "taxi_order" -> Taxi.order(p, Integer.parseInt(a[1]), Integer.parseInt(a[2]));
                 case "taxi_cancel" -> Taxi.cancel(p);
                 case "taxi_home" -> Taxi.home(p);
