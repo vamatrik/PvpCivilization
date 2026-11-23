@@ -10,8 +10,16 @@ import java.util.function.IntSupplier;
 public final class BagView implements IItemHandlerModifiable {
     private final ItemStackHandler h;
     private final IntSupplier off;
-    public BagView(ItemStackHandler h, IntSupplier off) { this.h = h; this.off = off; }
-    public int real(int i) { return i + off.getAsInt(); }
+    private final java.util.function.Supplier<int[]> map;
+    public BagView(ItemStackHandler h, IntSupplier off) { this(h, off, () -> null); }
+    /** map != null — режим поиска: окно показывает только эти индексы сумки (по порядку), off — сдвиг внутри списка. */
+    public BagView(ItemStackHandler h, IntSupplier off, java.util.function.Supplier<int[]> map) { this.h = h; this.off = off; this.map = map; }
+    public int real(int i) {
+        int[] m = map.get();
+        int j = i + off.getAsInt();
+        if (m == null) return j;
+        return j < m.length ? m[j] : -1;
+    }
     private boolean ok(int i) { int r = real(i); return r >= 0 && r < h.getSlots(); }
     @Override public int getSlots() { return Bag.VIEW; }
     @Override public ItemStack getStackInSlot(int i) { return ok(i) ? h.getStackInSlot(real(i)) : ItemStack.EMPTY; }

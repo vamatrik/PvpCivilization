@@ -64,7 +64,12 @@ public final class GameEvents {
         bus.addListener(GameEvents::onAttack);
         bus.addListener(GameEvents::onBoatTick);
         bus.addListener(BossManager::onDeath);
-        bus.addListener((net.neoforged.neoforge.event.entity.living.LivingKnockBackEvent e) -> { if (com.pvpciv.entity.mob.CivGunner.NO_KB) e.setCanceled(true); });
+        bus.addListener((net.neoforged.neoforge.event.entity.living.LivingKnockBackEvent e) -> {
+            if (com.pvpciv.entity.mob.CivGunner.NO_KB) { e.setCanceled(true); return; }
+            // 1.1.1: пара клинков (кинжалы/сабли/любое в обеих руках) — откидывание вдвое меньше, иначе цель улетает из дуги
+            if (e.getEntity().getLastHurtByMob() instanceof ServerPlayer sp && e.getEntity().getLastHurtByMobTimestamp() == e.getEntity().tickCount && com.pvpciv.combat.Melee.dual(sp))
+                e.setStrength(e.getStrength() * 0.5f);
+        });
         // 1.0: смерть на арене испытаний Луны — не смерть
         bus.addListener(net.neoforged.bus.api.EventPriority.HIGHEST, (net.neoforged.neoforge.event.entity.living.LivingDeathEvent e) -> {
             if (!(e.getEntity() instanceof ServerPlayer p) || p.level().isClientSide) return;
@@ -180,6 +185,9 @@ public final class GameEvents {
         com.pvpciv.floor.Belt.tick(server);
         Ritual.tick(server);   // 1.1
         LiftShaft.tick(server);
+        for (ServerPlayer pl : server.getPlayerList().getPlayers()) com.pvpciv.combat.CombatEvents.noJumpTick(pl);   // 1.1.2
+        Airlock.tick(server);
+        if (server.getTickCount() % 100 == 23) Airlock.ensure(server);
         com.pvpciv.world.Signs.tick(server);
         if (ticks % 100 == 41) Gates.ensure(server);
         if (ticks % 100 == 57) for (ServerPlayer p : server.getPlayerList().getPlayers()) Showcases.refreshNear(p);   // 1.1
@@ -188,6 +196,7 @@ public final class GameEvents {
             com.pvpciv.entity.CarmillaEntity.ensure(server); com.pvpciv.entity.EleonoraEntity.ensure(server);
             com.pvpciv.floor.Floor2.ensureNpcs(server);
             com.pvpciv.world.Monorail.ensure(server);
+            com.pvpciv.world.Monorail.ensure5(server);   // 1.1: кабина и рельс в шахте станции
             com.pvpciv.world.Monorail.ensure3(server);
             com.pvpciv.world.Monorail.ensure4(server);
             Library.ensure(server);
@@ -235,6 +244,7 @@ public final class GameEvents {
     private static void onMount(net.neoforged.neoforge.event.entity.EntityMountEvent e) {
         if (e.isDismounting() && e.getEntityBeingMounted() instanceof com.pvpciv.entity.LiftCabin c && c.ride() && c.locked && c.isAlive()) e.setCanceled(true);
         if (e.isDismounting() && e.getEntityBeingMounted() != null && e.getEntityBeingMounted().isAlive() && Rocket.lockSeat(e.getEntityMounting(), e.getEntityBeingMounted())) e.setCanceled(true);
+        if (e.isDismounting() && e.getEntityBeingMounted() != null && e.getEntityBeingMounted().isAlive() && Airlock.lockSeat(e.getEntityMounting())) e.setCanceled(true);
         // мобов в лодки не сажаем (абуз с беты: мобы в лодке беспомощны)
         if (e.isMounting() && e.getEntityBeingMounted() instanceof net.minecraft.world.entity.vehicle.Boat
                 && e.getEntityMounting() instanceof net.minecraft.world.entity.Mob) e.setCanceled(true);

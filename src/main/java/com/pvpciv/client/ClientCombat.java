@@ -48,9 +48,21 @@ public final class ClientCombat {
         if (combo > 0 && now - comboAt > 1500) combo = 0;
     }
 
+    // ------------------------------------------------------------------ 1.1.1: зажатая ЛКМ — автоатака без комбо
+    private static long holdSince = 0;
+    private static boolean autoFire;
+    /** Сколько надо держать ЛКМ, чтобы пошла автоатака (мс). */
+    private static final long HOLD = 350;
+
     /** Классифицировать удар рукой (0 — основная, 1 — вторая) и отправить стак на сервер. */
     private static void judge(int hand, boolean buffered) {
         long now = System.currentTimeMillis(), ready = hand == 0 ? readyMain : readyOff;
+        if (autoFire) {   // автоатака: комбо не набивается и сбрасывается
+            autoFire = false;
+            combo = 0;
+            PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd("combo:0"));
+            return;
+        }
         var hr = Minecraft.getInstance().hitResult;
         if (hr == null || hr.getType() != HitResult.Type.ENTITY) {   // 0.10.5: по воздуху комбо не набивается (и не тратится)
             PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd("combo:0"));
@@ -168,9 +180,10 @@ public final class ClientCombat {
         Lines.slash(p, p.getOffhandItem(), true);
     }
 
-    /** Каждый тик: клик из буфера — как только рука готова. */
+    /** Каждый тик: клик из буфера — как только рука готова; зажатая ЛКМ — автоатака. */
     public static void tick() {
         trackReady();
+        autoTick();
         if (pending == 0) return;
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer p = mc.player;
@@ -183,6 +196,28 @@ public final class ClientCombat {
             try { net.minecraft.client.KeyMapping.click(mc.options.keyAttack.getKey()); } finally { firing = false; }
             // клик из буфера пройдёт обычным путём (onAttackKey): анимация, дуга, ванильная атака
         } else if (off && offCharge(p) >= 0.92f) { pending = 0; judge(1, true); offStrike(mc, p); nextOff = false; }
+    }
+
+    private static void autoTick() {
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer p = mc.player;
+        boolean down = p != null && mc.screen == null && mc.options.keyAttack.isDown() && weapon(p.getMainHandItem()) && !p.isSpectator();
+        long now = System.currentTimeMillis();
+        if (!down) { holdSince = 0; return; }
+        if (holdSince == 0) { holdSince = now; return; }
+        if (now - holdSince < HOLD || pending != 0) return;
+        if (!(mc.hitResult instanceof EntityHitResult)) return;   // по воздуху не машем — только по цели
+        boolean off = dual(p) && nextOff;
+        if (!off && p.getAttackStrengthScale(0f) >= 0.999f) {
+            autoFire = true;
+            firing = true;
+            try { net.minecraft.client.KeyMapping.click(mc.options.keyAttack.getKey()); } finally { firing = false; }
+        } else if (off && offCharge(p) >= 0.999f) {
+            autoFire = true;
+            judge(1, false);
+            offStrike(mc, p);
+            nextOff = false;
+        }
     }
 
     private static void anim(int hand, ItemStack st) {

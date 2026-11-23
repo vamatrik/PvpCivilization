@@ -130,12 +130,93 @@ public abstract class CivBoss extends Monster implements GeoEntity {
         if (!enraged && getHealth() < getMaxHealth() * 0.5f) { enraged = true; onEnrage(lvl); }
         passive(lvl);
         // бета: никто не бьёт минуту — босс восстанавливается (2% в секунду)
-        if (tickCount - lastPlayerHit > 1200 && getHealth() < getMaxHealth() && tickCount % 20 == 0) {
-            heal(getMaxHealth() * 0.02f);
+        // 1.1.1: после 20 с без урона — медленный отхил 0.3%/с, к минуте разгоняется до 2%/с
+        long quiet = tickCount - lastPlayerHit;
+        if (quiet > 400 && getHealth() < getMaxHealth() && tickCount % 20 == 0) {
+            double k = Math.min(1.0, (quiet - 400) / 800.0);
+            heal((float) (getMaxHealth() * (0.003 + 0.017 * k)));
             if (tickCount % 100 == 0) lvl.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART, getX(), getY() + getBbHeight(), getZ(), 3, 0.5, 0.3, 0.5, 0);
         }
         if (--cooldown <= 0 && castTicks <= 0 && getTarget() instanceof ServerPlayer p && p.isAlive() && distanceTo(p) < 20) ability(lvl, p);
+        if (getTarget() != null || !victims(lvl, 24).isEmpty()) pressure(lvl);
     }
+
+    /**
+     * 1.1.2: «давление» — фоновая стрельба между умениями, чтобы босс не стоял без дела (как боссы Террарии).
+     * Вызывается каждый тик, пока рядом есть игроки. По умолчанию — ничего.
+     */
+    protected void pressure(ServerLevel lvl) {}
+
+    // ------------------------------------------------------------------ 1.1.2: снаряды и лучи
+    /** Снаряд из точки from в игрока (с упреждением по его скорости). */
+    protected BossShot bolt(ServerLevel lvl, Vec3 from, ServerPlayer p, net.minecraft.world.item.ItemStack look, float dmg, float speed, float spreadDeg) {
+        double travel = Math.max(1, p.getEyePosition().distanceTo(from) / speed);
+        Vec3 lead = p.position().add(0, p.getBbHeight() * 0.6, 0).add(p.getDeltaMovement().multiply(1, 0.2, 1).scale(Math.min(travel, 20)));
+        return boltDir(lvl, from, lead.subtract(from), look, dmg, speed, spreadDeg);
+    }
+
+    protected BossShot boltDir(ServerLevel lvl, Vec3 from, Vec3 dir, net.minecraft.world.item.ItemStack look, float dmg, float speed, float spreadDeg) {
+        BossShot s = new BossShot(lvl, this, dmg, look);
+        s.setPos(from.x, from.y, from.z);
+        s.shoot(dir.x, dir.y, dir.z, speed, spreadDeg);
+        lvl.addFreshEntity(s);
+        return s;
+    }
+
+    /** Веер из n снарядов в игрока (угол между соседними — stepDeg). */
+    protected void fan(ServerLevel lvl, Vec3 from, ServerPlayer p, int n, double stepDeg, net.minecraft.world.item.ItemStack look, float dmg, float speed) {
+        Vec3 d = p.position().add(0, p.getBbHeight() * 0.6, 0).subtract(from);
+        for (int i = 0; i < n; i++) {
+            double a = Math.toRadians((i - (n - 1) / 2.0) * stepDeg);
+            Vec3 r = new Vec3(d.x * Math.cos(a) - d.z * Math.sin(a), d.y, d.x * Math.sin(a) + d.z * Math.cos(a));
+            boltDir(lvl, from, r, look, dmg, speed, 0);
+        }
+    }
+
+    /** Кольцо из n снарядов во все стороны (tilt — наклон вниз, чтобы долетало до пола). */
+    protected void ringBurst(ServerLevel lvl, Vec3 from, int n, double tilt, net.minecraft.world.item.ItemStack look, float dmg, float speed) {
+        double off = random.nextDouble() * Math.PI * 2;
+        for (int i = 0; i < n; i++) {
+            double a = off + i * Math.PI * 2 / n;
+            boltDir(lvl, from, new Vec3(Math.cos(a), -tilt, Math.sin(a)), look, dmg, speed, 0);
+        }
+    }
+
+    /**
+     * Луч: тонкий прицел warn тиков, затем толстый выстрел — бьёт всех на линии (ширина width).
+     * Линия продлевается за цель на extra блоков.
+     */
+    protected void beam(ServerLevel lvl, Vec3 from, Vec3 to, int warn, double width, double extra, float dmg, Vector3f color, Consumer<ServerPlayer> onHit) {
+        Vec3 dir = to.subtract(from);
+        if (dir.lengthSqr() < 1e-4) return;
+        Vec3 end = to.add(dir.normalize().scale(extra));
+        var aim = com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.BEAM, from, 0.06f, warn, com.pvpciv.entity.FxEntity.rgb(color), light(color));
+        if (aim != null) aim.to(end);
+        lvl.playSound(null, BlockPos.containing(from), net.minecraft.sounds.SoundEvents.BEACON_ACTIVATE, net.minecraft.sounds.SoundSource.HOSTILE, 1.2f, 1.8f);
+        later(warn, () -> {
+            if (!isAlive()) return;
+            var shot = com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.BEAM, from, (float) (width * 0.5), 8, light(color), 0xFFFFFF);
+            if (shot != null) shot.to(end);
+            lvl.playSound(null, BlockPos.containing(from), net.minecraft.sounds.SoundEvents.WARDEN_SONIC_BOOM, net.minecraft.sounds.SoundSource.HOSTILE, 1.0f, 1.6f);
+            for (ServerPlayer p : victims(lvl, 80)) {
+                Vec3 c = p.position().add(0, p.getBbHeight() * 0.5, 0);
+                if (distToSegment(c, from, end) < width * 0.5 + 0.45) {
+                    p.invulnerableTime = 0;
+                    p.hurt(damageSources().indirectMagic(this, this), dmg);
+                    if (onHit != null) onHit.accept(p);
+                }
+            }
+        });
+    }
+
+    protected static double distToSegment(Vec3 p, Vec3 a, Vec3 b) {
+        Vec3 ab = b.subtract(a);
+        double t = Mth.clamp(p.subtract(a).dot(ab) / Math.max(1e-6, ab.lengthSqr()), 0, 1);
+        return p.distanceTo(a.add(ab.scale(t)));
+    }
+
+    /** Точка вылета снарядов: на уровне груди. */
+    protected Vec3 muzzle() { return position().add(0, getBbHeight() * 0.7, 0); }
 
     /** Смотреть на точку весь каст. */
     protected void faceTo(Vec3 at) {

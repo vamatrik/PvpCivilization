@@ -59,7 +59,7 @@ public class KeeperBoss extends CivBoss {
         if (enraged && roll < 4) spears(lvl);
         else if (distanceTo(target) < 7 && roll < 7) nova(lvl);
         else spikes(lvl, target);
-        cooldown = enraged ? 55 + random.nextInt(25) : 90 + random.nextInt(35);
+        cooldown = enraged ? 45 + random.nextInt(20) : 70 + random.nextInt(25);   // 1.1.2: чаще
     }
 
     private void spikes(ServerLevel lvl, ServerPlayer target) {
@@ -163,5 +163,16 @@ public class KeeperBoss extends CivBoss {
         cooldown = 40;
         for (ServerPlayer p : victims(lvl, 40))
             p.sendSystemMessage(Component.literal("❄ «Склеп не отпустит тебя.» Хранительница призывает стражу — с неба падают копья!").withStyle(ChatFormatting.AQUA));
+    }
+
+    /** 1.1.2: между умениями — ледяные осколки веером в каждого (замедляют). */
+    @Override
+    protected void pressure(ServerLevel lvl) {
+        if (castTicks > 0 || tickCount % (enraged ? 18 : 26) != 0) return;
+        for (ServerPlayer p : victims(lvl, 22)) {
+            fan(lvl, muzzle(), p, enraged ? 5 : 3, 11, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ICE), dmg() * 0.35f, 0.95f);
+        }
+        lvl.playSound(null, blockPosition(), SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 1f, 1.6f);
+        triggerAnim("main", "attack");
     }
 }

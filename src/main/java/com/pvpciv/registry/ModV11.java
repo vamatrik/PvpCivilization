@@ -42,5 +42,8 @@ public final class ModV11 {
     public static final DeferredBlock<com.pvpciv.block.ConsoleBlock> CONSOLE = BLOCKS.register("console",
             () -> new com.pvpciv.block.ConsoleBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).strength(-1.0F, 3600000.0F).noLootTable().noOcclusion().lightLevel(s -> 8)));
 
+    /** 1.1.2: снаряд червя (только картинка снаряда — не выпадает). */
+    public static final DeferredItem<Item> VOID_BOLT = ITEMS.register("void_bolt", () -> new Item(new Item.Properties()));
+
     public static void init() {}
 }

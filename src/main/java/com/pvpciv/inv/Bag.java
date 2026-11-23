@@ -18,6 +18,23 @@ public final class Bag {
     public static final int[] LEVEL_MILESTONES = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100};   // 0.9.0: строка раз в 10 уровней (было 4/8/12/16/20)
     static final int[] OLD_MILESTONES = {4, 8, 12, 16, 20};
 
+    /** 1.1.1: список содержимого сумки для поиска на клиенте: [индекс, id предмета]. */
+    public static void listTo(net.minecraft.server.level.ServerPlayer p) {
+        ItemStackHandler h = get(p);
+        int n = Math.min(unlocked(p), h.getSlots());
+        com.google.gson.JsonArray a = new com.google.gson.JsonArray();
+        for (int i = 0; i < n; i++) {
+            ItemStack st = h.getStackInSlot(i);
+            if (st.isEmpty()) continue;
+            com.google.gson.JsonArray e = new com.google.gson.JsonArray();
+            e.add(i); e.add(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem()).toString());
+            a.add(e);
+        }
+        com.google.gson.JsonObject j = new com.google.gson.JsonObject();
+        j.add("it", a);
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.pvpciv.net.Network.PhoneData(27, j.toString()));
+    }
+
     public static ItemStackHandler get(Player p) {
         ItemStackHandler h = p.getData(ModRegistry.BAG.get());
         if (h.getSlots() < MAX) {   // старые сохранения: 63 слота → расширяем без потерь

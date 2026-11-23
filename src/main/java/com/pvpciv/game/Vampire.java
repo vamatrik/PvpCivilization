@@ -387,7 +387,7 @@ public final class Vampire {
         Vec3 at = p.position().add(look.scale(3.2));
         CarmillaEntity c = CarmillaEntity.phantom(lvl, p, at);
         p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 110, 10, false, false));
-        p.addEffect(new MobEffectInstance(MobEffects.JUMP, 110, 128, false, false));   // прыжок отключён
+        com.pvpciv.combat.CombatEvents.noJump(p, 110);   // прыжок отключён
         p.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, 230, 0, false, false));
         PacketDistributor.sendToPlayer(p, new Network.Cinematic(1, 110, blood ? "Звезда крови требует платы…" : ele ? "Элеонора нажаловалась…" : "Кармилла пришла за долгом…"));
         lvl.playSound(null, p.blockPosition(), SoundEvents.WARDEN_HEARTBEAT, SoundSource.HOSTILE, 2f, 0.7f);

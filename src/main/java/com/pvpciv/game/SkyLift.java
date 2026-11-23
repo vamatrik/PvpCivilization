@@ -143,7 +143,7 @@ public final class SkyLift {
         if ((unlocked(d) & (1 << (floor - 1))) == 0 || RIDING.contains(p.getUUID())) return;
         int cur = Math.max(1, CivWorld.floor(p.level()));
         if (floor == cur) return;
-        if (floor == 5 || cur == 5) { rideF5(p, floor); return; }   // 1.0: на станцию — без монорельса
+        if (floor == 5 || cur == 5) LiftShaft.ensureOpen(p.server);   // 1.1: на станцию — тоже кабиной, через шахту атриума
         RIDING.add(p.getUUID());
         if (p.isPassenger()) p.stopRiding();
         p.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 300, 4, false, false));
@@ -210,7 +210,7 @@ public final class SkyLift {
         RIDING.remove(p.getUUID());
         p.stopRiding();
         p.resetFallDistance();
-        Vec3 a = floor == 4 ? com.pvpciv.floor.Floor4.LIFT_ARRIVE : floor == 3 ? com.pvpciv.floor.Floor3.LIFT_ARRIVE : floor == 2 ? com.pvpciv.floor.Floor2.LIFT_ARRIVE : com.pvpciv.world.DormBuilder.LIFT_ARRIVE;
+        Vec3 a = floor == 5 ? com.pvpciv.floor.Floor5.LIFT_ARRIVE() : floor == 4 ? com.pvpciv.floor.Floor4.LIFT_ARRIVE : floor == 3 ? com.pvpciv.floor.Floor3.LIFT_ARRIVE : floor == 2 ? com.pvpciv.floor.Floor2.LIFT_ARRIVE : com.pvpciv.world.DormBuilder.LIFT_ARRIVE;
         // бета 0.9.8: остаёмся там, где остановилась кабина (а не телепорт «перед лифтом», где могло зажать в блоках)
         if (cabinEnd != null) {
             ServerLevel tl = CivWorld.byFloor(p.server, floor);
@@ -229,6 +229,7 @@ public final class SkyLift {
         GameEvents.later(p.server, 2, () -> { if (p.level() == lvl && p.position().distanceTo(fa) > 0.8 && p.position().distanceTo(fa) < 6) p.teleportTo(lvl, fa.x, fa.y, fa.z, p.getYRot(), 0); });
         if (floor == 3) com.pvpciv.game.Library.onArrive(p);
         if (floor == 4) com.pvpciv.floor.Floor4.onArrive(p);
+        if (floor == 5) com.pvpciv.floor.Floor5.onArrive(p);
         p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1f, 1.4f);
     }
 }

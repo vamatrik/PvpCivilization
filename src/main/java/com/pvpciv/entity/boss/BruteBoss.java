@@ -65,7 +65,7 @@ public class BruteBoss extends CivBoss {
         double yaw = Math.atan2(target.getZ() - getZ(), target.getX() - getX());
         Vec3 c = position();
         lvl.playSound(null, blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.HOSTILE, 2f, 0.5f);
-        zone(lvl, c, 6.0, 13, RED).cone(yaw, Math.toRadians(60)).onHit(p -> {
+        zone(lvl, c, 6.0, 19, RED).cone(yaw, Math.toRadians(60)).onHit(p -> {   // 1.1.1: телеграф 19 тиков (было 13)
             p.hurt(damageSources().mobAttack(this), dmg() * 1.3f);
             knock(p, c, 1.5, 0.45);
         }).fx(at -> {

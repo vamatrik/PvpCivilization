@@ -31,6 +31,10 @@ public final class ArenaManager {
     private static int wave, delay;
     private static long readyAt = 0;
     private static final List<UUID> mobs = new ArrayList<>();
+    /** 1.1.1: Пепельный надзиратель — свои приёмы (в углу его больше не зажать). */
+    private static UUID warden;
+    private static int wt, slamAt = -1, leapAt = -1;
+    private static boolean summoned;
 
     private static Vec3 center() { return Vec3.atBottomCenterOf(Floor1.ARENA); }
 
@@ -87,6 +91,7 @@ public final class ArenaManager {
             m.teleportTo(c.x + (m.getRandom().nextDouble() - 0.5) * 10, Floor1.Y, c.z + (m.getRandom().nextDouble() - 0.5) * 10);
             lvl.sendParticles(ParticleTypes.POOF, m.getX(), m.getY() + 0.5, m.getZ(), 8, 0.3, 0.3, 0.3, 0.02);
         }
+        wardenTick(lvl);
         if (mobs.isEmpty()) {
             wave++;
             if (wave >= 3) { win(lvl); return; }
@@ -120,6 +125,7 @@ public final class ArenaManager {
                 Mobs.setup(boss, 5, true, "Пепельный надзиратель", "floor1_mob");
                 boss.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.SCALE).setBaseValue(1.5);
                 add(boss);
+                warden = boss.getUUID(); wt = 0; slamAt = -1; leapAt = -1; summoned = false;
             }
             lvl.playSound(null, Floor1.ARENA, SoundEvents.RAVAGER_ROAR, SoundSource.HOSTILE, 2f, 0.9f);
         }
@@ -127,7 +133,54 @@ public final class ArenaManager {
         lvl.playSound(null, Floor1.ARENA, SoundEvents.ZOMBIE_AMBIENT, SoundSource.HOSTILE, 2f, 0.7f);
     }
 
+    /**
+     * Надзиратель: «Пепельный удар» — если рядом кто-то стоит, через 1 с (дымное кольцо-предупреждение) бьёт по площади и отбрасывает;
+     * «Прыжок» — раз в ~9 с прыгает к дальнему игроку и приземляется с ударом; на половине здоровья зовёт двух пепельных зомби.
+     */
+    private static void wardenTick(ServerLevel lvl) {
+        if (warden == null || !(lvl.getEntity(warden) instanceof Mob w) || !w.isAlive()) { warden = null; return; }
+        wt++;
+        List<ServerPlayer> ps = inside(lvl);
+        if (ps.isEmpty()) return;
+        // удар по площади: телеграф 20 тиков
+        if (slamAt < 0 && wt % 70 == 0 && ps.stream().anyMatch(p -> p.distanceTo(w) < 4.5)) {
+            slamAt = wt + 20;
+            lvl.playSound(null, w.blockPosition(), SoundEvents.RAVAGER_ATTACK, SoundSource.HOSTILE, 1.5f, 0.6f);
+        }
+        if (slamAt > 0 && wt < slamAt && wt % 3 == 0)
+            for (int i = 0; i < 24; i++) { double a = i * Math.PI / 12; lvl.sendParticles(ParticleTypes.LARGE_SMOKE, w.getX() + Math.cos(a) * 4, w.getY() + 0.1, w.getZ() + Math.sin(a) * 4, 1, 0, 0, 0, 0); }
+        if (slamAt > 0 && wt >= slamAt) {
+            slamAt = -1;
+            lvl.sendParticles(ParticleTypes.EXPLOSION, w.getX(), w.getY() + 0.3, w.getZ(), 6, 2, 0.2, 2, 0);
+            lvl.sendParticles(ParticleTypes.LAVA, w.getX(), w.getY() + 0.3, w.getZ(), 20, 2, 0.2, 2, 0);
+            lvl.playSound(null, w.blockPosition(), SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 1.4f, 0.8f);
+            for (ServerPlayer p : ps) if (p.distanceTo(w) < 4.5) {
+                p.hurt(lvl.damageSources().mobAttack(w), (float) (w.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) * 1.6));
+                Vec3 push = p.position().subtract(w.position()).multiply(1, 0, 1).normalize().scale(1.4);
+                p.setDeltaMovement(push.x, 0.55, push.z); p.hurtMarked = true;
+            }
+        }
+        // прыжок к дальнему
+        if (leapAt < 0 && wt % 180 == 90) {
+            ServerPlayer far = ps.stream().max(java.util.Comparator.comparingDouble(p -> p.distanceToSqr(w))).orElse(null);
+            if (far != null && far.distanceTo(w) > 5) {
+                leapAt = wt + 14;
+                Vec3 d = far.position().subtract(w.position());
+                w.setDeltaMovement(d.x * 0.11, 0.9, d.z * 0.11); w.hurtMarked = true;
+                lvl.playSound(null, w.blockPosition(), SoundEvents.RAVAGER_ROAR, SoundSource.HOSTILE, 1.4f, 1.2f);
+            }
+        }
+        if (leapAt > 0 && wt >= leapAt && w.onGround()) { leapAt = -1; slamAt = wt + 1; }
+        // на половине — подмога
+        if (!summoned && w.getHealth() < w.getMaxHealth() * 0.5f) {
+            summoned = true;
+            for (int i = 0; i < 2; i++) add(Mobs.spawn(lvl, Mobs.Kind.ASH_ZOMBIE, 4, false, ring(lvl), "floor1_dungeon", "civ_dungeon"));
+            flint(lvl, "Надзиратель свистнул — с трибун прыгают ещё двое!");
+        }
+    }
+
     private static void cleanup(ServerLevel lvl) {
+        warden = null;
         for (UUID id : mobs) { Entity e = lvl.getEntity(id); if (e != null) e.discard(); }
         mobs.clear();
         gate(lvl, false);

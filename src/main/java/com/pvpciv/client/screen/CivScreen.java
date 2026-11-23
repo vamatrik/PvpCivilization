@@ -101,6 +101,7 @@ public abstract class CivScreen<M extends CivMenu> extends AbstractContainerScre
         for (Slot s : menu.slots) {
             if (!s.isActive()) continue;
             int x = leftPos + s.x, y = topPos + s.y;
+            if (s instanceof BagSlot b && b.blank()) { g.fill(x, y, x + 18, y + 18, 0x40000000); continue; }   // 1.1.1: пусто в выдаче поиска
             if (s instanceof BagSlot b && b.locked()) { Skin.slotLocked(g, x, y); continue; }
             Skin.slot(g, x, y);
             ItemStack st = s.getItem();
@@ -138,7 +139,7 @@ public abstract class CivScreen<M extends CivMenu> extends AbstractContainerScre
 
     @Override
     protected void renderTooltip(GuiGraphics g, int mx, int my) {
-        if (hoveredSlot instanceof BagSlot b && b.locked() && menu.getCarried().isEmpty()) {
+        if (hoveredSlot instanceof BagSlot b && b.locked() && !b.blank() && menu.getCarried().isEmpty()) {
             int have = 0;
             for (int m : Bag.LEVEL_MILESTONES) if (ClientState.level >= m) have++;
             int need = (b.bagIndex() - menu.unlockedSlots()) / 9 + 1;

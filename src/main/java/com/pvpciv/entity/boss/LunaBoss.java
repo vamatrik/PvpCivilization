@@ -127,4 +127,15 @@ public class LunaBoss extends CivBoss {
 
     @Override public void addAdditionalSaveData(CompoundTag t) { super.addAdditionalSaveData(t); t.putInt("stage", stage); }
     @Override public void readAdditionalSaveData(CompoundTag t) { super.readAdditionalSaveData(t); stage = Math.max(1, t.getInt("stage")); }
+
+    /** 1.1.2: со 2-й стадии — лунные серпики в цель; с 4-й — веером. */
+    @Override
+    protected void pressure(ServerLevel lvl) {
+        if (castTicks > 0 || stage < 2 || tickCount % Math.max(12, 34 - stage * 3) != 0) return;
+        for (ServerPlayer p : victims(lvl, 24)) {
+            if (stage >= 4) fan(lvl, muzzle(), p, 3, 12, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GLOWSTONE_DUST), dmg() * 0.3f, 1.1f);
+            else bolt(lvl, muzzle(), p, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GLOWSTONE_DUST), dmg() * 0.3f, 1.1f, 2f);
+        }
+        lvl.playSound(null, blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.HOSTILE, 1.2f, 1.6f);
+    }
 }

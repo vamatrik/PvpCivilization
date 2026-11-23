@@ -296,5 +296,6 @@
   "block.pvpciv.civ_sign": "Табличка",
   "block.pvpciv.console": "Пульт",
   "block.pvpciv.ritual_core": "Ядро ритуала",
-  "block.pvpciv.ritual_injector": "Инжектор тьмы"
+  "block.pvpciv.ritual_injector": "Инжектор тьмы",
+  "item.pvpciv.void_bolt": "Сгусток пустоты"
 }

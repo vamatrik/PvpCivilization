@@ -272,9 +272,10 @@ public final class VoidRift {
     private record Laser(boolean alongX, double pos, double speed, boolean high) {}
 
     private static void lasers(ServerLevel l, VoidDemon d) {
-        float frac = Math.max(0, Math.min(1, (75 - mana) / 25f));   // 0 в начале стадии → 1 в конце
-        int maxN = 1 + Math.round(frac * 4);
-        int every = Math.max(16, 66 - (int) (frac * 50));
+        float lin = Math.max(0, Math.min(1, (75 - mana) / 25f));   // 0 в начале стадии → 1 в конце
+        float frac = (float) Math.sqrt(lin);   // 1.1.1: сложность растёт быстро в начале и почти не растёт к концу
+        int maxN = 2 + Math.round(frac * 4);
+        int every = Math.max(14, 54 - (int) (frac * 40));
         Random rnd = new Random();
         if (sub % every == 0 && LASERS.size() < maxN) {
             int burst = frac > 0.75f && rnd.nextFloat() < 0.5f ? 2 : 1;
@@ -282,7 +283,7 @@ public final class VoidRift {
             for (int k = 0; k < burst; k++) {
                 boolean ax = burst == 2 ? (k == 0) : alongX, fromNeg = rnd.nextBoolean();
                 boolean high = frac > 0.3f && rnd.nextFloat() < 0.25f + frac * 0.2f;
-                double speed = (0.17 + frac * 0.2) * (fromNeg ? 1 : -1);
+                double speed = (0.2 + frac * 0.2) * (fromNeg ? 1 : -1);
                 LASERS.add(new Laser(ax, fromNeg ? -R - 1 : R + 1, speed, high));
             }
             if (d != null) d.anim("point");
@@ -463,7 +464,7 @@ public final class VoidRift {
             if (m == null) continue;
             m.moveTo(at.x, at.y, at.z, 0, 0);
             Mobs.setupDefault(m);
-            Mobs.setup(m, demonLevel - (ranged ? 4 : 2), false, "Тень: " + k.title, "floor5_mob");
+            Mobs.setup(m, demonLevel, false, "Тень: " + k.title, "floor5_mob");   // 1.1.1: урон — как у мобов пояса (ур. 38), без поправок вида
             m.setInvulnerable(true);
             m.addTag("boss_minion");
             m.setCustomName(Component.literal("Тень: " + k.title + " (неуязвима)").withStyle(ChatFormatting.DARK_PURPLE));
@@ -521,11 +522,20 @@ public final class VoidRift {
         if (d != null) d.anim("laugh");
         say(l, "«Мана кончилась… Ладно, ладно. Увидимся внизу — в Аду. Там ты мне за всё заплатишь.»");
         l.playSound(null, C, SoundEvents.WITHER_DEATH, SoundSource.HOSTILE, 3f, 1.4f);
-        disc(l, C.getY(), Blocks.BLACK_CONCRETE.defaultBlockState(), Blocks.MAGENTA_STAINED_GLASS.defaultBlockState());
-        clearLayer(l, C.getY() + 1);
+        // 1.1.1: никакого телепорта — взрыв, игроки зависают в пустоте (клетки из барьера), сюжет, лут падает к ним в клетку
+        clearPath(l);
+        clearLayer(l, C.getY()); clearLayer(l, C.getY() + 1);
         MinecraftServer s = l.getServer();
-        for (ServerPlayer p : fighters(s)) {
-            p.teleportTo(C.getX() + 0.5 + (p.getRandom().nextDouble() - 0.5) * 8, C.getY() + 1, C.getZ() + 4.5);
+        CAGES.clear();
+        int ci = 0;
+        List<ServerPlayer> fs = fighters(s);
+        for (ServerPlayer p : fs) {
+            double a = Math.PI * 2 * ci++ / Math.max(1, fs.size());
+            BlockPos cg = BlockPos.containing(C.getX() + 0.5 + (fs.size() > 1 ? Math.cos(a) * 5 : 0), C.getY() + 3, C.getZ() + 4.5 + (fs.size() > 1 ? Math.sin(a) * 5 : 0));
+            cage(l, cg, true);
+            CAGES.put(p.getUUID(), cg);
+            p.teleportTo(cg.getX() + 0.5, cg.getY(), cg.getZ() + 0.5);
+            p.setDeltaMovement(Vec3.ZERO);
             p.resetFallDistance();
             StoryData sd = Progress.d(p);
             boolean first = (sd.trophies & 512) == 0;
@@ -541,20 +551,30 @@ public final class VoidRift {
                 Classes.giveMatter(p, 2);
             }
             for (ItemStack st : loot) Story.announceRareDrop(l, st, p.getGameProfile().getName());
-            PENDING.put(p.getUUID(), loot);   // выдаём на площадке (здесь при полной сумке выпало бы в пустоту)
+            PENDING.put(p.getUUID(), loot);   // 1.1.1: выпадет в клетку через несколько секунд; что не подобрано — выдам на площадке
             Progress.addXp(p, Progress.xpFor(sd.level, demonLevel, 20));
             Progress.addMoney(p, 20000, true);
             com.pvpciv.progress.Titles.grant(p, "hell_walker");
             p.connection.send(new ClientboundSetTitleTextPacket(Component.literal("ИЗГНАНА!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)));
             p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("Демоница ушла в Ад. Адский след — твой: почини лифт станции").withStyle(ChatFormatting.GRAY)));
-            p.sendSystemMessage(Component.literal("Награда демоницы (выдам на площадке через 15 с): " + Story.lootLine(loot)).withStyle(ChatFormatting.GOLD));
+            p.sendSystemMessage(Component.literal("Награда демоницы: " + Story.lootLine(loot)).withStyle(ChatFormatting.GOLD));
         }
+        // общий лут — по клеткам по кругу
+        List<UUID> owners = new ArrayList<>(CAGES.keySet());
+        int oi = 0;
         for (ItemStack st : LootTables.roll("floor5_final_ground", l.random, 1.0 + 0.3 * (FIGHTERS.size() - 1))) {
-            ItemEntity ie = new ItemEntity(l, C.getX() + 0.5, C.getY() + 2, C.getZ() + 0.5, st);
-            ie.setDeltaMovement((l.random.nextDouble() - 0.5) * 0.5, 0.4, (l.random.nextDouble() - 0.5) * 0.5);
-            l.addFreshEntity(ie);
             Story.announceRareDrop(l, st);
+            if (!owners.isEmpty()) PENDING.computeIfAbsent(owners.get(oi++ % owners.size()), k -> new ArrayList<>()).add(st);
         }
+        // взрыв
+        for (int i = 0; i < 6; i++) {
+            double a = i * Math.PI / 3;
+            l.sendParticles(ParticleTypes.EXPLOSION_EMITTER, C.getX() + 0.5 + Math.cos(a) * 6, C.getY() + 1, C.getZ() + 0.5 + Math.sin(a) * 6, 1, 0, 0, 0, 0);
+        }
+        l.sendParticles(ParticleTypes.DRAGON_BREATH, C.getX() + 0.5, C.getY() + 2, C.getZ() + 0.5, 300, 8, 3, 8, 0.1);
+        l.playSound(null, C, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 4f, 0.5f);
+        l.playSound(null, C, SoundEvents.ENDER_DRAGON_DEATH, SoundSource.HOSTILE, 2f, 1.6f);
+        for (ServerPlayer p : fs) PacketDistributor.sendToPlayer(p, new Network.PhoneData(22, "{\"cut\":\"rift\",\"len\":40}"));
         for (ServerPlayer o : s.getPlayerList().getPlayers())
             o.sendSystemMessage(Component.literal("☠ Демоница Пустоты изгнана в Ад! Галактический червь пал. Первый мир почти пройден…").withStyle(ChatFormatting.DARK_PURPLE));
     }
@@ -565,7 +585,48 @@ public final class VoidRift {
             if (endT < 60) { l.sendParticles(ParticleTypes.FLAME, d.getX(), d.getY() + 1, d.getZ(), 20, 0.5, 1, 0.5, 0.05); l.sendParticles(ParticleTypes.LAVA, d.getX(), d.getY() + 1, d.getZ(), 5, 0.5, 1, 0.5, 0); }
             if (endT == 60) { l.sendParticles(ParticleTypes.EXPLOSION_EMITTER, d.getX(), d.getY() + 1, d.getZ(), 1, 0, 0, 0, 0); l.playSound(null, d.blockPosition(), SoundEvents.PORTAL_TRAVEL, SoundSource.HOSTILE, 1f, 1.5f); d.discard(); demon = null; }
         }
-        if (endT >= 300) end(l);
+        // 1.1.1: сюжет, пока висишь в пустоте
+        String[] story = {
+                "Разлом схлопывается. Пустота держит тебя, как вода — и не отпускает.",
+                "Снизу поднимается жар. Там, под станцией, под всем миром, — красное зарево.",
+                "☠ Демоница (эхом): «Адский след у тебя в руке — он приведёт ко мне. Почини лифт… и спускайся.»",
+                "Пустота вздыхает и разжимает пальцы. Пора назад — на площадку шлюза."};
+        int[] at = {60, 130, 200, 300};
+        for (int i = 0; i < story.length; i++) if (endT == at[i])
+            for (ServerPlayer p : fighters(l.getServer())) p.sendSystemMessage(Component.literal(story[i]).withStyle(i == 2 ? ChatFormatting.LIGHT_PURPLE : ChatFormatting.GRAY, ChatFormatting.ITALIC));
+        if (endT == 140) for (ServerPlayer p : fighters(l.getServer())) {
+            p.connection.send(new ClientboundSetTitleTextPacket(Component.literal("Дальше — Ад").withStyle(ChatFormatting.RED)));
+            p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("этаж 6 · скоро").withStyle(ChatFormatting.GRAY)));
+        }
+        // лут сыплется в клетку
+        if (endT == 90) for (var en : CAGES.entrySet()) {
+            List<ItemStack> got = PENDING.remove(en.getKey());
+            if (got == null) continue;
+            BlockPos cg = en.getValue();
+            int k = 0;
+            for (ItemStack st : got) {
+                ItemEntity ie = new ItemEntity(l, cg.getX() + 0.5, cg.getY() + 2.2, cg.getZ() + 0.5, st);
+                ie.setDeltaMovement(0, -0.05, 0);
+                ie.setPickUpDelay(10 + k++ * 2);
+                l.addFreshEntity(ie);
+            }
+            l.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, cg.getX() + 0.5, cg.getY() + 2, cg.getZ() + 0.5, 40, 0.6, 0.4, 0.6, 0.3);
+            l.playSound(null, cg, SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 1f, 1f);
+        }
+        if (endT % 20 == 0) for (BlockPos cg : CAGES.values()) l.sendParticles(ParticleTypes.REVERSE_PORTAL, cg.getX() + 0.5, cg.getY() - 0.5, cg.getZ() + 0.5, 12, 1.2, 0.1, 1.2, 0.02);
+        if (endT >= 360) end(l);
+    }
+
+    /** Клетки игроков на финале: id → низ клетки (где стоят ноги). */
+    private static final Map<UUID, BlockPos> CAGES = new HashMap<>();
+
+    private static void cage(ServerLevel l, BlockPos c, boolean on) {
+        for (int x = -1; x <= 1; x++) for (int z = -1; z <= 1; z++) for (int y = -1; y <= 3; y++) {
+            boolean wall = y == -1 || y == 3 || Math.abs(x) == 1 || Math.abs(z) == 1;
+            if (!wall) continue;
+            BlockPos q = c.offset(x, y, z);
+            l.setBlock(q, on ? Blocks.BARRIER.defaultBlockState() : Blocks.AIR.defaultBlockState(), 2);
+        }
     }
 
     private static void fail(ServerLevel l) {
@@ -575,6 +636,16 @@ public final class VoidRift {
     }
 
     private static void end(ServerLevel l) {
+        // неподобранное в клетках — владельцу; клетки убрать
+        for (var en : CAGES.entrySet()) {
+            BlockPos cg = en.getValue();
+            for (ItemEntity ie : l.getEntitiesOfClass(ItemEntity.class, new AABB(cg).inflate(2, 3, 2))) {
+                PENDING.computeIfAbsent(en.getKey(), k -> new ArrayList<>()).add(ie.getItem().copy());
+                ie.discard();
+            }
+            cage(l, cg, false);
+        }
+        CAGES.clear();
         for (ServerPlayer p : fighters(l.getServer())) {
             BlockPos pad = com.pvpciv.floor.Belt.PAD;
             p.teleportTo(l, pad.getX() + 0.5, pad.getY(), pad.getZ() + 0.5, 180, 0);

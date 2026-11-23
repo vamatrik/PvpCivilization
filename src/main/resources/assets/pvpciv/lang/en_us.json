@@ -296,5 +296,6 @@
   "block.pvpciv.civ_sign": "Sign",
   "block.pvpciv.console": "Console",
   "block.pvpciv.ritual_core": "Ritual Core",
-  "block.pvpciv.ritual_injector": "Dark Injector"
+  "block.pvpciv.ritual_injector": "Dark Injector",
+  "item.pvpciv.void_bolt": "Void Bolt"
 }

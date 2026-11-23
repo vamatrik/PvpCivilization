@@ -19,9 +19,11 @@ public class BagSlot extends SlotItemHandler {
         this.viewIndex = index; this.unlocked = unlocked; this.off = off; this.visible = visible;
     }
 
-    /** Индекс в настоящей сумке (с учётом прокрутки). */
-    public int bagIndex() { return viewIndex + off.getAsInt(); }
-    public boolean locked() { return bagIndex() >= unlocked.getAsInt(); }
+    /** Индекс в настоящей сумке (с учётом прокрутки и поиска); −1 — пустое место в выдаче поиска. */
+    public int bagIndex() { return getItemHandler() instanceof BagView v ? v.real(viewIndex) : viewIndex + off.getAsInt(); }
+    public boolean locked() { int i = bagIndex(); return i < 0 || i >= unlocked.getAsInt(); }
+    /** Пустая клетка выдачи поиска (не «закрытый» слот). */
+    public boolean blank() { return bagIndex() < 0; }
 
     @Override public boolean mayPlace(ItemStack st) { return !locked() && super.mayPlace(st); }
     @Override public boolean mayPickup(Player p) { return !locked() && super.mayPickup(p); }

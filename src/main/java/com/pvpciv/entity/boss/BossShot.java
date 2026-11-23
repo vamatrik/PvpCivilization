@@ -14,6 +14,9 @@ import net.minecraft.world.phys.HitResult;
 public class BossShot extends Snowball {
     private final float dmg;
     private int life = 80;
+    /** 1.1.2: доп. эффект при попадании (замедление, яд и т.п.) и свой след частиц. */
+    public java.util.function.Consumer<ServerPlayer> onHit;
+    public net.minecraft.core.particles.ParticleOptions trail = ParticleTypes.REVERSE_PORTAL;
 
     public BossShot(Level l, LivingEntity owner, float dmg, ItemStack look) { super(l, owner); this.dmg = dmg; setItem(look); setNoGravity(true); }
 
@@ -23,15 +26,23 @@ public class BossShot extends Snowball {
     public void tick() {
         super.tick();
         if (level() instanceof ServerLevel l) {
-            l.sendParticles(ParticleTypes.REVERSE_PORTAL, getX(), getY(), getZ(), 2, 0.05, 0.05, 0.05, 0.01);
+            if (trail != null) l.sendParticles(trail, getX(), getY(), getZ(), 2, 0.05, 0.05, 0.05, 0.01);
             if (--life <= 0) discard();
         }
     }
 
     @Override
     protected void onHitEntity(EntityHitResult r) {
-        if (r.getEntity() instanceof ServerPlayer p && getOwner() instanceof LivingEntity o) { p.invulnerableTime = 0; p.hurt(damageSources().mobProjectile(this, o), dmg); }
+        if (r.getEntity() instanceof ServerPlayer p && getOwner() instanceof LivingEntity o) {
+            p.invulnerableTime = 0;
+            p.hurt(damageSources().mobProjectile(this, o), dmg);
+            if (onHit != null) onHit.accept(p);
+        }
     }
+
+    /** Сквозь своих (босса, его сегменты и миньонов) — не задевать. */
+    @Override
+    protected boolean canHitEntity(net.minecraft.world.entity.Entity e) { return e instanceof net.minecraft.world.entity.player.Player && super.canHitEntity(e); }
 
     @Override
     protected void onHit(HitResult r) {

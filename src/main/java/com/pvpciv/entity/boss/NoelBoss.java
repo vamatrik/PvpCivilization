@@ -93,7 +93,7 @@ public class NoelBoss extends CivBoss {
         // 1.0.1: чёрные дыры — не чаще раза в 22 с (в ярости — в 15 с) и меньше штук: стягивали слишком часто
         if (r < 6 || tickCount < nextHoles) plasma(lvl, target, petDead);
         else { holes(lvl, petDead ? 2 : 1); nextHoles = tickCount + (petDead ? 300 : 440); }
-        cooldown = petDead ? 40 + random.nextInt(15) : 70 + random.nextInt(25);
+        cooldown = petDead ? 35 + random.nextInt(12) : 55 + random.nextInt(20);   // 1.1.2: чаще
     }
 
     private void plasma(ServerLevel lvl, ServerPlayer t, boolean twice) {
@@ -130,7 +130,7 @@ public class NoelBoss extends CivBoss {
         if (twice) later(34, () -> { if (isAlive() && t.isAlive()) plasma(lvl, t, false); });
     }
 
-    private Vec3 muzzle() { return getEyePosition().add(getLookAngle().scale(0.8)).add(0, -0.35, 0); }
+    @Override protected Vec3 muzzle() { return getEyePosition().add(getLookAngle().scale(0.8)).add(0, -0.35, 0); }
 
     private void holes(ServerLevel lvl, int n) {
         play("cast", 26);
@@ -199,4 +199,15 @@ public class NoelBoss extends CivBoss {
     }
 
     @Override protected void onEnrage(ServerLevel lvl) {}
+
+    /** 1.1.2: между выстрелами пушки — плазменные сгустки в каждого (не стреляет, пока Лиана жуёт). */
+    @Override
+    protected void pressure(ServerLevel lvl) {
+        if (castTicks > 0 || tickCount % (petDead ? 14 : 22) != 0) return;
+        LianaBoss pet = null;
+        for (var e : lvl.getEntitiesOfClass(LianaBoss.class, getBoundingBox().inflate(30))) pet = e;
+        if (pet != null && pet.chewing()) return;
+        for (ServerPlayer p : victims(lvl, 26)) bolt(lvl, muzzle(), p, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.AMETHYST_SHARD), dmg() * 0.3f, 1.3f, 2f);
+        lvl.playSound(null, blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.HOSTILE, 1.2f, 2f);
+    }
 }

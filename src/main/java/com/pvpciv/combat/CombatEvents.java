@@ -42,6 +42,8 @@ public final class CombatEvents {
         // 0.10.3: удар основной рукой — шлейф взмаха для остальных игроков
         bus.addListener((net.neoforged.neoforge.event.entity.player.AttackEntityEvent e) -> {
             if (e.getEntity() instanceof ServerPlayer sp && sp.getMainHandItem().getItem() instanceof com.pvpciv.item.CivWeaponItem) {
+                // 1.1.1: незаряженный удар основной рукой (закликивание, рассинхрон) — не проходит и на сервере
+                if (sp.getAttackStrengthScale(0.5f) < 0.8f && !sp.isCreative()) { e.setCanceled(true); return; }
                 Melee.noteCharge(sp, sp.getAttackStrengthScale(0.5f));   // 0.10.8: заряд этого удара — для полного урона
                 Melee.slash(sp, sp.getMainHandItem(), false); Melee.afterMain(sp);
             }
@@ -163,6 +165,31 @@ public final class CombatEvents {
     private static ServerLevel lvlOf(ServerPlayer p) { return p.serverLevel(); }
 
     /** Мобы Кряжа: каждый удар — стак холода (сброс через 6 с без ударов), на 5 стаках — заморозка 1.5 с. */
+    private static final net.minecraft.resources.ResourceLocation NOJUMP = com.pvpciv.PvpCiv.id("nojump");
+
+    /**
+     * 1.1.2: «нельзя прыгать» на ticks тиков. Раньше было «прыгучесть 128» — в 1.21 это не запрет, а +12.9 к прыжку:
+     * игрока выстреливало на сотни блоков (мороз Королевы, подвал, Лиана, Дипломат).
+     */
+    public static void noJump(ServerPlayer p, int ticks) {
+        var a = p.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.JUMP_STRENGTH);
+        if (a == null) return;
+        if (a.getModifier(NOJUMP) == null)
+            a.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(NOJUMP, -1.0, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+        long until = p.serverLevel().getGameTime() + ticks;
+        p.getPersistentData().putLong("noJumpUntil", Math.max(until, p.getPersistentData().getLong("noJumpUntil")));
+    }
+
+    /** Каждый тик сервера: снять запрет прыжка, когда истёк. */
+    public static void noJumpTick(ServerPlayer p) {
+        var t = p.getPersistentData();
+        if (!t.contains("noJumpUntil")) return;
+        if (p.serverLevel().getGameTime() < t.getLong("noJumpUntil") && p.isAlive()) return;
+        t.remove("noJumpUntil");
+        var a = p.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.JUMP_STRENGTH);
+        if (a != null) a.removeModifier(NOJUMP);
+    }
+
     public static void frost(ServerPlayer p, ServerLevel lvl) {
         var t = p.getPersistentData();
         long now = lvl.getGameTime();
@@ -174,7 +201,7 @@ public final class CombatEvents {
             stacks = 0;
             p.setTicksFrozen(Math.max(p.getTicksFrozen(), 200));   // синяя рамка мороза
             p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 30, 6, false, false));
-            p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.JUMP, 30, 128, false, false));
+            noJump(p, 30);
             p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.DIG_SLOWDOWN, 30, 4, false, false));
             lvl.playSound(null, p.blockPosition(), net.minecraft.sounds.SoundEvents.GLASS_BREAK, net.minecraft.sounds.SoundSource.PLAYERS, 1f, 0.6f);
             lvl.sendParticles(net.minecraft.core.particles.ParticleTypes.ITEM_SNOWBALL, p.getX(), p.getY() + 1, p.getZ(), 30, 0.4, 0.8, 0.4, 0.1);

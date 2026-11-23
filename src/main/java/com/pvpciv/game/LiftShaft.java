@@ -147,6 +147,13 @@ public final class LiftShaft {
         }
     }
 
+    /** Шахта нужна для поездки (или full5) — открыть сразу, без сцены. */
+    public static void ensureOpen(MinecraftServer s) {
+        if (isOpen(s) || t >= 0) return;
+        buildShaft(CivWorld.f5(s), true);
+        CivData d = CivData.get(s); d.bossNext.put(FLAG, 1L); d.setDirty();
+    }
+
     /** После перезапуска: если шахта была открыта — пересобрать (на случай сцены, прерванной выключением). */
     public static void startup(MinecraftServer s) {
         if (isOpen(s)) buildShaft(CivWorld.f5(s), true);

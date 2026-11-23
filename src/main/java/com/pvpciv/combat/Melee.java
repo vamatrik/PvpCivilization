@@ -135,7 +135,7 @@ public final class Melee {
 
     /** Удар второй рукой по сущности (id) или по воздуху (id < 0). */
     public static void offHit(ServerPlayer p, int id) {
-        if (!dual(p) || p.isSpectator() || offCharge(p) < 0.6f) return;
+        if (!dual(p) || p.isSpectator() || offCharge(p) < 0.8f) return;   // 1.1.1: было 0.6 — лишний удар при закликивании
         OFF_LAST.put(p.getUUID(), p.serverLevel().getGameTime());
         capMain(p, 0.5);
         ItemStack st = p.getOffhandItem();
@@ -173,7 +173,7 @@ public final class Melee {
     /** Взмах по воздуху (пакет от клиента): по всем в дуге — полный урон × заряд. */
     public static void airSwing(ServerPlayer p) {
         float charge = p.getAttackStrengthScale(0.5f);
-        if (charge < 0.6f || p.isSpectator()) return;
+        if (charge < 0.8f || p.isSpectator()) return;
         ItemStack st = p.getMainHandItem();
         Arc a = arc(st);
         double base = p.getAttributeValue(Attributes.ATTACK_DAMAGE) * (charge >= 0.6f ? 1.0 : 0.2 + 0.8 * charge * charge);   // 0.10.8: заряжен — полный

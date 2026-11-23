@@ -43,9 +43,10 @@ public final class Belt {
         RandomSource r = RandomSource.create(7007);
         int id = 0;
         // кольца ступенек вокруг центра, соседние — в прыжке при низкой гравитации
-        for (int ring = 0; ring < 3; ring++) {
-            int n = 7 + ring * 4;
-            double rad = 11 + ring * 7.5;
+        // 1.1.1: два кольца вместо трёх (было 33 камня — «съеденный» камень терялся среди остальных)
+        for (int ring = 0; ring < 2; ring++) {
+            int n = 6 + ring * 3;
+            double rad = 12 + ring * 8;
             for (int i = 0; i < n; i++) {
                 double a = Math.PI * 2 * (i + (ring % 2) * 0.5) / n + r.nextDouble() * 0.15;
                 int x = CENTER.getX() + (int) Math.round(Math.cos(a) * rad), z = CENTER.getZ() + (int) Math.round(Math.sin(a) * rad);
@@ -67,13 +68,7 @@ public final class Belt {
     // ------------------------------------------------------------------ постройка
     public static void build(ServerLevel l) {
         for (Rock k : ROCKS) rock(l, k, true);
-        // центральный астероид: широкая плоская вершина
-        RandomSource r = RandomSource.create(77);
-        for (int x = -9; x <= 9; x++) for (int z = -9; z <= 9; z++) for (int y = -7; y <= 0; y++) {
-            double d = Math.sqrt(x * x + z * z + (y * 1.6) * (y * 1.6));
-            if (d > 8.5 + r.nextDouble() * 0.8) continue;
-            l.setBlock(CENTER.offset(x, y - 1, z), y == 0 ? top(r, x, z) : stone(r), 2);
-        }
+        center(l, true);
         // шлюзовая площадка
         for (int x = -6; x <= 6; x++) for (int z = -6; z <= 6; z++) {
             double d = Math.hypot(x, z);
@@ -89,6 +84,48 @@ public final class Belt {
     }
 
     public static BlockPos CONSOLE() { return PAD.offset(3, 0, 4); }
+
+    /** Центральный астероид: широкая плоская вершина (on=false — разбит). */
+    public static void center(ServerLevel l, boolean on) {
+        RandomSource r = RandomSource.create(77);
+        for (int x = -9; x <= 9; x++) for (int z = -9; z <= 9; z++) for (int y = -7; y <= 0; y++) {
+            double d = Math.sqrt(x * x + z * z + (y * 1.6) * (y * 1.6));
+            if (d > 8.5 + r.nextDouble() * 0.8) continue;
+            BlockState st = y == 0 ? top(r, x, z) : stone(r);
+            BlockPos q = CENTER.offset(x, y - 1, z);
+            if (on) l.setBlock(q, st, 2);
+            else if (!l.getBlockState(q).is(com.pvpciv.registry.ModRegistry.BOSS_ALTAR.get())) l.setBlock(q, Blocks.AIR.defaultBlockState(), 2);
+        }
+    }
+    public static final int CENTER_ID = -1;
+    public static boolean centerGone() { return GONE.containsKey(CENTER_ID); }
+
+    /** 1.1.1: червь разбил центральный астероид — вернётся через 25 с или сразу, когда червь на него ляжет. */
+    public static void breakCenter(ServerLevel l) {
+        if (centerGone()) return;
+        GONE.put(CENTER_ID, l.getGameTime() + 500);
+        center(l, false);
+        l.sendParticles(ParticleTypes.EXPLOSION_EMITTER, CENTER.getX() + 0.5, CENTER.getY(), CENTER.getZ() + 0.5, 3, 4, 1, 4, 0);
+    }
+    public static void restoreCenter(ServerLevel l) {
+        if (GONE.remove(CENTER_ID) == null) return;
+        center(l, true);
+        l.sendParticles(ParticleTypes.END_ROD, CENTER.getX() + 0.5, CENTER.getY(), CENTER.getZ() + 0.5, 80, 6, 0.5, 6, 0.02);
+    }
+
+    /** 1.1.1: старое поле (3 кольца, 33 камня) — убрать всё между центром и площадкой, затем построить заново. */
+    public static void rebuildField(ServerLevel l) {
+        for (int x = -40; x <= 40; x++) for (int z = -40; z <= 46; z++) {
+            double h = Math.hypot(x, z);
+            if (h < 10.5 || h > 47) continue;
+            for (int y = -8; y <= 7; y++) {
+                BlockPos q = CENTER.offset(x, y, z);
+                if (!l.getBlockState(q).isAir()) l.setBlock(q, Blocks.AIR.defaultBlockState(), 2);
+            }
+        }
+        for (Rock k : ROCKS) rock(l, k, true);
+        // площадку не трогаем (она дальше 47 от центра)
+    }
 
     private static void sign(ServerLevel l, BlockPos at, String... lines) {
         l.setBlock(at.below(), Blocks.POLISHED_DEEPSLATE.defaultBlockState(), 2);
@@ -141,12 +178,30 @@ public final class Belt {
             Story.say(p, "Шлюз", 0x40D0FF, "ВЫХОД ЗАПРЕЩЁН. Разрешение подписывает посол. (Победи Инопланетного дипломата на Мостике.)");
             return true;
         }
+        if (out) {   // 1.1.1: свой шлюз с анимацией вылета
+            if (!com.pvpciv.game.Airlock.start(p)) p.displayClientMessage(Component.literal("Шлюз уже открыт — подожди следующего цикла.").withStyle(ChatFormatting.AQUA), true);
+            return true;
+        }
         EXITING.put(p.getUUID(), out ? 1 : -1);
         TICKS.put(p.getUUID(), 0);
         PacketDistributor.sendToPlayer(p, new Network.PhoneData(22, "{\"cut\":\"airlock\",\"len\":60}"));
         p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.IRON_DOOR_OPEN, SoundSource.PLAYERS, 2f, 0.5f);
         p.displayClientMessage(Component.literal(out ? "Шлюз открывается… разгерметизация" : "Шлюз: возвращение в ангар").withStyle(ChatFormatting.AQUA), true);
         return true;
+    }
+
+    /** Прибытие на площадку после вылета из шлюза. */
+    public static void arriveOut(ServerPlayer p) {
+        ServerLevel l = p.serverLevel();
+        p.teleportTo(l, PAD.getX() + 0.5, Y, PAD.getZ() + 0.5, 180, 0);
+        p.resetFallDistance();
+        PacketDistributor.sendToPlayer(p, new Network.PhoneData(22, "{\"cut\":\"arrive\",\"len\":30}"));
+        p.connection.send(new net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket(Component.literal("Пояс астероидов").withStyle(ChatFormatting.LIGHT_PURPLE)));
+        p.connection.send(new net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket(Component.literal("Низкая гравитация · ур. 38").withStyle(ChatFormatting.GRAY)));
+        if (!Progress.d(p).gates.contains("belt_seen")) {
+            var d = Progress.d(p); d.gates.putInt("belt_seen", 1); p.setData(com.pvpciv.registry.ModRegistry.STORY.get(), d);
+            p.sendSystemMessage(Component.literal("✦ Пояс астероидов. Прыжки тут длинные, падать — далеко. В центре на большом астероиде — алтарь Галактического червя.").withStyle(ChatFormatting.LIGHT_PURPLE));
+        }
     }
     private static final Map<UUID, Integer> EXITING = new HashMap<>(), TICKS = new HashMap<>();
 
@@ -161,6 +216,7 @@ public final class Belt {
             long now = l.getGameTime();
             GONE.entrySet().removeIf(en -> {
                 if (en.getValue() > now) return false;
+                if (en.getKey() == CENTER_ID) { center(l, true); return true; }
                 for (Rock k : ROCKS) if (k.id == en.getKey()) { rock(l, k, true); l.sendParticles(ParticleTypes.END_ROD, k.c.getX() + 0.5, k.c.getY(), k.c.getZ() + 0.5, 20, k.r, 0.5, k.r, 0.02); }
                 return true;
             });

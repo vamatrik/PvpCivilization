@@ -95,7 +95,7 @@ public class LianaBoss extends CivBoss {
                 if (grabbed(v)) return;
                 v.hurt(damageSources().mobAttack(this), dmg() * 0.8f);
                 v.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 50, 6, false, false));
-                v.addEffect(new MobEffectInstance(MobEffects.JUMP, 50, 128, false, false));
+                com.pvpciv.combat.CombatEvents.noJump(v, 50);
                 v.displayClientMessage(Component.literal("Корни держат!").withStyle(ChatFormatting.GREEN), true);
             });
         }
@@ -190,5 +190,16 @@ public class LianaBoss extends CivBoss {
         // своё не ранит; проглоченный бьёт изнутри вдвое сильнее
         if (src.getEntity() instanceof ServerPlayer p && grabbed(p)) amount *= 2;
         return super.hurt(src, amount);
+    }
+
+    /** 1.1.2: плюётся шипами в каждого, кто далеко (вблизи — хлещет). */
+    @Override
+    protected void pressure(ServerLevel lvl) {
+        if (castTicks > 0 || chewing() || tickCount % (enraged ? 24 : 34) != 0) return;
+        for (ServerPlayer p : victims(lvl, 24)) if (p.distanceTo(this) > 5) {
+            var s = bolt(lvl, muzzle(), p, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SWEET_BERRIES), dmg() * 0.3f, 1.0f, 3f);
+            s.trail = net.minecraft.core.particles.ParticleTypes.SPORE_BLOSSOM_AIR;
+        }
+        lvl.playSound(null, blockPosition(), SoundEvents.LLAMA_SPIT, SoundSource.HOSTILE, 1.3f, 0.7f);
     }
 }

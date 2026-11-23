@@ -114,6 +114,7 @@ public final class AdminKit {
         StoryData d = Progress.d(p);
         d.trophies = 127; d.showcase = 127;
         d.level = Progress.levelCap(d); d.xp = 0;
+        d.homeGate = 4;
         d.gates.putInt("ench_q", 4);
         d.gates.putInt("stella_q", 1);
         p.setData(ModRegistry.STORY.get(), d);
@@ -151,6 +152,9 @@ public final class AdminKit {
         d.gates.putInt("luna5_met", 1);
         d.gates.putInt("belt_seen", 1);
         d.gates.putInt("ritual_open", 1);
+        d.homeGate = 5;   // 1.1.1: главные врата — до этажа 5
+        d.showcase |= 128 | 256 | 512;
+        for (Gates.Gate g : Gates.ALL) d.gates.putInt(g.id(), 2);
         com.pvpciv.game.Classes.addMatter(d, 9);
         p.setData(ModRegistry.STORY.get(), d);
         put(p, EquipmentSlot.HEAD, com.pvpciv.registry.ModF5.ORBIT_HELMET.get());
@@ -165,6 +169,7 @@ public final class AdminKit {
         Bag.give(p, new ItemStack(com.pvpciv.registry.ModF5.CMP_LAZURATRON.get(), 32));
         Bag.give(p, new ItemStack(com.pvpciv.registry.ModF5.DARK_STAR.get(), 3));
         Bag.give(p, new ItemStack(com.pvpciv.registry.ModF5.HELL_TRAIL.get(), 1));
+        com.pvpciv.game.LiftShaft.ensureOpen(p.server);   // 1.1.1: лифт станции — с шахтой и кабиной
         Progress.applyStats(p);
         p.setHealth(p.getMaxHealth());
         Story.sync(p);

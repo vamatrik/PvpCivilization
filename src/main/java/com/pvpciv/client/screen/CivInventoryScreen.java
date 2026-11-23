@@ -25,6 +25,66 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
 
     public CivInventoryScreen(CivInventoryMenu m, Inventory inv, Component t) { super(m, inv, "Инвентарь", 278, 206); }
 
+    // ------------------------------------------------------------------ 1.1.1: поиск по сумке
+    private net.minecraft.client.gui.components.EditBox search;
+    private String query = "";
+
+    @Override
+    protected void init() {
+        super.init();
+        search = new net.minecraft.client.gui.components.EditBox(font, leftPos + 184, topPos + 41, 80, 11, Component.literal("Поиск"));
+        search.setBordered(true);
+        search.setMaxLength(24);
+        search.setHint(Component.literal("поиск…").withStyle(ChatFormatting.DARK_GRAY));
+        search.setValue(query);
+        search.setResponder(v -> { query = v.trim().toLowerCase(java.util.Locale.ROOT); refreshSearch(); });
+        addRenderableWidget(search);
+        search.visible = menu.tab() == CivInventoryMenu.TAB_BAG;
+    }
+
+    private void refreshSearch() {
+        if (query.isEmpty() && filter < 0) {
+            menu.setFilter(null);
+            net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd("bagmap:"));
+            return;
+        }
+        net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd("bagls"));
+    }
+
+    /** Ответ сервера: содержимое сумки → индексы под запрос и фильтр. */
+    public void onBagList(com.google.gson.JsonObject j) {
+        if (query.isEmpty() && filter < 0) return;
+        StringBuilder sb = new StringBuilder();
+        java.util.List<Integer> idx = new java.util.ArrayList<>();
+        for (var e : j.getAsJsonArray("it")) {
+            var a = e.getAsJsonArray();
+            var it = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a.get(1).getAsString()));
+            var st = new net.minecraft.world.item.ItemStack(it);
+            if (filter >= 0 && Categories.of(st) != filter) continue;
+            if (!query.isEmpty() && !st.getHoverName().getString().toLowerCase(java.util.Locale.ROOT).contains(query)) continue;
+            idx.add(a.get(0).getAsInt());
+        }
+        for (int i : idx) sb.append(sb.length() > 0 ? "," : "").append(i);
+        menu.setFilter(idx.stream().mapToInt(Integer::intValue).toArray());
+        net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd("bagmap:" + (idx.isEmpty() ? "-1" : sb)));
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int b) {
+        boolean r = super.mouseReleased(mx, my, b);
+        if (menu.filterMap != null) refreshSearch();   // предмет переложили — выдача поиска обновится
+        return r;
+    }
+
+    @Override
+    public boolean keyPressed(int key, int sc, int mods) {
+        if (search != null && search.isFocused()) {
+            if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) { search.setFocused(false); return true; }
+            return search.keyPressed(key, sc, mods) || true;   // не закрывать инвентарь буквой E и не жать хоткеи
+        }
+        return super.keyPressed(key, sc, mods);
+    }
+
     @Override
     protected String hintFor(Slot s) {
         int i = menu.slots.indexOf(s) - menu.armorStart;
@@ -34,6 +94,7 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
     @Override
     protected void drawContent(GuiGraphics g, int mx, int my, float pt) {
         int x = leftPos, y = topPos;
+        if (search != null) search.visible = menu.tab() == CivInventoryMenu.TAB_BAG;
         for (int i = 0; i < 3; i++) Skin.tab(g, font, x + 12 + i * 60, y + 18, 58, TABS[i], menu.tab() == i, mx, my);
         g.fill(x + 10, y + 32, x + imageWidth - 10, y + 33, Skin.GOLD_D);
         drawMoney(g, x + imageWidth - 14, y + 21);
@@ -47,14 +108,14 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
 
     private void bagTab(GuiGraphics g, int x, int y, int mx, int my) {
         Skin.inset(g, x + 180, y + 38, 88, 126);
-        g.drawString(font, "Фильтр", x + 186, y + 43, Skin.GOLD_L, false);
+        if (menu.filterMap != null) g.drawString(font, "найдено: " + menu.filterMap.length, x + 182, y + 184, Skin.GOLD_L, false);
         String[] f = {"Всё", Categories.NAMES[0], Categories.NAMES[1], Categories.NAMES[2], Categories.NAMES[3], Categories.NAMES[4]};
         for (int i = 0; i < f.length; i++) Skin.row(g, font, x + 183, y + 55 + i * 13, 82, f[i], filter == i - 1, mx, my);
         Skin.button(g, font, x + 184, y + 144, 80, "Сортировать", mx, my, true, false);
         g.drawString(font, "Слоты " + menu.unlockedSlots() + (menu.maxScroll() > 0 ? " · колесо ↕" : ""), x + 182, y + 170, Skin.DIM, false);
         int next = 0;
         for (int m : Bag.LEVEL_MILESTONES) if (ClientState.level < m) { next = m; break; }
-        if (next > 0) g.drawString(font, "+9 на ур. " + next, x + 182, y + 184, Skin.FAINT, false);
+        if (next > 0 && menu.filterMap == null) g.drawString(font, "+9 на ур. " + next, x + 182, y + 184, Skin.FAINT, false);
     }
 
     private void equipTab(GuiGraphics g, int x, int y, int mx, int my) {
@@ -129,7 +190,7 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
 
     @Override
     protected void drawOverlay(GuiGraphics g, int mx, int my) {
-        if (menu.tab() != CivInventoryMenu.TAB_BAG || filter < 0) return;
+        if (menu.tab() != CivInventoryMenu.TAB_BAG || filter < 0 || menu.filterMap != null) return;
         for (Slot s : menu.slots) {
             if (!(s instanceof BagSlot) || !s.isActive() || !s.hasItem()) continue;
             if (Categories.of(s.getItem()) != filter) g.fill(leftPos + s.x, topPos + s.y, leftPos + s.x + 16, topPos + s.y + 16, 0xD00B0911);
@@ -152,8 +213,10 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
     public boolean mouseClicked(double mx, double my, int b) {
         for (int i = 0; i < 3; i++) if (in(mx, my, 12 + i * 60, 18, 58, 14)) { click(i); return true; }
         if (menu.tab() == CivInventoryMenu.TAB_BAG) {
-            for (int i = 0; i < 6; i++) if (in(mx, my, 183, 55 + i * 13, 82, 13)) { filter = i - 1; return true; }
-            if (in(mx, my, 184, 144, 80, 16)) { click(CivInventoryMenu.BTN_SORT); return true; }
+            for (int i = 0; i < 6; i++) if (in(mx, my, 183, 55 + i * 13, 82, 13)) { filter = i - 1; refreshSearch(); return true; }
+            if (search != null && in(mx, my, 184, 41, 80, 11)) { search.setFocused(true); setFocused(search); return search.mouseClicked(mx, my, b) || true; }
+            if (search != null) search.setFocused(false);
+            if (in(mx, my, 184, 144, 80, 16)) { click(CivInventoryMenu.BTN_SORT); if (menu.filterMap != null) refreshSearch(); return true; }
         }
         if (menu.tab() == CivInventoryMenu.TAB_STATS) {
             if (in(mx, my, 142, 53, 126, 64)) { minecraft.setScreen(new SkillsScreen()); return true; }   // 0.10.5: меню навыков

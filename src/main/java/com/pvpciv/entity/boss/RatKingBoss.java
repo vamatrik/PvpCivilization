@@ -53,7 +53,7 @@ public class RatKingBoss extends CivBoss {
         else if (roll < (enraged ? 5 : 4)) burrow(lvl, target);
         else if (roll < 7) puddles(lvl);
         else summon(lvl, enraged ? 4 : 3);
-        cooldown = enraged ? 50 + random.nextInt(25) : 80 + random.nextInt(30);
+        cooldown = enraged ? 40 + random.nextInt(20) : 60 + random.nextInt(25);   // 1.1.2: чаще
     }
 
     private void summon(ServerLevel lvl, int n) {
@@ -125,5 +125,17 @@ public class RatKingBoss extends CivBoss {
         cooldown = 40;
         for (ServerPlayer p : victims(lvl, 40))
             p.sendSystemMessage(Component.literal("☠ «ПИ-И-И!» Крысиный король напрягает пресс и зовёт всю стаю!").withStyle(ChatFormatting.DARK_PURPLE));
+    }
+
+    /** 1.1.2: плевки нечистотами в каждого (травят). */
+    @Override
+    protected void pressure(ServerLevel lvl) {
+        if (castTicks > 0 || tickCount % (enraged ? 20 : 30) != 0) return;
+        for (ServerPlayer p : victims(lvl, 22)) {
+            var s = bolt(lvl, muzzle(), p, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SLIME_BALL), dmg() * 0.3f, 0.95f, 4f);
+            s.trail = net.minecraft.core.particles.ParticleTypes.ITEM_SLIME;
+            s.onHit = pp -> pp.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON, 50, 0));
+        }
+        lvl.playSound(null, blockPosition(), SoundEvents.SLIME_SQUISH, SoundSource.HOSTILE, 1.4f, 0.6f);
     }
 }

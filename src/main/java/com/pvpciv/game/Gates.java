@@ -100,7 +100,14 @@ public final class Gates {
             new Gate("g_ark", "«Ковчег»", "Западный купол. Арена доктора Ноэля.", 4, "neon",
                     () -> com.pvpciv.floor.Floor4.ARK.offset(24, 0, 0), 260, new Cost(() -> com.pvpciv.registry.ModF4.PLASMA_CELL.get(), 1), new Cost(() -> com.pvpciv.registry.ModF4.LAZURATRON.get(), 10)),
             new Gate("g_cosmo", "Космодром", "Площадка с ракетой «Заря-5». Ракета сломана… пока.", 4, "neon",
-                    () -> com.pvpciv.floor.Floor4.COSMO.offset(-8, 0, -24), 200, new Cost(() -> com.pvpciv.registry.ModF4.NANO_SCRAP.get(), 8), new Cost(() -> com.pvpciv.registry.ModF4.CRYO_SHARD.get(), 6))
+                    () -> com.pvpciv.floor.Floor4.COSMO.offset(-8, 0, -24), 200, new Cost(() -> com.pvpciv.registry.ModF4.NANO_SCRAP.get(), 8), new Cost(() -> com.pvpciv.registry.ModF4.CRYO_SHARD.get(), 6)),
+            // 1.1.1: этаж 5 — станция «Орбита»
+            new Gate("g_atrium", "Атриум «Орбиты»", "Сердце станции: лифт, Луна, ритуальный зал.", 5, "neon",
+                    () -> com.pvpciv.floor.Floor5.HUB.center().offset(-10, 0, -4), 300, new Cost(() -> com.pvpciv.registry.ModF5.CIRCUIT.get(), 6)),
+            new Gate("g_hangar", "Ангар", "Ракета «Заря-5» и шлюз на пояс астероидов.", 5, "neon",
+                    () -> com.pvpciv.floor.Floor5.HANGAR_M.center().offset(-9, 0, 4), 400, new Cost(() -> com.pvpciv.registry.ModF5.CIRCUIT.get(), 8), new Cost(() -> com.pvpciv.registry.ModF5.VOID_SHARD.get(), 6)),
+            new Gate("g_bridge", "У мостика", "Командный мостик. Там ждёт Инопланетный дипломат.", 5, "ash",
+                    () -> com.pvpciv.floor.Floor5.BRIDGE_M.center().offset(-13, 0, -13), 500, new Cost(() -> com.pvpciv.registry.ModF5.VOID_SHARD.get(), 10), new Cost(() -> com.pvpciv.registry.ModF5.STAR_ALLOY.get(), 6))
     );
 
     public static Gate byId(String id) { for (Gate g : ALL) if (g.id.equals(id)) return g; return null; }
@@ -115,10 +122,11 @@ public final class Gates {
     /** Уровень домашних врат: 1 — только этаж 1; +1 этаж за улучшение. */
     public static int home(StoryData d) { return Math.max(1, d.homeGate); }
 
-    public static final int[] HOME_UP_MONEY = {0, 0, 800, 2000, 4500};
+    public static final int[] HOME_UP_MONEY = {0, 0, 800, 2000, 4500, 9000};
     public static final Cost[][] HOME_UP = {{}, {}, {new Cost(() -> ModRegistry.NEON_TUBE.get(), 6), new Cost(() -> ModRegistry.GOLD_CHAIN.get(), 3), new Cost(() -> ModRegistry.RUBBER_SCRAP.get(), 3)},
             {new Cost(() -> ModRegistry.SILK_SCRAP.get(), 8), new Cost(() -> ModRegistry.FOX_FUR.get(), 8), new Cost(() -> ModRegistry.JADE_SEAL.get(), 1)},
-            {new Cost(() -> com.pvpciv.registry.ModF4.NANO_SCRAP.get(), 12), new Cost(() -> com.pvpciv.registry.ModF4.LAZURATRON.get(), 12), new Cost(() -> com.pvpciv.registry.ModF4.QUANTUM_CHIP.get(), 1)}};   // 0.11.1: ур.4   // бета 0.9.8: ур.3 — ресурсами этажа 3
+            {new Cost(() -> com.pvpciv.registry.ModF4.NANO_SCRAP.get(), 12), new Cost(() -> com.pvpciv.registry.ModF4.LAZURATRON.get(), 12), new Cost(() -> com.pvpciv.registry.ModF4.QUANTUM_CHIP.get(), 1)},
+            {new Cost(() -> com.pvpciv.registry.ModF5.STAR_ALLOY.get(), 12), new Cost(() -> com.pvpciv.registry.ModF5.CIRCUIT.get(), 16), new Cost(() -> com.pvpciv.registry.ModF5.ASTRO_CORE.get(), 1)}};   // 1.1.1: ур.5   // 0.11.1: ур.4   // бета 0.9.8: ур.3 — ресурсами этажа 3
 
     // ------------------------------------------------------------------ мир
     private static ServerLevel lvl(MinecraftServer s, int floor) { return CivWorld.byFloor(s, floor); }
@@ -307,6 +315,7 @@ public final class Gates {
         j.addProperty("lift", d.liftOk);
         j.addProperty("lift3", SkyLift.f3Ok(d));
         j.addProperty("lift4", SkyLift.f4Ok(d));
+        j.addProperty("lift5", SkyLift.f5Ok(d));
         j.addProperty("money", d.money);
         j.addProperty("cd", Math.max(0, (CD.getOrDefault(p.getUUID(), 0L) - System.currentTimeMillis()) / 1000));
         com.google.gson.JsonObject st = new com.google.gson.JsonObject();
@@ -318,7 +327,7 @@ public final class Gates {
     /** Список починенных — клиенту для анимации врат. */
     public static void sync(ServerPlayer p) {
         StoryData d = Progress.d(p);
-        for (int f = 1; f <= 4; f++) {   // 0.10.2: титул за все врата этажа — и тем, кто починил раньше
+        for (int f = 1; f <= 5; f++) {   // 0.10.2: титул за все врата этажа — и тем, кто починил раньше
             boolean all = true, any = false;
             for (Gate o : ALL) if (o.floor == f) { any = true; if (!fixed(d, o.id)) { all = false; break; } }
             if (any && all && !d.titles.contains("gates_" + f)) com.pvpciv.progress.Titles.grant(p, "gates_" + f);
@@ -339,7 +348,7 @@ public final class Gates {
         if (!to.equals("home")) {
             Gate g = byId(to);
             if (g == null || !fixed(d, to)) { msg(p, "Эти врата ещё не починены.", ChatFormatting.RED); return; }
-            if (from.equals("home") ? g.floor > home(d) || (g.floor == 2 && !d.liftOk) || (g.floor == 3 && !SkyLift.f3Ok(d)) || (g.floor == 4 && !SkyLift.f4Ok(d)) : byId(from) == null || byId(from).floor != g.floor) {
+            if (from.equals("home") ? g.floor > home(d) || (g.floor == 2 && !d.liftOk) || (g.floor == 3 && !SkyLift.f3Ok(d)) || (g.floor == 4 && !SkyLift.f4Ok(d)) || (g.floor == 5 && !SkyLift.f5Ok(d)) : byId(from) == null || byId(from).floor != g.floor) {
                 msg(p, from.equals("home") ? "Врата общежития пока не достают до этого этажа — улучши их." : "С этих врат — только по своему этажу и домой.", ChatFormatting.RED);
                 return;
             }
@@ -386,6 +395,8 @@ public final class Gates {
         int next = home(d) + 1;
         if (next >= HOME_UP.length) { msg(p, "Дальше этажей пока нет.", ChatFormatting.GRAY); return; }
         if (next == 2 && !d.liftOk) { msg(p, "Сначала открой этаж 2 (лифт и Луна).", ChatFormatting.RED); return; }
+        if (next == 4 && !SkyLift.f4Ok(d)) { msg(p, "Сначала открой этаж 4: победи Каппу и Кумихо.", ChatFormatting.RED); return; }
+        if (next == 5 && !SkyLift.f5Ok(d)) { msg(p, "Сначала почини лифт станции (адский след).", ChatFormatting.RED); return; }
         if (next == 3 && !SkyLift.f3Ok(d)) { msg(p, "Сначала открой этаж 3: победи Дона и Крысиного короля.", ChatFormatting.RED); return; }
         for (Cost c : HOME_UP[next]) if (Bag.count(p, s -> s.is(c.item.get())) < c.n) { msg(p, "Не хватает: " + com.pvpciv.util.Ru.name(c.item.get()) + " ×" + c.n + ".", ChatFormatting.RED); return; }
         if (d.money < HOME_UP_MONEY[next]) { msg(p, "Не хватает Искр: " + HOME_UP_MONEY[next] + " ✦.", ChatFormatting.RED); return; }

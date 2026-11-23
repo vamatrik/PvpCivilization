@@ -16,6 +16,10 @@ public class GateScreen extends PlainScreen {
     private final JsonObject d;
     private final String from;
     private int floor, sel = -1;
+    /** 1.1.1: этажи — выпадающим списком (вкладки не помещались рядом с «В общежитие»). */
+    private boolean drop;
+    private static final int FLOORS = 5, DX = 52, DW = 112;
+    private static final String[] FNAME = {"Нижний Шпиль", "Неоновый город", "Тихая библиотека", "НТЦ «NaZa»", "Станция «Орбита»"};
     private final Scroll ls = new Scroll();
 
     public GateScreen(JsonObject d) {
@@ -30,18 +34,13 @@ public class GateScreen extends PlainScreen {
     private boolean home() { return from.equals("home"); }
     private int homeLvl() { return d.get("home").getAsInt(); }
     private List<Gates.Gate> list() { return Gates.ALL.stream().filter(g -> g.floor() == floor).toList(); }
-    private boolean floorOpen(int f) { return home() ? f <= homeLvl() && (f == 1 || d.get("lift").getAsBoolean()) && (f < 3 || (d.has("lift3") && d.get("lift3").getAsBoolean())) && (f < 4 || (d.has("lift4") && d.get("lift4").getAsBoolean())) : Gates.byId(from) != null && Gates.byId(from).floor() == f; }
+    private boolean floorOpen(int f) { return home() ? f <= homeLvl() && (f == 1 || d.get("lift").getAsBoolean()) && (f < 3 || (d.has("lift3") && d.get("lift3").getAsBoolean())) && (f < 4 || (d.has("lift4") && d.get("lift4").getAsBoolean())) && (f < 5 || (d.has("lift5") && d.get("lift5").getAsBoolean())) : Gates.byId(from) != null && Gates.byId(from).floor() == f; }
 
     @Override
     protected void drawContent(GuiGraphics g, int mx, int my, float pt) {
-        // вкладки: мир → этажи
-        g.drawString(font, "Мир 1", left + 14, top + 20, Skin.GOLD_L, false);
-        for (int f = 1; f <= 4; f++) {
-            int tx = left + 52 + (f - 1) * 64;
-            boolean on = floor == f, ok = floorOpen(f);
-            Skin.tab(g, font, tx, top + 17, 60, "Этаж " + f, on, mx, my);
-            if (!ok) Skin.icon(g, "lock", tx + 48, top + 20);
-        }
+        // этаж: выпадающий список
+        g.drawString(font, "Мир 1", left + 14, top + 21, Skin.GOLD_L, false);
+        Skin.button(g, font, left + DX, top + 17, DW, "Этаж " + floor + (drop ? "  ▴" : "  ▾"), mx, my, true, false);
         // список
         List<Gates.Gate> l = list();
         int lx = left + 12, ly = top + 36, lw = 150, lh = 172;
@@ -72,7 +71,7 @@ public class GateScreen extends PlainScreen {
                     g.drawString(font, "Улучшить до этажа " + next + ":", cx + 6, ly + 80, Skin.DIM, false);
                     Skin.para(g, font, Gates.costText(Gates.HOME_UP[next], Gates.HOME_UP_MONEY[next]), cx + 6, ly + 92, cw - 12, 10, 4, Skin.TEXT, false);
                     Skin.button(g, font, cx + 6, ly + lh - 22, cw - 12, "Улучшить", mx, my, true, true);
-                } else g.drawString(font, "Новые этажи — в следующих обновлениях.", cx + 6, ly + 80, Skin.FAINT, false);
+                } else Skin.para(g, font, "Новые этажи — в следующих обновлениях.", cx + 6, ly + 80, cw - 12, 10, 2, Skin.FAINT, false);
             } else Skin.para(g, font, "Выбери врата слева. Починенные — переносят бесплатно, сломанные чинятся ресурсами своей локации прямо у врат.", cx + 6, ly + 8, cw - 12, 10, 6, Skin.DIM, false);
         } else {
             Gates.Gate gt = l.get(sel);
@@ -90,6 +89,21 @@ public class GateScreen extends PlainScreen {
             Skin.button(g, font, cx + 6, ly + lh - 22, cw - 12, b, mx, my, can && cd <= 0, true);
         }
         if (!home()) Skin.button(g, font, left + 248, top + 17, 100, "В общежитие", mx, my, d.get("cd").getAsInt() <= 0, false);
+        if (drop) {
+            int x = left + DX, y = top + 34, ww = DW + 60;
+            g.pose().pushPose(); g.pose().translate(0, 0, 300);
+            g.fill(x - 1, y - 1, x + ww + 1, y + FLOORS * 16 + 1, 0xFF6A5A3A);
+            g.fill(x, y, x + ww, y + FLOORS * 16, 0xF0120E1A);
+            for (int f = 1; f <= FLOORS; f++) {
+                int ry = y + (f - 1) * 16;
+                boolean hv = mx >= x && mx < x + ww && my >= ry && my < ry + 16, ok = floorOpen(f);
+                if (hv) g.fill(x, ry, x + ww, ry + 16, 0x30FFFFFF);
+                if (f == floor) g.fill(x, ry, x + 2, ry + 16, Skin.GOLD);
+                g.drawString(font, "Этаж " + f + " · " + FNAME[f - 1], x + 6, ry + 4, ok ? (f == floor ? Skin.GOLD_L : Skin.TEXT) : Skin.FAINT, false);
+                if (!ok) Skin.icon(g, "lock", x + ww - 14, ry + 3);
+            }
+            g.pose().popPose();
+        }
     }
 
     @Override
@@ -97,7 +111,12 @@ public class GateScreen extends PlainScreen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int b) {
-        for (int f = 1; f <= 4; f++) if (in(mx, my, 52 + (f - 1) * 64, 17, 60, 14)) { floor = f; sel = -1; ls.off = 0; return true; }
+        if (drop) {
+            for (int f = 1; f <= FLOORS; f++) if (in(mx, my, DX, 34 + (f - 1) * 16, DW + 60, 16)) { floor = f; sel = -1; ls.off = 0; drop = false; return true; }
+            drop = false;
+            return true;
+        }
+        if (in(mx, my, DX, 17, DW, 16)) { drop = true; return true; }
         if (!home() && in(mx, my, 248, 17, 100, 16)) { cmd("gate:" + from + ":home"); onClose(); return true; }
         List<Gates.Gate> l = list();
         if (my >= top + 36 && my < top + 208)

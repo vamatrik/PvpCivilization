@@ -42,7 +42,7 @@ public class KumihoBoss extends CivBoss {
         else if (r < 7) blink(lvl, target, enraged);
         else if (r < 9) charm(lvl);
         else court(lvl);
-        cooldown = enraged ? 45 + random.nextInt(20) : 70 + random.nextInt(30);
+        cooldown = enraged ? 38 + random.nextInt(15) : 55 + random.nextInt(25);   // 1.1.2: чаще
     }
 
     private void foxfire(ServerLevel lvl) {
@@ -99,5 +99,13 @@ public class KumihoBoss extends CivBoss {
         FxEntity.spawn(lvl, FxEntity.PILLAR, position(), 1.6f, 40, 0x5A9AFF, 0xFF70C0);
         for (ServerPlayer p : victims(lvl, 40))
             p.sendSystemMessage(Component.literal("☠ Девять хвостов Кумихо вспыхивают лисьим огнём!").withStyle(ChatFormatting.LIGHT_PURPLE));
+    }
+
+    /** 1.1.2: лисьи огоньки веером в каждого. */
+    @Override
+    protected void pressure(ServerLevel lvl) {
+        if (castTicks > 0 || tickCount % (enraged ? 16 : 24) != 0) return;
+        for (ServerPlayer p : victims(lvl, 22)) fan(lvl, muzzle(), p, enraged ? 5 : 3, 14, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.HEART_OF_THE_SEA), dmg() * 0.3f, 1.0f);
+        lvl.playSound(null, blockPosition(), SoundEvents.FOX_SCREECH, SoundSource.HOSTILE, 1.2f, 1.3f);
     }
 }

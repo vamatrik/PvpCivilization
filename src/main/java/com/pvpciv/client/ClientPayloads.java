@@ -85,6 +85,7 @@ public final class ClientPayloads {
             case 7 -> mc.setScreen(new com.pvpciv.client.screen.GateScreen(j));
             case 9 -> mc.setScreen(new com.pvpciv.client.screen.AlmanacScreen(j));
             case 22 -> Cutscene.start(j);
+            case 27 -> { if (mc.screen instanceof com.pvpciv.client.screen.CivInventoryScreen s) s.onBagList(j); }   // 1.1.1: поиск в сумке
             case 26 -> mc.setScreen(new com.pvpciv.client.screen.NotesScreen(j));   // 1.1: заметки   // 0.12: кат-сцены
             case 21 -> {   // 0.11.2: только гнёзда модулей (без открытия экрана)
                 var a = j.getAsJsonArray("mods");

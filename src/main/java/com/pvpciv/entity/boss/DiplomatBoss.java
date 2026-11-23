@@ -78,7 +78,7 @@ public class DiplomatBoss extends CivBoss {
         else if (r < 4) papers(lvl, t);
         else if (r < 7) contract(lvl, t);
         else audit(lvl, t);
-        cooldown = (enraged ? 45 : 65) + random.nextInt(20);
+        cooldown = (enraged ? 35 : 50) + random.nextInt(18);   // 1.1.2: чаще
         if (random.nextInt(3) == 0) for (ServerPlayer p : victims(lvl, 30))
             p.sendSystemMessage(Component.literal("✉ Дипломат: " + DEALS[random.nextInt(DEALS.length)]).withStyle(ChatFormatting.AQUA));
     }
@@ -135,7 +135,7 @@ public class DiplomatBoss extends CivBoss {
     /** Контракт долетел: обездвиживает и берёт искры. */
     void signed(ServerPlayer p) {
         p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 60, 10, false, true));
-        p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.JUMP, 60, 128, false, false));
+        com.pvpciv.combat.CombatEvents.noJump(p, 60);
         tax(p, 0.05, 1500, "Контракт подписан");
         p.connection.send(new net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket(Component.literal("ПОДПИСАНО").withStyle(ChatFormatting.RED, ChatFormatting.BOLD)));
     }
@@ -221,4 +221,14 @@ public class DiplomatBoss extends CivBoss {
 
     @SuppressWarnings("unused") private static final Vector3f R2 = RED;
     @SuppressWarnings("unused") private static final Vector3f P2 = PAPER;
+
+    /** 1.1.2: «служебные записки» — быстрые документы в каждого между умениями; в ярости — лучи-сканеры. */
+    @Override
+    protected void pressure(ServerLevel lvl) {
+        if (castTicks > 0) return;
+        if (tickCount % (enraged ? 18 : 26) == 0)
+            for (ServerPlayer p : victims(lvl, 24)) bolt(lvl, muzzle(), p, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.PAPER), dmg() * 0.28f, 1.3f, 3f);
+        if (enraged && tickCount % 90 == 45)
+            for (ServerPlayer p : victims(lvl, 24)) beam(lvl, muzzle(), p.position().add(0, 1, 0), 20, 1.0, 10, dmg() * 0.9f, new org.joml.Vector3f(0.4f, 1f, 0.6f), null);
+    }
 }

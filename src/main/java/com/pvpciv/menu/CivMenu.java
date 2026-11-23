@@ -23,6 +23,8 @@ public abstract class CivMenu extends AbstractContainerMenu {
     /** прокрутка сумки в строках (клиент и сервер синхронны через кнопку SCROLL_BTN+row) */
     public int scroll;
     public static final int SCROLL_BTN = 900;
+    /** 1.1.1: поиск/фильтр — показываем только эти индексы сумки (null — вся сумка). */
+    public int[] filterMap;
 
     protected CivMenu(MenuType<?> type, int id, Inventory inv) {
         super(type, id);
@@ -37,13 +39,21 @@ public abstract class CivMenu extends AbstractContainerMenu {
     protected void addBag(int x, int y, BooleanSupplier visible) {
         bagStart = slots.size();
         bagX = x; bagY = y;
-        var view = new com.pvpciv.inv.BagView(bag, () -> scroll * 9);
+        var view = new com.pvpciv.inv.BagView(bag, () -> scroll * 9, () -> filterMap);
         for (int i = 0; i < Bag.VIEW; i++)
             addSlot(new BagSlot(view, i, x + (i % 9) * 18, y + (i / 9) * 18, unlocked::get, () -> scroll * 9, visible));
     }
 
     /** всего строк, доступных к прокрутке (открытые + одна закрытая «на вырост») */
-    public int bagRows() { return Math.min(Bag.MAX / 9, (unlocked.get() + 8) / 9 + 1); }
+    public int bagRows() { return filterMap != null ? Math.max(1, (filterMap.length + 8) / 9) : Math.min(Bag.MAX / 9, (unlocked.get() + 8) / 9 + 1); }
+
+    /** Выдача поиска (обе стороны): null — снять. */
+    public void setFilter(int[] map) {
+        if (map != null) { int n = unlocked.get(); map = java.util.Arrays.stream(map).filter(i -> i >= 0 && i < n && i < bag.getSlots()).toArray(); }
+        filterMap = map;
+        scroll = 0;
+        if (!player.level().isClientSide) broadcastChanges();
+    }
     public int maxScroll() { return Math.max(0, bagRows() - Bag.VIEW / 9); }
 
     /** обработка кнопки прокрутки; вызывать первой строкой clickMenuButton подклассов */

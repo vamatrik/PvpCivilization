@@ -46,7 +46,7 @@ public class DonBoss extends CivBoss {
         if (enraged && roll < 3) spray(lvl);
         else if (roll < 6) burst(lvl, target);
         else grenades(lvl);
-        cooldown = enraged ? 55 + random.nextInt(25) : 85 + random.nextInt(30);
+        cooldown = enraged ? 45 + random.nextInt(20) : 65 + random.nextInt(25);   // 1.1.2: чаще
     }
 
     private void line(ServerLevel lvl, double yaw, int delay, float dmgK) {
@@ -113,5 +113,19 @@ public class DonBoss extends CivBoss {
         cooldown = 40;
         for (ServerPlayer p : victims(lvl, 40))
             p.sendSystemMessage(Component.literal("☠ «Ну всё. Ребята — работаем.» Дон зовёт всю бригаду и достаёт второй магазин.").withStyle(ChatFormatting.GOLD));
+    }
+
+    /** 1.1.2: пистолет — двойной выстрел в каждого между умениями. */
+    @Override
+    protected void pressure(ServerLevel lvl) {
+        if (castTicks > 0 || tickCount % (enraged ? 16 : 24) != 0) return;
+        for (int k = 0; k < 2; k++) later(k * 4, () -> {
+            if (!isAlive()) return;
+            for (ServerPlayer p : victims(lvl, 24)) {
+                var s = bolt(lvl, muzzle(), p, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLD_NUGGET), dmg() * 0.3f, 1.7f, 3f);
+                s.trail = net.minecraft.core.particles.ParticleTypes.SMOKE;
+            }
+            lvl.playSound(null, blockPosition(), SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.HOSTILE, 1.2f, 1.4f);
+        });
     }
 }
