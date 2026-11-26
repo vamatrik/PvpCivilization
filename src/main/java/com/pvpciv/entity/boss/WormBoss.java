@@ -438,7 +438,8 @@ public class WormBoss extends CivBoss {
         if (t % 2 == 0) lvl.sendParticles(ParticleTypes.SONIC_BOOM, getX(), getY() + 1, getZ(), 1, 0, 0, 0, 0);
         int lvlM = com.pvpciv.combat.Mobs.level(this);
         for (ServerPlayer p : victims(lvl, 6)) {
-            if (p.distanceTo(this) > 3.2 || !dashHit.add(p.getUUID())) continue;
+            // 1.5.2: зона удара = красная линия (2.0) + полтела игрока; было 3.2 — убивало рядом с линией
+            if (Math.hypot(p.getX() - getX(), p.getZ() - getZ()) > 2.3 || Math.abs(p.getY() - getY()) > 3 || !dashHit.add(p.getUUID())) continue;
             boolean over = Progress.d(p).level >= lvlM + 3;
             p.invulnerableTime = 0;
             p.hurt(damageSources().mobAttack(this), p.getMaxHealth() * (over ? 0.45f : 5f));
@@ -468,7 +469,18 @@ public class WormBoss extends CivBoss {
     }
 
     // ------------------------------------------------------------------ тело
+    /** Сегменты, которые голова ведёт сейчас (остальные с её UUID — лишние). */
+    public boolean owns(UUID seg) { return segs.contains(seg); }
+
     private void spawnSegments(ServerLevel lvl) {
+        // 1.5.2: после выгрузки/загрузки чанка список сегментов пуст, а старое тело осталось в мире —
+        // раньше голова спавнила новое тело, и старое лежало «вторым червём». Теперь подбираем своё.
+        List<WormSegment> mine = lvl.getEntitiesOfClass(WormSegment.class, getBoundingBox().inflate(120), w -> getUUID().equals(w.head));
+        mine.sort(Comparator.comparingInt(w -> w.index));
+        boolean full = mine.size() == SEGMENTS;
+        for (int i = 0; full && i < SEGMENTS; i++) if (mine.get(i).index != i) full = false;
+        if (full) { for (WormSegment w : mine) segs.add(w.getUUID()); return; }
+        for (WormSegment w : mine) w.discard();
         for (int i = 0; i < SEGMENTS; i++) {
             WormSegment s = com.pvpciv.registry.ModMobs.WORM_SEG.get().create(lvl);
             if (s == null) return;

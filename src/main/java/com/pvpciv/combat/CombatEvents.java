@@ -42,6 +42,7 @@ public final class CombatEvents {
         // 0.10.3: удар основной рукой — шлейф взмаха для остальных игроков
         bus.addListener((net.neoforged.neoforge.event.entity.player.AttackEntityEvent e) -> {
             if (e.getEntity() instanceof ServerPlayer sp && sp.getMainHandItem().getItem() instanceof com.pvpciv.item.CivWeaponItem) {
+                if (DMGLOG) System.out.printf("ATKLOG t=%d s=%.2f aspd=%.2f%n", sp.serverLevel().getGameTime(), sp.getAttackStrengthScale(0.5f), sp.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED));
                 // 1.1.1: незаряженный удар основной рукой (закликивание, рассинхрон) — не проходит и на сервере
                 if (sp.getAttackStrengthScale(0.5f) < 0.8f && !sp.isCreative()) { e.setCanceled(true); return; }
                 Melee.noteCharge(sp, sp.getAttackStrengthScale(0.5f));   // 0.10.8: заряд этого удара — для полного урона

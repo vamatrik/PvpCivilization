@@ -204,6 +204,7 @@ public final class Network {
         r.playToClient(PhoneData.TYPE, PhoneData.CODEC, (p, ctx) -> com.pvpciv.client.ClientPayloads.phone(p));
         r.playToServer(PhoneCmd.TYPE, PhoneCmd.CODEC, (p, ctx) -> {
             if (ctx.player() instanceof ServerPlayer sp) {
+                if (com.pvpciv.combat.CombatEvents.DMGLOG) System.out.printf("CMDLOG t=%d %s s=%.2f%n", sp.serverLevel().getGameTime(), p.cmd(), sp.getAttackStrengthScale(0.5f));
                 if (p.cmd().equals("open")) com.pvpciv.game.Phone.open(sp);
                 else if (p.cmd().equals("almanac")) com.pvpciv.game.Library.almanacFromHero(sp);
                 else if (p.cmd().equals("about")) com.pvpciv.game.About.send(sp);   // 1.2: «О себе»   // 0.10: вкладка «Альманах» в герое

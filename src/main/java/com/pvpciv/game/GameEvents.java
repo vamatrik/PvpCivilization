@@ -435,6 +435,19 @@ public final class GameEvents {
                         .then(Commands.literal("full4").executes(c -> AdminKit.full4(c.getSource().getPlayerOrException(), c.getSource())))
                         .then(Commands.literal("full5").executes(c -> AdminKit.full5(c.getSource().getPlayerOrException(), c.getSource())))
                         .then(Commands.literal("shelves").executes(c -> { Showcases.build(com.pvpciv.world.CivWorld.level(c.getSource().getServer()), CivData.get(c.getSource().getServer())); Showcases.refresh(c.getSource().getPlayerOrException()); return 1; }))
+                        .then(Commands.literal("dummy").executes(c -> {   // 1.5.2: манекен для проверки урона
+                            ServerPlayer p = c.getSource().getPlayerOrException();
+                            var m = com.pvpciv.combat.Mobs.Kind.GHOUL.type().create(p.serverLevel());
+                            if (m == null) return 0;
+                            var look = p.getLookAngle();
+                            m.moveTo(p.getX() + look.x * 2, p.getY(), p.getZ() + look.z * 2, p.getYRot() + 180, 0);
+                            com.pvpciv.combat.Mobs.setupDefault(m);
+                            m.setNoAi(true); m.addTag("dt");
+                            m.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).setBaseValue(1_000_000);
+                            m.setHealth(1_000_000);
+                            p.serverLevel().addFreshEntity(m);
+                            return 1;
+                        }))
                         .then(Commands.literal("ritual").executes(c -> { Ritual.debugLight(c.getSource().getServer()); if (c.getSource().getEntity() instanceof ServerPlayer sp) Ritual.debugPrep(sp); return 1; }))
                         .then(Commands.literal("shaft").executes(c -> { LiftShaft.start(c.getSource().getPlayerOrException()); return 1; }))
                         .then(Commands.literal("darkstars").executes(c -> { com.pvpciv.inv.Bag.give(c.getSource().getPlayerOrException(), new net.minecraft.world.item.ItemStack(com.pvpciv.registry.ModF5.DARK_STAR.get(), 2)); return 1; }))

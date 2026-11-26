@@ -139,7 +139,9 @@ public final class ClientCombat {
         if (!off && ch >= 0.92f) {   // основная рука: ваниль дальше сделает атаку/взмах
             judge(0, pendingPrecise); pendingPrecise = false; pending = 0;
             mainStrike(mc, p);
-            if (com.pvpciv.combat.Melee.pair(p.getMainHandItem())) { e.setSwingHand(false); p.swing(swingHand()); }
+            // 1.5.2: взмах — ПОСЛЕ ванильной атаки (в конце тика). Сервер обнуляет заряд на каждый пакет взмаха:
+            // взмах до атаки делал заряд 6% — сервер отбрасывал почти все удары парным оружием.
+            if (com.pvpciv.combat.Melee.pair(p.getMainHandItem())) { e.setSwingHand(false); swingLater = swingHand(); }
             else if (plant) p.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             if (dual) nextOff = true;
             return;
@@ -189,7 +191,10 @@ public final class ClientCombat {
     }
 
     /** Каждый тик: клик из буфера — как только рука готова; зажатая ЛКМ — автоатака. */
+    private static net.minecraft.world.InteractionHand swingLater;
+
     public static void tick() {
+        if (swingLater != null) { LocalPlayer sp = Minecraft.getInstance().player; if (sp != null) sp.swing(swingLater); swingLater = null; }
         trackReady();
         autoTick();
         if (pending == 0) return;
@@ -244,6 +249,37 @@ public final class ClientCombat {
         START[hand] = System.currentTimeMillis();
     }
 
+    /** Отладка: замедление анимаций (переменная окружения PVPCIV_ANIM_SLOW). */
+    private static final float SLOW = parseSlow();
+    private static float parseSlow() { try { var f = java.nio.file.Path.of(System.getProperty("java.io.tmpdir"), "pvpciv_anim_slow"); return java.nio.file.Files.exists(f) ? Math.max(1f, Float.parseFloat(java.nio.file.Files.readString(f).trim())) : 1f; } catch (Exception e) { return 1f; } }
+
+    /**
+     * 1.5.2: парное оружие — свои анимации для каждой руки.
+     * Сабли: диагональный рез — замах вверх-наружу, удар через центр вниз-внутрь, правая и левая зеркально (крест-накрест).
+     * Кинжалы: короткий выпад к центру прицела с доворотом клинка, рука чуть отводится перед уколом.
+     */
+    private static void pairAnim(PoseStack ps, int cls, float t, float side) {
+        if (cls == 2) {
+            float pull = t < 0.14f ? ease(t / 0.14f) : t < 0.3f ? 1 - ease((t - 0.14f) / 0.16f) : 0;
+            float k = t < 0.14f ? 0 : t < 0.36f ? ease((t - 0.14f) / 0.22f) : 1 - ease(Math.min(1, (t - 0.36f) / 0.64f));
+            ps.translate(-side * 0.26f * k + side * 0.05f * pull, 0.07f * k - 0.05f * pull, -0.62f * k + 0.12f * pull);
+            ps.mulPose(Axis.YP.rotationDegrees(side * 22 * k));
+            ps.mulPose(Axis.XP.rotationDegrees(-58 * k + 12 * pull));
+            ps.mulPose(Axis.ZP.rotationDegrees(-side * 28 * k));
+            return;
+        }
+        float wind = t < 0.2f ? ease(t / 0.2f) : 0;
+        float cut = t < 0.2f ? 0 : ease(Math.min(1, (t - 0.2f) / 0.38f));
+        float back = t > 0.64f ? ease((t - 0.64f) / 0.36f) : 0;
+        float m = 1 - back;
+        float up = (t < 0.2f ? wind : 1 - cut) * m, across = cut * m;
+        // положение: замах — выше и чуть наружу; рез — к центру и вниз, с выносом вперёд в середине
+        ps.translate(side * 0.10f * up - side * 0.46f * across, 0.24f * up - 0.20f * across, -0.08f * up - 0.18f * across - 0.22f * (float) Math.sin(Math.PI * cut) * m);
+        ps.mulPose(Axis.YP.rotationDegrees(side * 20 * up - side * 55 * across));
+        ps.mulPose(Axis.ZP.rotationDegrees(side * 40 * up - side * 85 * across));
+        ps.mulPose(Axis.XP.rotationDegrees(-25 * up - 40 * across));
+    }
+
     private static float ease(float t) { return t < 0.5f ? 4 * t * t * t : 1 - (float) Math.pow(-2 * t + 2, 3) / 2; }
 
     /** Своя отрисовка оружия в руке от первого лица: без руки, взмах по дуге. */
@@ -262,8 +298,10 @@ public final class ClientCombat {
         float side = right ? 1 : -1;
         float equip = e.getEquipProgress();
         ps.translate(side * 0.56f, -0.52f - equip * 0.6f, -0.72f);
-        long el = System.currentTimeMillis() - START[hand];
-        if (el < DUR[hand]) {
+        long el = (long) ((System.currentTimeMillis() - START[hand]) / SLOW);
+        boolean paired = com.pvpciv.combat.Melee.pair(p.getMainHandItem());
+        if (el < DUR[hand] && paired) pairAnim(ps, CLS[hand], el / (float) DUR[hand], side);
+        else if (el < DUR[hand]) {
             float t = el / (float) DUR[hand], d = DIR[hand] * side;
             switch (CLS[hand]) {
                 case 2 -> {   // кинжал: выпад вперёд с поворотом

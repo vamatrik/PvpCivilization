@@ -41,7 +41,8 @@ public class WormSegment extends Mob implements GeoEntity {
         noPhysics = true;
         super.tick();
         if (level().isClientSide) return;
-        if (head == null || !(level() instanceof net.minecraft.server.level.ServerLevel l) || !(l.getEntity(head) instanceof WormBoss w) || !w.isAlive()) {
+        // 1.5.2: голова жива, но ведёт другое тело — это лишний сегмент (второй «червь»)
+        if (head == null || !(level() instanceof net.minecraft.server.level.ServerLevel l) || !(l.getEntity(head) instanceof WormBoss w) || !w.isAlive() || (w.tickCount > 10 && !w.owns(getUUID()))) {
             if (++orphan > 40) discard();
         } else orphan = 0;
     }
