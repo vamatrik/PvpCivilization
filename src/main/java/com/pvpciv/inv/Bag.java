@@ -91,6 +91,12 @@ public final class Bag {
     }
 
     /** Выдать игроку: сумка → хотбар → на землю. */
+    /** 1.5.3: забрал с пьедестала пустой рукой — в руку; иначе — в сумку. */
+    public static void giveHand(ServerPlayer p, ItemStack st) {
+        if (p.getMainHandItem().isEmpty() && !st.isEmpty()) { p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, st); return; }
+        give(p, st);
+    }
+
     public static void give(ServerPlayer p, ItemStack st) {
         ItemStack rest = insert(p, st.copy());
         if (!rest.isEmpty() && !p.getInventory().add(rest)) p.drop(rest, false);

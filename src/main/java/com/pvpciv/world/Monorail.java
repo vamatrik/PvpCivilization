@@ -103,6 +103,9 @@ public final class Monorail {
         if (!CivWorld.isF4(l4)) return;
         if (loaded(l4, S4)) station(l4, S4);
         for (double s = -80; s < -6; s += 6) seg(l4, f4(s).add(0, 1.4, -1.9), f4(s + 6).add(0, 1.4, -1.9));
+        // 1.5.3: рельс доходит до кабины вплотную (был зазор −6..+6 у станции)
+        seg(l4, f4(-6).add(0, 1.4, -1.9), f4(0).add(0, 1.4, -1.9));
+        seg(l4, f4(0).add(0, 1.4, -1.9), f4(6).add(0, 1.4, -1.9));
         // 1.2: вверх — к станции «Орбита». Пока лифт станции не починен — обломанный, загнутый конец
         if (com.pvpciv.game.LiftShaft.isOpen(server)) {
             for (var e : l4.getEntitiesOfClass(Display.ItemDisplay.class, new AABB(S4.x - 4, S4.y + 5, S4.z - 6, S4.x + 4, S4.y + 20, S4.z + 4), e -> e.getTags().contains(TAG + "_broken"))) e.discard();

@@ -68,8 +68,6 @@ public final class VoidRift {
     private static boolean tilesOff;
     private static final List<Beam> BEAMS = new ArrayList<>();
     private static final Map<UUID, Long> LASER_CD = new HashMap<>();
-    private static Wall wall;
-    private static int wallGap;
     private static final List<UUID> MOBS = new ArrayList<>();
     private static int endT = -1;
     private static long started, rageAt = -1;
@@ -109,7 +107,7 @@ public final class VoidRift {
         if (FIGHTERS.isEmpty()) return;
         active = true; t = 0; stage = 0; sub = 0; round = 0; mana = 100; endT = -1; waitT = -1; OUT.clear();
         started = s.overworld().getGameTime(); rageAt = -1;
-        BEAMS.clear(); wall = null; MOBS.clear(); CHESTS.clear(); CHEST_LOOT.clear();
+        BEAMS.clear(); WALLS.clear(); trainLeft = 0; MOBS.clear(); CHESTS.clear(); CHEST_LOOT.clear();
         bar = new ServerBossEvent(Component.literal("Демоница Пустоты · мана"), BossEvent.BossBarColor.PURPLE, BossEvent.BossBarOverlay.NOTCHED_20);
         bar.setProgress(1f);
         for (UUID u : FIGHTERS) {
@@ -187,7 +185,7 @@ public final class VoidRift {
         }
         VoidDemon d = demon == null ? null : (l.getEntity(demon) instanceof VoidDemon vd ? vd : null);
         if (endT >= 0) { finishTick(l, d); return; }
-        for (ServerPlayer p : fighters(server)) fallCheck(l, p);
+        for (ServerPlayer p : fighters(server)) { fallCheck(l, p); if (stage >= 3) noFloatKick(p); }
         bar.setProgress(Math.max(0, mana / 100f));
         // стадии
         if (stage == 0) {
@@ -208,7 +206,7 @@ public final class VoidRift {
                 mana -= 25f / (85 * 20);
                 float lin = Math.max(0, Math.min(1, (25 - mana) / 25f));
                 walls(l, d, lin, true);
-                if (sub > 60) lasers(l, d, 0.25f + lin * 0.4f, true);
+                if (sub > 60) lasers(l, d, lin, true);
             }
             default -> {}
         }
@@ -225,7 +223,7 @@ public final class VoidRift {
         clearBeams(l);
         clearWall(l);
         fx(l, 0);
-        wallGap = 50;
+        trainLeft = 0;
         if (d != null) d.anim("cast");
         l.playSound(null, C, SoundEvents.WITHER_AMBIENT, SoundSource.HOSTILE, 3f, 1.4f);
         String[] names = {"", "НЕОНОВЫЕ ПЛИТЫ", "ЛАЗЕРЫ", "СТЕНА", "ФИНАЛ"};
@@ -329,11 +327,13 @@ public final class VoidRift {
     // ---- лазеры: сервер считает попадания, клиент рисует (PhoneData 31) — луч шлётся один раз
     /** k: 0 — едущий отрезок, 1 — вращающийся, 2 — вертикальный столб. type: 0 низкий, 1 высокий. */
     private static final class Beam {
-        int k, type, warn, life, color; Vec3 a, b = Vec3.ZERO, v = Vec3.ZERO; double len, ang, om, h; boolean two; long t0; float w = 0.11f, dmg;
+        int k, type, warn, life, color; Vec3 a, b = Vec3.ZERO, v = Vec3.ZERO; double len, ang, om, h, rv; boolean two; long t0; float w = 0.11f, dmg;
         Vec3[] ends(double tt) {
             return switch (k) {
                 case 1 -> { double an = ang + om * tt; Vec3 dir = new Vec3(Math.cos(an), 0, Math.sin(an)).scale(len); yield new Vec3[]{two ? a.subtract(dir) : a, a.add(dir)}; }
                 case 2 -> new Vec3[]{a, a.add(0, h, 0)};
+                case 3 -> { Vec3 q = a.add(v.scale(tt)); yield new Vec3[]{q, q.add(0, h, 0)}; }
+                case 4 -> { double an = ang + om * tt, r = Math.max(0.3, len + rv * tt); Vec3 q = a.add(Math.cos(an) * r, 0, Math.sin(an) * r); yield new Vec3[]{q, q.add(0, h, 0)}; }
                 default -> new Vec3[]{a.add(v.scale(tt)), b.add(v.scale(tt))};
             };
         }
@@ -349,6 +349,8 @@ public final class VoidRift {
         if (b.k == 0) s.append(String.format(Locale.ROOT, ",\"b\":[%.3f,%.3f,%.3f],\"v\":[%.4f,%.4f,%.4f]", b.b.x, b.b.y, b.b.z, b.v.x, b.v.y, b.v.z));
         if (b.k == 1) s.append(String.format(Locale.ROOT, ",\"len\":%.3f,\"ang\":%.4f,\"om\":%.5f,\"two\":%b", b.len, b.ang, b.om, b.two));
         if (b.k == 2) s.append(String.format(Locale.ROOT, ",\"h\":%.2f", b.h));
+        if (b.k == 3) s.append(String.format(Locale.ROOT, ",\"h\":%.2f,\"v\":[%.4f,%.4f,%.4f]", b.h, b.v.x, b.v.y, b.v.z));
+        if (b.k == 4) s.append(String.format(Locale.ROOT, ",\"h\":%.2f,\"len\":%.3f,\"ang\":%.4f,\"om\":%.5f,\"rv\":%.4f", b.h, b.len, b.ang, b.om, b.rv));
         s.append('}');
         for (ServerPlayer p : fighters(l.getServer())) PacketDistributor.sendToPlayer(p, new Network.PhoneData(31, s.toString()));
     }
@@ -390,45 +392,95 @@ public final class VoidRift {
         send(l, b);
     }
 
-    /** lin 0..1 — прогресс стадии; сложность растёт линейно (медленнее, чем раньше), но к концу — плотнее, чем было. */
+    /** 1.5.3: едущий вертикальный луч: off — смещение поперёк хода (вдоль dir), едет по нормали через арену. */
+    private static void vbar(ServerLevel l, double deg, double off, boolean fromNeg, double speed, int warn, float dmg, int color) {
+        double an = Math.toRadians(deg);
+        Vec3 dir = new Vec3(Math.cos(an), 0, Math.sin(an)), n = new Vec3(-dir.z, 0, dir.x);
+        Beam b = new Beam();
+        b.k = 3; b.type = 2; b.color = color; b.w = 0.24f; b.dmg = dmg; b.h = 4.2;
+        b.a = new Vec3(C.getX() + 0.5, floorTop(), C.getZ() + 0.5).add(n.scale(fromNeg ? -(R + 1.5) : R + 1.5)).add(dir.scale(off));
+        b.v = n.scale(fromNeg ? speed : -speed);
+        b.warn = warn; b.t0 = l.getGameTime() + warn; b.life = (int) Math.ceil((2 * R + 3) / speed);
+        send(l, b);
+    }
+
+    /** Ряд вертикальных лучей с проёмом — найди дыру. */
+    private static void vrow(ServerLevel l, double speed, int warn, float dmg) {
+        Random r = new Random();
+        double deg = r.nextBoolean() ? 0 : 90;
+        boolean fromNeg = r.nextBoolean();
+        double step = 1.15;
+        int n = (int) ((2 * R + 2) / step);
+        int gap = 3 + r.nextInt(Math.max(1, n - 8)), gapW = 3;
+        for (int i = 0; i < n; i++) {
+            if (i >= gap && i < gap + gapW) continue;
+            vbar(l, deg, -(R + 1) + i * step, fromNeg, speed, warn, dmg, 0xFF4060);
+        }
+    }
+
+    /** Кружащая группа вертикальных лучей: n штук на радиусе r0, вращение om, радиус меняется на rv за тик. */
+    private static void orbit(ServerLevel l, int n, double r0, double om, double rv, int life, int warn, float dmg) {
+        double a0 = new Random().nextDouble() * Math.PI * 2;
+        for (int i = 0; i < n; i++) {
+            Beam b = new Beam();
+            b.k = 4; b.type = 2; b.color = 0xFF7030; b.w = 0.24f; b.dmg = dmg; b.h = 4.2;
+            b.a = new Vec3(C.getX() + 0.5, floorTop(), C.getZ() + 0.5);
+            b.len = r0; b.ang = a0 + Math.PI * 2 * i / n; b.om = om; b.rv = rv;
+            b.warn = warn; b.t0 = l.getGameTime() + warn; b.life = life;
+            send(l, b);
+        }
+    }
+
+    /**
+     * lin 0..1 — прогресс стадии; сложность растёт плавно. 1.5.3: едущие вертикальные лучи (по одному, рядами с проёмом,
+     * кружащими группами), плотнее к концу. В финале (последние 25%) — тяжело: лучи поверх стен.
+     */
     private static void lasers(ServerLevel l, VoidDemon d, float lin, boolean finale) {
-        float f = lin;
-        int maxN = finale ? 2 + Math.round(f * 2) : 2 + Math.round(f * 5);
-        int every = finale ? 70 - (int) (f * 25) : 62 - (int) (f * 42);
-        int warn = Math.max(14, 24 - (int) (f * 8));
-        double speed = finale ? 0.18 + f * 0.08 : 0.15 + f * 0.22;
+        float f = finale ? 0.75f + lin * 0.25f : lin;
+        int maxN = 2 + Math.round(f * 5) + (finale ? 1 : 0);
+        int every = finale ? 34 - (int) (lin * 12) : 64 - (int) (f * 40);
+        int warn = Math.max(14, 26 - (int) (f * 10));
+        double speed = 0.15 + f * 0.22;
         float dmg = 0.16f + f * 0.1f;
         Random rnd = new Random();
-        if (sub % Math.max(18, every) != 0) return;
-        int straightN = 0;
-        for (Beam b : BEAMS) if (b.k == 0) straightN++;
-        // вертикальные столбы
-        if (f > 0.45f && rnd.nextFloat() < (finale ? 0.3f : 0.35f)) {
-            int n = 2 + rnd.nextInt(finale ? 2 : 2 + Math.round(f * 2));
-            List<ServerPlayer> fs = fighters(l.getServer());
-            for (int i = 0; i < n; i++) {
-                double x, z;
-                if (i < fs.size() && rnd.nextFloat() < 0.6f) { x = fs.get(i).getX(); z = fs.get(i).getZ(); }
-                else { double a = rnd.nextDouble() * Math.PI * 2, r = rnd.nextDouble() * (R - 1); x = C.getX() + 0.5 + Math.cos(a) * r; z = C.getZ() + 0.5 + Math.sin(a) * r; }
-                column(l, x, z, warn + 8, dmg + 0.06f);
-            }
-            l.playSound(null, C, SoundEvents.NOTE_BLOCK_BASEDRUM.value(), SoundSource.HOSTILE, 1.2f, 0.6f);
-            return;
-        }
-        if (straightN >= maxN) return;
-        // вращающийся луч
-        if (!finale && f > 0.62f && rnd.nextFloat() < 0.18f && BEAMS.stream().noneMatch(b -> b.k == 1)) {
-            sweeper(l, 0.028 + f * 0.012, warn + 10, dmg);
+        if (sub % Math.max(16, every) != 0) return;
+        int moving = 0; boolean orbiting = false, sweeping = false;
+        for (Beam b : BEAMS) { if (b.k == 0 || b.k == 3) moving++; if (b.k == 4) orbiting = true; if (b.k == 1) sweeping = true; }
+        float roll = rnd.nextFloat();
+        // кружащая группа
+        if (f > 0.4f && !orbiting && roll < (finale ? 0.3f : 0.22f)) {
+            int n = 3 + Math.round(f * 4);
+            double r0 = 4 + rnd.nextDouble() * 7, rv = rnd.nextFloat() < 0.5f ? 0 : (r0 > 8 ? -0.025 : 0.025);
+            orbit(l, n, r0, (0.018 + f * 0.022) * (rnd.nextBoolean() ? 1 : -1), rv, 160 + Math.round(f * 80), warn + 10, dmg + 0.04f);
             if (d != null) d.anim("cast");
-            l.playSound(null, C, SoundEvents.BEACON_POWER_SELECT, SoundSource.HOSTILE, 1.5f, 1.4f);
+            l.playSound(null, C, SoundEvents.BEACON_POWER_SELECT, SoundSource.HOSTILE, 1.5f, 0.8f);
             return;
         }
-        int burst = f > 0.75f && rnd.nextFloat() < 0.45f ? 2 : 1;
+        // ряд с проёмом
+        if (f > 0.55f && moving < maxN && roll < (finale ? 0.5f : 0.36f)) {
+            vrow(l, speed * 0.75, warn + 8, dmg + 0.04f);
+            if (d != null) d.anim("point");
+            l.playSound(null, C, SoundEvents.NOTE_BLOCK_BASEDRUM.value(), SoundSource.HOSTILE, 1.2f, 0.7f);
+            return;
+        }
+        // вращающийся низкий луч
+        if (f > 0.65f && !sweeping && roll < (finale ? 0.62f : 0.46f)) {
+            sweeper(l, 0.028 + f * 0.014, warn + 10, dmg);
+            return;
+        }
+        if (moving >= maxN) return;
+        int burst = f > 0.6f && rnd.nextFloat() < 0.35f + f * 0.25f ? 2 : 1;
+        if (finale && rnd.nextFloat() < 0.35f) burst = 3;
         double baseDeg = rnd.nextBoolean() ? 0 : 90;
         for (int k = 0; k < burst; k++) {
-            boolean diag = f > 0.3f && rnd.nextFloat() < 0.35f;
+            float t = rnd.nextFloat();
+            if (f > 0.2f && t < 0.2f + f * 0.15f) {   // одиночный едущий вертикальный
+                vbar(l, rnd.nextBoolean() ? 0 : 90, (rnd.nextDouble() * 2 - 1) * (R - 3), rnd.nextBoolean(), speed * 0.85, warn, dmg + 0.03f, 0xFF5020);
+                continue;
+            }
+            boolean diag = f > 0.25f && rnd.nextFloat() < 0.35f;
             boolean high = !diag && f > 0.15f && rnd.nextFloat() < 0.2f + f * 0.2f;
-            double deg = diag ? (rnd.nextBoolean() ? 45 : 135) : (burst == 2 ? baseDeg + 90 * k : baseDeg);
+            double deg = diag ? (rnd.nextBoolean() ? 45 : 135) : (burst >= 2 ? baseDeg + 90 * k : baseDeg);
             straight(l, deg, high, diag ? C_DIAG : high ? C_HIGH : C_LOW, speed * (diag ? 0.9 : 1), warn, dmg);
         }
         if (d != null) d.anim("point");
@@ -462,7 +514,7 @@ public final class VoidRift {
         if (tt < 0) return false;
         AABB bb = p.getBoundingBox();
         Vec3[] e = b.ends(tt);
-        if (b.k == 2) return Math.hypot(p.getX() - e[0].x, p.getZ() - e[0].z) < b.w + 0.35 && bb.minY < e[1].y && bb.maxY > e[0].y;
+        if (b.k >= 2) return Math.hypot(p.getX() - e[0].x, p.getZ() - e[0].z) < b.w + 0.33 && bb.minY < e[1].y && bb.maxY > e[0].y;
         double y = e[0].y;
         if (!(bb.minY < y + b.w && bb.maxY > y - b.w)) return false;
         double ax = e[0].x, az = e[0].z, dx = e[1].x - ax, dz = e[1].z - az, px = p.getX() - ax, pz = p.getZ() - az;
@@ -470,81 +522,106 @@ public final class VoidRift {
         return Math.hypot(px - dx * k, pz - dz * k) < b.w + 0.32;
     }
 
-    // ---- стадии 3–4: едущая стена
-    /** Стена толщиной в блок (+ ступени перед ней). axis 0 — едет по X (поперёк — Z), 1 — по Z. s — направление (+1/−1). */
+    // ---- стадии 3–4: едущие стены (1.5.3 — плавные, из движущихся столбиков-сущностей, поездом без пауз)
+    /** Одна стена поезда: ось (0 — едет по X), направление, скорость, где сейчас (вдоль оси, от центра), её столбики. */
     private static final class Wall {
-        int axis, s, pos, H, period, timer;
-        int[][] cell;          // [lat+OFF][h]: 0 — пусто, 1 — стена, 2 — хрупкий блок
-        boolean[] ladder;      // колонки со ступенями
-        static final int OFF = R + 1, N = 2 * R + 3;
-        int layers() { return Math.max(0, H - 2); }
-        int endPos() { return R + 2 + layers(); }
-        /** Твёрдый ли блок (along, lat, h) при положении стены p. */
-        int at(int p, int along, int lat, int h) {
-            int li = lat + OFF;
-            if (li < 0 || li >= N || h < 0 || h >= H) return 0;
-            if (Math.hypot(along, lat) > R + 0.5) return 0;
-            if (along == p) return cell[li][h];
-            int k = (along - p) * s;
-            if (k >= 1 && k <= layers() && ladder[li] && h < H - 1 - k) return 3;
-            return 0;
-        }
-        BlockPos world(int along, int lat, int h) {
-            return axis == 0 ? new BlockPos(C.getX() + along, C.getY() + 1 + h, C.getZ() + lat) : new BlockPos(C.getX() + lat, C.getY() + 1 + h, C.getZ() + along);
-        }
-        double alongOf(Vec3 v) { return axis == 0 ? v.x - C.getX() : v.z - C.getZ(); }
-        double latOf(Vec3 v) { return axis == 0 ? v.z - C.getZ() : v.x - C.getX(); }
-        Vec3 make(double along, double lat, double y) { return axis == 0 ? new Vec3(C.getX() + along, y, C.getZ() + lat) : new Vec3(C.getX() + lat, y, C.getZ() + along); }
+        int axis, s, id, layers; double along, v; final List<UUID> parts = new ArrayList<>();
+        Vec3 make(double al, double lat, double y) { return axis == 0 ? new Vec3(C.getX() + 0.5 + al, y, C.getZ() + 0.5 + lat) : new Vec3(C.getX() + 0.5 + lat, y, C.getZ() + 0.5 + al); }
+        boolean out() { return along * s > R + 3 + layers; }
     }
+    private static final List<Wall> WALLS = new ArrayList<>();
+    private static int trainLeft, trainAxis, trainS, wallSeq;
+    private static Wall trainLast;
+    private enum Pat { LADDER, HOLES, LIMBO, HURDLE, GAP, MIX }
 
     private static void walls(ServerLevel l, VoidDemon d, float lin, boolean finale) {
-        if (wall == null) {
-            if (--wallGap > 0) return;
-            wall = newWall(lin, finale);
-            place(l, wall, true);
-            if (d != null) d.anim("cast");
-            l.playSound(null, C, SoundEvents.PISTON_EXTEND, SoundSource.HOSTILE, 3f, 0.5f);
-            for (ServerPlayer p : fighters(l.getServer()))
-                p.connection.send(new ClientboundSetActionBarTextPacket(Component.literal("▮ Стена! Жёлтые ступени — перелезть · бирюзовые блоки — разбить и ползти (Z)").withStyle(ChatFormatting.LIGHT_PURPLE)));
+        for (var it = WALLS.iterator(); it.hasNext(); ) {
+            Wall w = it.next();
+            w.along += w.v * w.s;
+            if (w.out()) { removeWall(l, w); it.remove(); }
+        }
+        Wall last = WALLS.isEmpty() ? null : WALLS.get(WALLS.size() - 1);
+        double spacing = finale ? 9.5 : 11.5;
+        if (trainLeft > 0) {
+            // следующая стена поезда — как только предыдущая отъехала на spacing
+            if (trainLast == null || (trainLast.along * trainLast.s + R + 2) >= spacing) { spawnWall(l, lin, finale); trainLast = WALLS.get(WALLS.size() - 1); trainLeft--; }
             return;
         }
-        if (++wall.timer < wall.period) return;
-        wall.timer = 0;
-        advance(l, wall);
-        if (wall.pos * wall.s > wall.endPos()) {
-            place(l, wall, false);
-            wall = null;
-            wallGap = finale ? 26 : 36;
+        // новый поезд — с перпендикулярной стороны, когда хвост прошлого уже за центром (стены не пересекаются в круге)
+        if (last == null || last.along * last.s > 8.5) {
+            trainAxis = last == null ? new Random().nextInt(2) : 1 - last.axis;
+            trainS = new Random().nextBoolean() ? 1 : -1;
+            trainLeft = finale ? 5 + new Random().nextInt(3) : 4 + new Random().nextInt(2);
+            trainLast = null;
+            if (d != null) d.anim("cast");
+            l.playSound(null, C, SoundEvents.PISTON_EXTEND, SoundSource.HOSTILE, 3f, 0.5f);
         }
     }
 
-    private static Wall newWall(float lin, boolean finale) {
+    private static void spawnWall(ServerLevel l, float lin, boolean finale) {
         Random r = new Random();
         Wall w = new Wall();
-        w.axis = r.nextInt(2);
-        w.s = r.nextBoolean() ? 1 : -1;
-        w.H = finale && r.nextFloat() < 0.6f ? 4 : 3;
-        w.pos = -w.s * (R + 2);
-        w.period = finale ? (lin < 0.5f ? 6 : 5) : (lin < 0.5f ? 8 : 7);
-        w.cell = new int[Wall.N][w.H];
-        w.ladder = new boolean[Wall.N];
-        for (int[] c : w.cell) Arrays.fill(c, 1);
-        // ступени: колонки шириной 2
-        int ladders = finale ? 1 + r.nextInt(2) : 2;
+        w.axis = trainAxis; w.s = trainS; w.id = ++wallSeq;
+        w.v = finale ? 0.17 + lin * 0.06 : 0.12 + lin * 0.05;
+        int H = finale && r.nextFloat() < 0.6f ? 4 : 3;
+        Pat[] pool = finale ? new Pat[]{Pat.LADDER, Pat.HOLES, Pat.LIMBO, Pat.HURDLE, Pat.GAP, Pat.MIX, Pat.LIMBO, Pat.MIX}
+                : lin < 0.35f ? new Pat[]{Pat.LADDER, Pat.HOLES, Pat.HURDLE, Pat.GAP} : new Pat[]{Pat.LADDER, Pat.HOLES, Pat.LIMBO, Pat.HURDLE, Pat.GAP, Pat.MIX};
+        Pat pat = pool[r.nextInt(pool.length)];
+        int N = 2 * R + 3, OFF = R + 1;
+        int[][] cell = new int[N][H];   // 0 пусто, 1 стена, 2 хрупкий
+        boolean[] ladder = new boolean[N];
+        for (int[] c : cell) Arrays.fill(c, 1);
         List<Integer> used = new ArrayList<>();
-        for (int i = 0; i < ladders; i++) {
-            int lc = pick(r, used, R - 3);
-            for (int k = 0; k < 2; k++) { int li = lc + k + Wall.OFF; w.ladder[li] = true; w.cell[li][w.H - 1] = 0; }
+        switch (pat) {
+            case LADDER -> { for (int i = 0; i < (finale ? 1 : 2); i++) { int lc = pick(r, used, R - 3); for (int k = 0; k < 2; k++) { ladder[lc + k + OFF] = true; cell[lc + k + OFF][H - 1] = 0; } } }
+            case HOLES -> { for (int i = 0; i < (finale ? 2 : 3); i++) { int li = pick(r, used, R - 2) + OFF; cell[li][0] = 2; if (r.nextFloat() < (finale ? 0.2f : 0.4f)) cell[li][1] = 2; } }
+            case LIMBO -> { for (int li = 0; li < N; li++) if ((li % 7) != 3) cell[li][0] = 0; }   // нижний ряд открыт — под стену только ползком (Z)
+            case HURDLE -> { H = 1; cell = new int[N][1]; for (int[] c : cell) c[0] = 1; }   // низкий барьер — перепрыгни
+            case GAP -> { int g = pick(r, used, R - 4) + OFF; for (int k = 0; k < (finale ? 1 : 2); k++) for (int h = 0; h < H; h++) cell[g + k][h] = 0; }
+            case MIX -> {
+                int lc = pick(r, used, R - 3); for (int k = 0; k < 2; k++) { ladder[lc + k + OFF] = true; cell[lc + k + OFF][H - 1] = 0; }
+                int li = pick(r, used, R - 2) + OFF; cell[li][0] = 2;
+            }
         }
-        // хрупкие блоки: снизу 1 (ползти) или 2 (пройти) блока
-        int weak = finale ? 2 : 3;
-        for (int i = 0; i < weak; i++) {
-            int lc = pick(r, used, R - 2);
-            int li = lc + Wall.OFF;
-            w.cell[li][0] = 2;
-            if (r.nextFloat() < (finale ? 0.25f : 0.45f)) w.cell[li][1] = 2;
+        w.layers = 0;
+        for (boolean b : ladder) if (b) w.layers = Math.max(w.layers, H - 2);
+        w.along = -w.s * (R + 2.0);
+        double vx = w.axis == 0 ? w.v * w.s : 0, vz = w.axis == 0 ? 0 : w.v * w.s;
+        for (int li = 0; li < N; li++) {
+            int lat = li - OFF;
+            if (Math.abs(lat) > R + 0.5) continue;
+            // столбики подряд одного вида
+            int h = 0;
+            while (h < H) {
+                int k = cell[li][h];
+                if (k == 0) { h++; continue; }
+                int h1 = h;
+                if (k == 1) while (h1 + 1 < H && cell[li][h1 + 1] == 1) h1++;
+                part(l, w, w.along, lat, h, h1 - h + 1, k == 2 ? 1 : 0, vx, vz);
+                h = h1 + 1;
+            }
+            if (ladder[li]) for (int k = 1; k <= H - 2; k++) part(l, w, w.along + w.s * k, lat, 0, H - 1 - k, 2, vx, vz);
         }
-        return w;
+        WALLS.add(w);
+        String hint = switch (pat) {
+            case LADDER -> "▮ Стена: жёлтые ступени — перелезь";
+            case HOLES -> "▮ Стена: разбей бирюзовые блоки и пролезь (Z — ползти)";
+            case LIMBO -> "▮ Низкая щель — ползи под стеной (Z)";
+            case HURDLE -> "▮ Барьер — прыгай!";
+            case GAP -> "▮ Проём в стене — успей в него";
+            case MIX -> "▮ Стена: ступени или хрупкий блок";
+        };
+        for (ServerPlayer p : fighters(l.getServer())) p.connection.send(new ClientboundSetActionBarTextPacket(Component.literal(hint).withStyle(ChatFormatting.LIGHT_PURPLE)));
+    }
+
+    private static void part(ServerLevel l, Wall w, double along, int lat, int h, int len, int kind, double vx, double vz) {
+        var e = ModRegistry.RIFT_WALL_E.get().create(l);
+        if (e == null) return;
+        Vec3 at = w.make(along, lat, floorTop() + h);
+        e.moveTo(at.x, at.y, at.z, 0, 0);
+        e.setup(kind, len, vx, vz, w.id);
+        l.addFreshEntity(e);
+        w.parts.add(e.getUUID());
     }
 
     private static int pick(Random r, List<Integer> used, int span) {
@@ -557,88 +634,43 @@ public final class VoidRift {
         return 0;
     }
 
-    /** Поставить/убрать блоки стены в текущем положении. */
-    private static void place(ServerLevel l, Wall w, boolean on) {
-        BlockState air = Blocks.AIR.defaultBlockState();
-        BlockState[] st = {air, ModRegistry.RIFT_WALL.get().defaultBlockState(), ModRegistry.RIFT_WALL_WEAK.get().defaultBlockState(), ModRegistry.RIFT_STEP.get().defaultBlockState()};
-        for (int k = 0; k <= w.layers(); k++) {
-            int along = w.pos + w.s * k;
-            for (int lat = -Wall.OFF; lat <= Wall.OFF; lat++) for (int h = 0; h < w.H; h++) {
-                int c = w.at(w.pos, along, lat, h);
-                if (c == 0) continue;
-                l.setBlock(w.world(along, lat, h), on ? st[c] : air, 2);
-            }
+    private static void removeWall(ServerLevel l, Wall w) {
+        for (UUID u : w.parts) { var e = l.getEntity(u); if (e != null) e.discard(); }
+        w.parts.clear();
+    }
+
+    private static void clearWall(ServerLevel l) {
+        for (Wall w : WALLS) removeWall(l, w);
+        WALLS.clear();
+        trainLeft = 0;
+        for (var e : l.getEntitiesOfClass(com.pvpciv.entity.RiftWallEntity.class, new AABB(C).inflate(40))) e.discard();
+    }
+
+    /** Стоять на едущей стене (сущность, не блок) сервер считает «парением» — сбрасываем счётчик, чтобы не кикнуло. */
+    private static java.lang.reflect.Field FLOAT;
+    private static void noFloatKick(ServerPlayer p) {
+        try {
+            if (FLOAT == null) { FLOAT = net.minecraft.server.network.ServerGamePacketListenerImpl.class.getDeclaredField("aboveGroundTickCount"); FLOAT.setAccessible(true); }
+            FLOAT.setInt(p.connection, 0);
+        } catch (Exception ignored) {}
+    }
+
+    /** Безопасная точка на оси поезда — не в стене (для возврата после падения). */
+    private static Vec3 safeSpot() {
+        if (WALLS.isEmpty()) return Vec3.atBottomCenterOf(C).add(0, 1, 0);
+        Wall ref = WALLS.get(WALLS.size() - 1);
+        for (double a = 0; a <= R - 3; a += 1) for (int sg : new int[]{1, -1}) {
+            double al = a * sg;
+            boolean ok = true;
+            for (Wall w : WALLS) if (w.axis == ref.axis && Math.abs(w.along - al) < 2.5 + (w.layers + 1)) { ok = false; break; }
+            if (ok) return ref.make(al, 0, floorTop());
         }
+        return Vec3.atBottomCenterOf(C).add(0, 1, 0);
     }
 
-    private static void clearWall(ServerLevel l) { if (wall != null) place(l, wall, false); wall = null; }
-
-    /** Шаг стены: убрать, сдвинуть, растолкать игроков (или увезти стоящих сверху), поставить. */
-    private static void advance(ServerLevel l, Wall w) {
-        int old = w.pos;
-        place(l, w, false);
-        w.pos += w.s;
-        for (ServerPlayer p : fighters(l.getServer())) {
-            Vec3 pp = p.position();
-            double al = w.alongOf(pp), la = w.latOf(pp), feet = pp.y - floorTop();
-            // стоит сверху — едет вместе со стеной
-            int ai = (int) Math.floor(al), li = (int) Math.floor(la), hb = (int) Math.round(feet) - 1;
-            if (Math.abs(feet - Math.round(feet)) < 0.2 && hb >= 0 && w.at(old, ai, li, hb) != 0) {
-                Vec3 to = w.make(al + w.s, la, pp.y);
-                if (!collides(w, w.pos, p, to)) { p.teleportTo(to.x, to.y, to.z); continue; }
-            }
-            if (!collides(w, w.pos, p, pp)) continue;
-            // в дыре — подровнять по центру колонки
-            Vec3 mid = w.make(al, Math.floor(la) + 0.5, pp.y);
-            if (!collides(w, w.pos, p, mid)) { p.teleportTo(mid.x, mid.y, mid.z); continue; }
-            // иначе — толкнуть перед стеной
-            Vec3 to = pp;
-            for (int k = 1; k <= w.layers() + 2; k++) {
-                double na = w.s > 0 ? w.pos + k + 0.31 : w.pos - k + 1 - 0.31;
-                to = w.make(na, la, pp.y);
-                if (!collides(w, w.pos, p, to)) break;
-            }
-            p.teleportTo(to.x, to.y, to.z);
-            Vec3 push = w.make(w.s * 0.35, 0, 0).subtract(w.make(0, 0, 0));
-            p.setDeltaMovement(push.x, 0.12, push.z);
-            p.hurtMarked = true;
-            if (l.getGameTime() % 4 == 0) l.playSound(null, p.blockPosition(), SoundEvents.SHIELD_BLOCK, SoundSource.HOSTILE, 0.5f, 0.6f);
-        }
-        place(l, w, true);
-    }
-
-    private static boolean collides(Wall w, int pos, ServerPlayer p, Vec3 at) {
-        AABB bb = p.getBoundingBox().move(at.subtract(p.position())).deflate(0.02);
-        double a0 = w.alongOf(new Vec3(bb.minX, 0, bb.minZ)), a1 = w.alongOf(new Vec3(bb.maxX, 0, bb.maxZ));
-        double l0 = w.latOf(new Vec3(bb.minX, 0, bb.minZ)), l1 = w.latOf(new Vec3(bb.maxX, 0, bb.maxZ));
-        int h0 = (int) Math.floor(bb.minY - floorTop()), h1 = (int) Math.floor(bb.maxY - floorTop() - 1e-3);
-        for (int a = (int) Math.floor(Math.min(a0, a1)); a <= (int) Math.floor(Math.max(a0, a1)); a++)
-            for (int la = (int) Math.floor(Math.min(l0, l1)); la <= (int) Math.floor(Math.max(l0, l1)); la++)
-                for (int h = h0; h <= h1; h++) if (w.at(pos, a, la, h) != 0) return true;
-        return false;
-    }
-
-    /** Удар по хрупкому блоку стены (оружием — взмах в воздух, рукой — клик по блоку). */
-    public static boolean tryBreak(ServerPlayer p, BlockPos q) {
-        if (!active || wall == null || !FIGHTERS.contains(p.getUUID())) return false;
-        ServerLevel l = p.serverLevel();
-        if (!l.getBlockState(q).is(ModRegistry.RIFT_WALL_WEAK.get())) return false;
-        Wall w = wall;
-        int along = w.axis == 0 ? q.getX() - C.getX() : q.getZ() - C.getZ(), lat = w.axis == 0 ? q.getZ() - C.getZ() : q.getX() - C.getX(), h = q.getY() - C.getY() - 1;
-        if (along != w.pos || w.at(w.pos, along, lat, h) != 2) return false;
-        w.cell[lat + Wall.OFF][h] = 0;
-        l.setBlock(q, Blocks.AIR.defaultBlockState(), 2);
-        l.sendParticles(ParticleTypes.END_ROD, q.getX() + 0.5, q.getY() + 0.5, q.getZ() + 0.5, 14, 0.3, 0.3, 0.3, 0.08);
-        l.sendParticles(ParticleTypes.GLOW, q.getX() + 0.5, q.getY() + 0.5, q.getZ() + 0.5, 10, 0.4, 0.4, 0.4, 0.05);
-        l.playSound(null, q, SoundEvents.GLASS_BREAK, SoundSource.BLOCKS, 1f, 1.3f);
-        return true;
-    }
-
-    /** Взмах оружием в разломе: если смотрит на хрупкий блок рядом — ломаем. */
-    public static void onSwing(ServerPlayer p) {
-        if (!active || wall == null) return;
-        if (p.pick(4.5, 1f, false) instanceof net.minecraft.world.phys.BlockHitResult bh && bh.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) tryBreak(p, bh.getBlockPos());
-    }
+    /** Старые блочные стены (до 1.5.3) — больше не используются. */
+    public static boolean tryBreak(ServerPlayer p, BlockPos q) { return false; }
+    public static void onSwing(ServerPlayer p) {}
 
     private static void clearMobs(ServerLevel l) {
         for (UUID u : MOBS) { var e = l.getEntity(u); if (e != null) { l.sendParticles(ParticleTypes.POOF, e.getX(), e.getY() + 1, e.getZ(), 10, 0.3, 0.5, 0.3, 0.02); e.discard(); } }
@@ -670,10 +702,7 @@ public final class VoidRift {
                 break outer;
             }
         }
-        if (wall != null) {   // за стену — туда, где она уже проехала
-            double a = Math.max(-(R - 2), Math.min(R - 2, wall.pos - wall.s * 4));
-            if (Math.abs(a) < R - 3 || wall.pos * wall.s < 0) to = wall.make(wall.pos * wall.s < 0 ? wall.s * (R - 3) : a + 0.5, 0.5, floorTop());
-        }
+        if (!WALLS.isEmpty()) to = safeSpot();   // не в стену
         p.teleportTo(to.x, to.y, to.z);
         p.displayClientMessage(Component.literal("Пустота выплюнула тебя обратно: −30% здоровья").withStyle(ChatFormatting.RED), true);
     }
@@ -901,12 +930,12 @@ public final class VoidRift {
             if (waitT >= 0) {   // все выбыли — с начала
                 waitT = -1;
                 stage = 0; sub = 0; round = 0; mana = 100; t = 44; rageAt = -1;
-                BEAMS.clear(); wall = null;
+                BEAMS.clear(); WALLS.clear(); trainLeft = 0;
                 PacketDistributor.sendToPlayer(p, new Network.PhoneData(22, "{\"cut\":\"rift\",\"len\":50}"));
                 p.sendSystemMessage(Component.literal("☄ Разлом открывается заново!").withStyle(ChatFormatting.LIGHT_PURPLE));
                 continue;
             }
-            Vec3 to = wall != null ? wall.make(wall.pos * wall.s < 0 ? wall.s * (R - 3) : wall.pos - wall.s * 4 + 0.5, 0.5, floorTop()) : new Vec3(C.getX() + 0.5 + 9, floorTop(), C.getZ() + 0.5);
+            Vec3 to = !WALLS.isEmpty() ? safeSpot() : new Vec3(C.getX() + 0.5 + 9, floorTop(), C.getZ() + 0.5);
             p.teleportTo(l, to.x, to.y, to.z, 90, 0); p.resetFallDistance();
             PacketDistributor.sendToPlayer(p, new Network.PhoneData(22, "{\"cut\":\"arrive\",\"len\":30}"));
             if (stage >= 1) PacketDistributor.sendToPlayer(p, new Network.PhoneData(31, fxJson(stage == 1 ? 1 : 2)));

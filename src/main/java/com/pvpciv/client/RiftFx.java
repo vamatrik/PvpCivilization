@@ -13,6 +13,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.joml.Matrix4f;
+import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +28,7 @@ public final class RiftFx {
     private static final ResourceLocation TEX = PvpCiv.id("textures/misc/rift_beam.png");
 
     /** k: 0 — едущий отрезок (a,b + v·t), 1 — вращающийся (o,len,ang,om,two), 2 — вертикальный столб (o,h). */
-    private record B(int k, Vec3 a, Vec3 b, Vec3 v, double len, double ang, double om, boolean two, double h,
+    private record B(int k, Vec3 a, Vec3 b, Vec3 v, double len, double ang, double om, boolean two, double h, double rv,
                      long t0, int warn, int life, int color, float w) {}
     private static final List<B> LIST = new ArrayList<>();
 
@@ -44,7 +45,7 @@ public final class RiftFx {
         int k = j.get("k").getAsInt();
         Vec3 a = v(j, "a"), b = j.has("b") ? v(j, "b") : a, vel = j.has("v") ? v(j, "v") : Vec3.ZERO;
         if (LIST.size() > 120) LIST.remove(0);
-        LIST.add(new B(k, a, b, vel, d(j, "len"), d(j, "ang"), d(j, "om"), j.has("two") && j.get("two").getAsBoolean(), d(j, "h"),
+        LIST.add(new B(k, a, b, vel, d(j, "len"), d(j, "ang"), d(j, "om"), j.has("two") && j.get("two").getAsBoolean(), d(j, "h"), d(j, "rv"),
                 j.get("t0").getAsLong(), j.get("warn").getAsInt(), j.get("life").getAsInt(), j.get("c").getAsInt(), (float) d(j, "w")));
     }
 
@@ -81,7 +82,7 @@ public final class RiftFx {
             if (t > b.life) continue;
             float fade = (float) Math.min(1, Math.min(t / 3.0, (b.life - t) / 4.0));
             Vec3[] ab = ends(b, t);
-            float w = b.w * (b.k == 2 ? (float) Math.min(1, t / 2.0) : 1f);
+            float w = b.w * (b.k >= 2 ? (float) Math.min(1, t / 3.0) : 1f);
             box(vc, m, ab[0], ab[1], w * 2.4f, r * 0.22f * fade, g * 0.22f * fade, bl * 0.22f * fade, scroll * 0.6f);   // ореол
             box(vc, m, ab[0], ab[1], w, r * 0.95f * fade, g * 0.95f * fade, bl * 0.95f * fade, scroll);                  // тело
             box(vc, m, ab[0], ab[1], w * 0.35f, 0.75f * fade, 0.75f * fade, 0.75f * fade, -scroll * 1.4f);               // белая сердцевина
@@ -98,6 +99,12 @@ public final class RiftFx {
                 yield new Vec3[]{b.two ? b.a.subtract(dir) : b.a, b.a.add(dir)};
             }
             case 2 -> new Vec3[]{b.a, b.a.add(0, b.h, 0)};
+            case 3 -> { Vec3 q = b.a.add(b.v.scale(t)); yield new Vec3[]{q, q.add(0, b.h, 0)}; }   // 1.5.3: едущий вертикальный
+            case 4 -> {   // 1.5.3: кружащий вертикальный (радиус может расти/сжиматься)
+                double an = b.ang + b.om * t, r = Math.max(0.3, b.len + b.rv * t);
+                Vec3 q = b.a.add(Math.cos(an) * r, 0, Math.sin(an) * r);
+                yield new Vec3[]{q, q.add(0, b.h, 0)};
+            }
             default -> new Vec3[]{b.a.add(b.v.scale(t)), b.b.add(b.v.scale(t))};
         };
     }
@@ -137,7 +144,7 @@ public final class RiftFx {
 
 
     // ------------------------------------------------------------------ HD-арена: цельные поверхности + свет + HD-полоски
-    private static final List<float[]> EDGES = new ArrayList<>();   // x0,y0,z0,x1,y1,z1,group
+    private static final List<float[]> EDGES = new ArrayList<>();   // x0,y0,z0,x1,y1,z1,group,vx,vz
     private static long edgesAt = -1;
 
     private static void arena(RenderLevelStageEvent e, Minecraft mc) {
@@ -287,44 +294,94 @@ public final class RiftFx {
 
     /** Контуры стен разлома: светящиеся рёбра по силуэту (стена — фиолетовые, хрупкие — бирюзовые, ступени — жёлтые). */
     private static void wallEdges(VertexConsumer vc, Matrix4f m, Minecraft mc, double sec, float in) {
+        float pt = mc.getTimer().getGameTimeDeltaPartialTick(false);
         long gt = mc.level.getGameTime();
         if (gt != edgesAt) { edgesAt = gt; scanEdges(mc); }
         float[][] gc = {{0.85f, 0.35f, 1f}, {0.3f, 1f, 1f}, {1f, 0.8f, 0.2f}};
         for (float[] ed : EDGES) {
             int g = (int) ed[6];
+            // рёбра едут со стеной: сдвиг на долю тика
+            double ox = ed[7] * (pt - 1), oz = ed[8] * (pt - 1);
             double mx = (ed[0] + ed[3]) / 2, mz = (ed[2] + ed[5]) / 2;
             float k = (float) (0.9 + 0.7 * Math.pow(Math.max(0, Math.cos((mx + mz) * 0.25 - sec * 4)), 6)) * in;
-            Vec3 a = new Vec3(ed[0], ed[1], ed[2]), b = new Vec3(ed[3], ed[4], ed[5]);
+            Vec3 a = new Vec3(ed[0] + ox, ed[1], ed[2] + oz), b = new Vec3(ed[3] + ox, ed[4], ed[5] + oz);
             float[] c = gc[g];
             box(vc, m, a, b, 0.045f, c[0] * k, c[1] * k, c[2] * k, 0);
             box(vc, m, a, b, 0.13f, c[0] * k * 0.3f, c[1] * k * 0.3f, c[2] * k * 0.3f, 0);
         }
     }
 
-    private static int group(net.minecraft.world.level.block.state.BlockState st) {
-        if (st.is(com.pvpciv.registry.ModRegistry.RIFT_WALL.get())) return 0;
-        if (st.is(com.pvpciv.registry.ModRegistry.RIFT_WALL_WEAK.get())) return 1;
-        if (st.is(com.pvpciv.registry.ModRegistry.RIFT_STEP.get())) return 2;
-        return -1;
+    private static List<com.pvpciv.entity.RiftWallEntity> walls(Minecraft mc, double r) {
+        if (mc.level == null || mc.player == null) return List.of();
+        return mc.level.getEntitiesOfClass(com.pvpciv.entity.RiftWallEntity.class, mc.player.getBoundingBox().inflate(r));
     }
 
+    /** Силуэт стен из клеток едущих столбиков: ребро рисуется, если открыты обе соседние грани. */
     private static void scanEdges(Minecraft mc) {
         EDGES.clear();
-        int R = 17, bx = (int) Math.floor(at.x), by = (int) Math.floor(at.y), bz = (int) Math.floor(at.z);
-        if (mode == 1) { bx += gridN * tile / 2; bz += gridN * tile / 2; }
-        var lvl = mc.level;
-        net.minecraft.core.BlockPos.MutableBlockPos q = new net.minecraft.core.BlockPos.MutableBlockPos();
-        int[][] dirs = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
-        for (int x = -R; x <= R; x++) for (int z = -R; z <= R; z++) for (int y = 0; y <= 5; y++) {
-            int g = group(lvl.getBlockState(q.set(bx + x, by + y, bz + z)));
-            if (g < 0) continue;
-            boolean[] open = new boolean[6];
-            for (int i = 0; i < 6; i++) open[i] = group(lvl.getBlockState(q.set(bx + x + dirs[i][0], by + y + dirs[i][1], bz + z + dirs[i][2]))) != g;
-            float X = bx + x, Y = by + y, Z = bz + z;
-            // 12 рёбер: рисуем, если открыты обе соседние грани
-            for (int sx = 0; sx < 2; sx++) for (int sy = 0; sy < 2; sy++) if (open[sx == 1 ? 0 : 1] && open[sy == 1 ? 2 : 3]) EDGES.add(new float[]{X + sx, Y + sy, Z, X + sx, Y + sy, Z + 1, g});
-            for (int sx = 0; sx < 2; sx++) for (int sz = 0; sz < 2; sz++) if (open[sx == 1 ? 0 : 1] && open[sz == 1 ? 4 : 5]) EDGES.add(new float[]{X + sx, Y, Z + sz, X + sx, Y + 1, Z + sz, g});
-            for (int sy = 0; sy < 2; sy++) for (int sz = 0; sz < 2; sz++) if (open[sy == 1 ? 2 : 3] && open[sz == 1 ? 4 : 5]) EDGES.add(new float[]{X, Y + sy, Z + sz, X + 1, Y + sy, Z + sz, g});
+        var all = walls(mc, 60);
+        if (all.isEmpty()) return;
+        java.util.Map<Integer, List<com.pvpciv.entity.RiftWallEntity>> by = new java.util.HashMap<>();
+        for (var e : all) by.computeIfAbsent(e.wallId(), k -> new ArrayList<>()).add(e);
+        for (var list : by.values()) {
+            var ref = list.get(0);
+            double fx = ref.getX() - 0.5 - Math.floor(ref.getX() - 0.5), fz = ref.getZ() - 0.5 - Math.floor(ref.getZ() - 0.5);
+            java.util.Map<Long, Integer> cells = new java.util.HashMap<>();
+            for (var e : list) {
+                int cx = (int) Math.round(e.getX() - 0.5 - fx), cz = (int) Math.round(e.getZ() - 0.5 - fz), cy = (int) Math.round(e.getY());
+                for (int i = 0; i < e.len(); i++) cells.put(net.minecraft.core.BlockPos.asLong(cx, cy + i, cz), e.kind());
+            }
+            int[][] dirs = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+            float vx = (float) ref.vx(), vz = (float) ref.vz();
+            for (var en : cells.entrySet()) {
+                net.minecraft.core.BlockPos p = net.minecraft.core.BlockPos.of(en.getKey());
+                int g = en.getValue();
+                boolean[] open = new boolean[6];
+                for (int i = 0; i < 6; i++) { Integer o = cells.get(net.minecraft.core.BlockPos.asLong(p.getX() + dirs[i][0], p.getY() + dirs[i][1], p.getZ() + dirs[i][2])); open[i] = o == null || o != g; }
+                float X = (float) (p.getX() + fx), Y = p.getY(), Z = (float) (p.getZ() + fz);
+                for (int sx = 0; sx < 2; sx++) for (int sy = 0; sy < 2; sy++) if (open[sx == 1 ? 0 : 1] && open[sy == 1 ? 2 : 3]) EDGES.add(new float[]{X + sx, Y + sy, Z, X + sx, Y + sy, Z + 1, g, vx, vz});
+                for (int sx = 0; sx < 2; sx++) for (int sz = 0; sz < 2; sz++) if (open[sx == 1 ? 0 : 1] && open[sz == 1 ? 4 : 5]) EDGES.add(new float[]{X + sx, Y, Z + sz, X + sx, Y + 1, Z + sz, g, vx, vz});
+                for (int sy = 0; sy < 2; sy++) for (int sz = 0; sz < 2; sz++) if (open[sy == 1 ? 2 : 3] && open[sz == 1 ? 4 : 5]) EDGES.add(new float[]{X, Y + sy, Z + sz, X + 1, Y + sy, Z + sz, g, vx, vz});
+            }
+        }
+    }
+
+    /**
+     * 1.5.3: едущие стены на клиенте. Стоишь сверху — едешь вместе со стеной; стена наехала — выталкивает вперёд
+     * (плавно, без застревания). Сервер в это не вмешивается — движение игрока остаётся его.
+     */
+    public static void tick() {
+        Minecraft mc = Minecraft.getInstance();
+        var p = mc.player;
+        if (p == null || mc.level == null || p.isSpectator()) return;
+        var ws = walls(mc, 6);
+        if (ws.isEmpty()) return;
+        // везём стоящего сверху
+        AABB pb = p.getBoundingBox();
+        for (var w : ws) {
+            AABB b = w.getBoundingBox();
+            boolean onTop = Math.abs(pb.minY - b.maxY) < 0.06 && pb.maxX > b.minX + 0.02 && pb.minX < b.maxX - 0.02 && pb.maxZ > b.minZ + 0.02 && pb.minZ < b.maxZ - 0.02;
+            if (onTop) { p.setPos(p.getX() + w.vx(), p.getY(), p.getZ() + w.vz()); break; }
+        }
+        // выталкиваем из стены (до 4 проходов — ступени перед стеной)
+        for (int pass = 0; pass < 4; pass++) {
+            pb = p.getBoundingBox().deflate(0.002);
+            boolean moved = false;
+            for (var w : ws) {
+                AABB b = w.getBoundingBox();
+                if (!b.intersects(pb)) continue;
+                double vx = w.vx(), vz = w.vz();
+                double nx = p.getX(), nz = p.getZ();
+                if (Math.abs(vx) > Math.abs(vz)) nx = vx > 0 ? b.maxX + p.getBbWidth() / 2 + 0.003 : b.minX - p.getBbWidth() / 2 - 0.003;
+                else nz = vz > 0 ? b.maxZ + p.getBbWidth() / 2 + 0.003 : b.minZ - p.getBbWidth() / 2 - 0.003;
+                // если над игроком хватает места, а ниже — стена по колено: просто поднимаем (ступенька)
+                if (b.maxY - pb.minY <= 0.6 && b.maxY - pb.minY > 0) { p.setPos(p.getX(), b.maxY, p.getZ()); moved = true; break; }
+                p.setPos(nx, p.getY(), nz);
+                p.setDeltaMovement(p.getDeltaMovement().add(vx * 0.5, 0, vz * 0.5));
+                moved = true;
+                break;
+            }
+            if (!moved) break;
         }
     }
 

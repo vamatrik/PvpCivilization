@@ -55,6 +55,7 @@ public final class ClientInit {
             e.registerEntityRenderer(ModRegistry.LUNA_GUIDE.get(), GeoNpcRenderer::new);
             e.registerEntityRenderer(ModRegistry.CIV_BOAT.get(), CivBoatRenderer::new);
             e.registerEntityRenderer(ModRegistry.LIFT_CABIN.get(), LiftCabinRenderer::new);
+            e.registerEntityRenderer(ModRegistry.RIFT_WALL_E.get(), RiftWallRenderer::new);   // 1.5.3
             e.registerEntityRenderer(ModRegistry.TIMOFEY.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/timofey.png")));
             e.registerEntityRenderer(ModRegistry.PARACHUTIST.get(), ctx -> new NpcRenderer<>(ctx, true, PvpCiv.id("textures/entity/parachutist.png")));
             e.registerEntityRenderer(ModRegistry.PLUMBER.get(), ctx -> new NpcRenderer<>(ctx, false, PvpCiv.id("textures/entity/plumber.png")));
@@ -196,6 +197,7 @@ public final class ClientInit {
         });
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> onTick());
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> ClientCombat.tick());
+        NeoForge.EVENT_BUS.addListener((ClientTickEvent.Pre e) -> RiftFx.tick());   // 1.5.3: едущие стены толкают и везут игрока
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> BossMusic.tick());   // 1.0.1
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> {   // 0.11: во рту Лианы — каждый пробел на сервер
             var mc = net.minecraft.client.Minecraft.getInstance();

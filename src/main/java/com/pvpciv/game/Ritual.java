@@ -241,7 +241,7 @@ public final class Ritual {
         }
         boolean result = !(core.item.getItem() instanceof CivWeaponItem) || Gear.stars(core.item) != Gear.MAX_STARS;   // итог ритуала, пока владельца не было
         if (sp.isShiftKeyDown() || result) {
-            com.pvpciv.inv.Bag.give(sp, core.item.copy()); core.item = ItemStack.EMPTY; core.owner = null; core.ownerName = ""; core.wait = 0; core.sync();
+            com.pvpciv.inv.Bag.giveHand(sp, core.item.copy()); core.item = ItemStack.EMPTY; core.owner = null; core.ownerName = ""; core.wait = 0; core.sync();
             l.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8f, 1f);
             l.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1f, 1.2f);
             return;

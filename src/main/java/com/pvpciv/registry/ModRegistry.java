@@ -255,6 +255,8 @@ public final class ModRegistry {
             () -> EntityType.Builder.<com.pvpciv.entity.AnimeNpc>of((t, l) -> new com.pvpciv.entity.AnimeNpc(t, l, com.pvpciv.entity.AnimeNpc.Kind.HARUKI), MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("chef"));
     public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.AnimeNpc>> ASSASSIN = ENTITIES.register("assassin",
             () -> EntityType.Builder.<com.pvpciv.entity.AnimeNpc>of((t, l) -> new com.pvpciv.entity.AnimeNpc(t, l, com.pvpciv.entity.AnimeNpc.Kind.YUKI), MobCategory.MISC).sized(0.6F, 1.8F).clientTrackingRange(10).build("assassin"));
+    public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.RiftWallEntity>> RIFT_WALL_E = ENTITIES.register("rift_wall",
+            () -> EntityType.Builder.<com.pvpciv.entity.RiftWallEntity>of(com.pvpciv.entity.RiftWallEntity::new, MobCategory.MISC).sized(1F, 1F).clientTrackingRange(8).updateInterval(20).noSave().build("rift_wall"));
     public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.LiftCabin>> LIFT_CABIN = ENTITIES.register("lift_cabin",
             () -> EntityType.Builder.<com.pvpciv.entity.LiftCabin>of(com.pvpciv.entity.LiftCabin::new, MobCategory.MISC).sized(2.6F, 3.0F).clientTrackingRange(16).updateInterval(1).build("lift_cabin"));
     public static final DeferredHolder<EntityType<?>, EntityType<com.pvpciv.entity.GateEntity>> GATE = ENTITIES.register("gate",

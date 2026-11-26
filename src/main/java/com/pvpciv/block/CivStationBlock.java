@@ -112,7 +112,7 @@ public class CivStationBlock extends Block implements net.minecraft.world.level.
             sp.displayClientMessage(Component.literal("Это положил(а) " + be.ownerName() + " — не трогай.").withStyle(ChatFormatting.RED), true);
             return true;
         }
-        com.pvpciv.inv.Bag.give(sp, be.item().copy());
+        com.pvpciv.inv.Bag.giveHand(sp, be.item().copy());
         be.set(net.minecraft.world.item.ItemStack.EMPTY, null, "");
         sp.level().playSound(null, be.getBlockPos(), net.minecraft.sounds.SoundEvents.ITEM_PICKUP, net.minecraft.sounds.SoundSource.BLOCKS, 0.8f, 1f);
         return true;
