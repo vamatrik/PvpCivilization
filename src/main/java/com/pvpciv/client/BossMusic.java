@@ -29,6 +29,7 @@ public final class BossMusic {
             Map.entry("kappa", 168.5), Map.entry("kumiho", 267.6), Map.entry("noel", 258.8), Map.entry("luna", 224.2),
             Map.entry("diplomat", 230.0), Map.entry("worm", 288.4), Map.entry("demon", 192.8));
 
+    private static final double RAGE = 1.12;   // = BossManager.RAGE_TEMPO
     private static String cur = "";
     private static Track inst;
     private static long last;
@@ -40,12 +41,19 @@ public final class BossMusic {
         last = System.currentTimeMillis();
         Minecraft mc = Minecraft.getInstance();
         if (m.isEmpty()) { stop(); return; }
-        if (m.equals(cur) && inst != null && !inst.isStopped() && !inst.fading) return;
-        stop();
+        if (m.equals(cur) && inst != null && !inst.fading && (!inst.isStopped() || inst.startMs < 0 || System.currentTimeMillis() - inst.startMs < 3000)) return;
         double t = j.get("t").getAsDouble();
-        double len = LEN.getOrDefault(m, 200.0);
+        boolean rage = m.endsWith("_rage");
+        String base = rage ? m.substring(0, m.length() - 5) : m;
+        double len = LEN.getOrDefault(base, 200.0) / (rage ? RAGE : 1.0);
+        double off = t % len;
+        boolean cross = rage && base.equals(cur) && inst != null && !inst.isStopped() && !inst.fading;
+        if (cross) off = (inst.pos() % LEN.getOrDefault(base, 200.0)) / RAGE;   // 1.4: ярость — ремикс продолжает с того же места
+        if (cross) inst.fadeStep = 0.07f;
+        stop();
         cur = m;
-        inst = new Track(m, t % len);
+        inst = new Track(m, off);
+        if (cross) inst.vol = 0.45f;
         mc.getMusicManager().stopPlaying();
         mc.getSoundManager().play(inst);
         com.mojang.logging.LogUtils.getLogger().info("[PvpCiv] музыка босса: {} с {} с", m, String.format(java.util.Locale.ROOT, "%.1f", t % len));
@@ -65,7 +73,10 @@ public final class BossMusic {
     static final class Track extends AbstractTickableSoundInstance {
         final double offset;
         boolean fading;
-        float vol = 0.05f;
+        float vol = 0.05f, fadeStep = 0.025f;
+        long startMs = -1;
+        /** Текущая позиция в треке, с (от начала файла, без учёта зацикливания). */
+        double pos() { return offset + (startMs < 0 ? 0 : (System.currentTimeMillis() - startMs) / 1000.0); }
 
         Track(String id, double offset) {
             super(SoundEvent.createVariableRangeEvent(PvpCiv.id("music." + id)), SoundSource.RECORDS, RandomSource.create());   // 1.0.1: ползунок «Музыкальные блоки» — ванильную музыку часто выключают
@@ -80,7 +91,8 @@ public final class BossMusic {
         @Override
         public void tick() {
             if (isStopped()) return;
-            if (fading) { vol -= 0.025f; if (vol <= 0) { stop(); return; } }
+            if (startMs < 0) startMs = System.currentTimeMillis();
+            if (fading) { vol -= fadeStep; if (vol <= 0) { stop(); return; } }
             else if (vol < 1f) vol = Math.min(1f, vol + 0.05f);
             volume = vol;
         }

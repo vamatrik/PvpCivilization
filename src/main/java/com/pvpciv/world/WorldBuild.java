@@ -12,7 +12,7 @@ import java.util.Map;
 
 /** Полная сборка мира 1 в его измерении: общежитие, подвал, обе локации этажа 1, трассы. */
 public final class WorldBuild {
-    public static final int VERSION = 48;
+    public static final int VERSION = 49;
 
     /** Мелкие правки уже построенного мира (без полной перестройки). */
     public static void patch(MinecraftServer server, int from) {
@@ -36,6 +36,7 @@ public final class WorldBuild {
         if (from < 35) com.pvpciv.floor.Floor3Areas.fixPlants(CivWorld.f3(server));   // 0.9.9: осыпавшиеся цветы и грибы
         if (from < 41) com.pvpciv.floor.Floor4.build(CivWorld.f4(server));
         if (from < 42) com.pvpciv.floor.Floor5.build(CivWorld.f5(server));   // 1.0: шлюз, пульт лифта, пояс астероидов   // 0.12: станция «Орбита»   // 0.11: этаж 4 — НТЦ «NaZa» (0.11.1: пол лифта, галереи впритык)
+        if (from < 49 && from >= 42) com.pvpciv.game.Ritual.placeCrystals(CivWorld.f5(server));   // 1.4: тёмные кристаллы в ритуальном зале
         if (from < 48 && from >= 20) com.pvpciv.floor.Floor3Areas.placeDecoy(CivWorld.f3(server));   // 1.2: обманка на пути к Кумихо
         if (from < 47 && from >= 41) com.pvpciv.game.Rocket.rebuild(server);   // 1.2: лестница и кабина с пультом в ракетах
         if (from < 46 && from >= 42) com.pvpciv.game.StationTeleport.decommission(CivWorld.f5(server));   // 1.2: одна система телепортов на станции

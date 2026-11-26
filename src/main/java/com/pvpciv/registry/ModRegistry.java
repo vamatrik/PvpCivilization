@@ -121,6 +121,16 @@ public final class ModRegistry {
     public static final DeferredBlock<Block> NEON_ROAD_LINE = BLOCKS.register("neon_road_line",
             () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.BLACK_CONCRETE).friction(0.98f).strength(-1.0F, 3600000.0F).noLootTable()));
     public static final DeferredItem<BlockItem> NEON_ROAD_LINE_ITEM = ITEMS.registerSimpleBlockItem(NEON_ROAD_LINE);
+    /** 1.4: неоновые блоки разлома демоницы (светятся сами, без источников света — арена перестраивается каждую секунду). */
+    private static DeferredBlock<Block> rift(String n) {
+        return BLOCKS.register(n, () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.BLACK_CONCRETE).sound(net.minecraft.world.level.block.SoundType.GLASS).strength(-1.0F, 3600000.0F).noLootTable()));
+    }
+    /** 1.4: тёмный кристалл ритуального зала (вместо аметистов). */
+    public static final DeferredBlock<Block> DARK_CRYSTAL = BLOCKS.register("dark_crystal",
+            () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.AMETHYST_CLUSTER).strength(-1.0F, 3600000.0F).noLootTable().noOcclusion().noCollission().lightLevel(st -> 6)));
+    public static final DeferredBlock<Block> RIFT_NEON_RED = rift("rift_neon_red"), RIFT_NEON_BLUE = rift("rift_neon_blue"),
+            RIFT_NEON_YELLOW = rift("rift_neon_yellow"), RIFT_NEON_GREEN = rift("rift_neon_green"), RIFT_NEON_OFF = rift("rift_neon_off"),
+            RIFT_FLOOR = rift("rift_floor"), RIFT_WALL = rift("rift_wall"), RIFT_WALL_WEAK = rift("rift_wall_weak"), RIFT_STEP = rift("rift_step"), RIFT_PAD = rift("rift_pad");
     public static final DeferredBlock<com.pvpciv.block.CivStationBlock> LIFT_PANEL = BLOCKS.register("lift_panel",
             () -> new com.pvpciv.block.CivStationBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).strength(-1.0F, 3600000.0F).noLootTable().noOcclusion().lightLevel(s -> 12), true, com.pvpciv.block.CivStationBlock.Kind.LIFT));
     public static final DeferredItem<BlockItem> LIFT_PANEL_ITEM = ITEMS.registerSimpleBlockItem(LIFT_PANEL);
@@ -468,6 +478,10 @@ public final class ModRegistry {
     // ------------------------------------------------------------------ 0.8.4: звуки, курьер, зелья Элеоноры
     public static final DeferredRegister<net.minecraft.sounds.SoundEvent> SOUNDS = DeferredRegister.create(Registries.SOUND_EVENT, PvpCiv.MODID);
     // 0.9.0: синтезированные звуки (tools/sfx/synth.py)
+    /** 1.4: голос Кармиллы (синтез, своя запись — без лицензий). */
+    public static final DeferredHolder<net.minecraft.sounds.SoundEvent, net.minecraft.sounds.SoundEvent> CARMILLA_GIGGLE = SOUNDS.register("npc.carmilla.giggle", () -> net.minecraft.sounds.SoundEvent.createVariableRangeEvent(PvpCiv.id("npc.carmilla.giggle")));
+    public static final DeferredHolder<net.minecraft.sounds.SoundEvent, net.minecraft.sounds.SoundEvent> CARMILLA_OUCH = SOUNDS.register("npc.carmilla.ouch", () -> net.minecraft.sounds.SoundEvent.createVariableRangeEvent(PvpCiv.id("npc.carmilla.ouch")));
+    public static final DeferredHolder<net.minecraft.sounds.SoundEvent, net.minecraft.sounds.SoundEvent> CARMILLA_GREET = SOUNDS.register("npc.carmilla.greet", () -> net.minecraft.sounds.SoundEvent.createVariableRangeEvent(PvpCiv.id("npc.carmilla.greet")));
     public static final DeferredHolder<net.minecraft.sounds.SoundEvent, net.minecraft.sounds.SoundEvent> FX_ZONE = SOUNDS.register("fx.zone", () -> net.minecraft.sounds.SoundEvent.createVariableRangeEvent(PvpCiv.id("fx.zone")));
     public static final DeferredHolder<net.minecraft.sounds.SoundEvent, net.minecraft.sounds.SoundEvent> FX_IMPACT = SOUNDS.register("fx.impact", () -> net.minecraft.sounds.SoundEvent.createVariableRangeEvent(PvpCiv.id("fx.impact")));
     public static final DeferredHolder<net.minecraft.sounds.SoundEvent, net.minecraft.sounds.SoundEvent> FX_WAVE = SOUNDS.register("fx.wave", () -> net.minecraft.sounds.SoundEvent.createVariableRangeEvent(PvpCiv.id("fx.wave")));

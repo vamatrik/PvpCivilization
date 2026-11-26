@@ -22,10 +22,11 @@ public final class ClientInit {
     public static final KeyMapping SKILL3 = new KeyMapping("key.pvpciv.skill3", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, "key.categories.pvpciv");
     public static final KeyMapping PHONE = new KeyMapping("key.pvpciv.phone", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Y, "key.categories.pvpciv");
     public static final KeyMapping SKILL4 = new KeyMapping("key.pvpciv.skill4", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_H, "key.categories.pvpciv");
+    public static final KeyMapping CRAWL = new KeyMapping("key.pvpciv.crawl", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Z, "key.categories.pvpciv");   // 1.4: ползти (держать)
     public static final KeyMapping[] SKILL_KEYS = {DASH, SKILL2, SKILL3, SKILL4};
 
     public static void init(IEventBus modBus) {
-        modBus.addListener((RegisterKeyMappingsEvent e) -> { e.register(DASH); e.register(SKILL2); e.register(SKILL3); e.register(SKILL4); e.register(PHONE); });
+        modBus.addListener((RegisterKeyMappingsEvent e) -> { e.register(DASH); e.register(SKILL2); e.register(SKILL3); e.register(SKILL4); e.register(PHONE); e.register(CRAWL); });
         modBus.addListener((net.neoforged.neoforge.client.event.ModelEvent.RegisterAdditional e) -> e.register(StashRenderer.LID));
         // 0.12: космическое небо этажа 5
         modBus.addListener((net.neoforged.neoforge.client.event.RegisterDimensionSpecialEffectsEvent e) -> e.register(SpaceSky.ID, new SpaceSky()));
@@ -112,6 +113,7 @@ public final class ClientInit {
         });
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.RenderLivingEvent.Post<?, ?> e) -> MobBars.onRender(e));
         NeoForge.EVENT_BUS.addListener(Lines::render);
+        NeoForge.EVENT_BUS.addListener(RiftFx::render);   // 1.4: лучи разлома
         NeoForge.EVENT_BUS.addListener(ArenaFx::render);   // 1.0.1: купола арен, алтари
         NeoForge.EVENT_BUS.addListener(EnchModulesRenderer::render);
         NeoForge.EVENT_BUS.addListener(Cutscene::camera);   // 0.12: кат-сцены (ракета)
@@ -292,6 +294,7 @@ public final class ClientInit {
             com.mojang.logging.LogUtils.getLogger().info("[UI-FIT] калибровка шрифта: Поко X3 Про={} Золотая морковь={} Жетоны: 200={} ★✦={}",
                     mc.font.width("Поко X3 Про"), mc.font.width("Золотая морковь"), mc.font.width("Жетоны: 200"), mc.font.width("★✦"));
         }
+        crawlTick(mc);
         while (PHONE.consumeClick()) if (mc.player != null && mc.screen == null) PacketDistributor.sendToServer(new Network.PhoneCmd("open"));
         for (int k = 1; k <= 3; k++) while (SKILL_KEYS[k].consumeClick()) {
             if (mc.player == null) continue;
@@ -316,5 +319,19 @@ public final class ClientInit {
         if (!(sc instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> cs)) return false;
         var slot = cs.getSlotUnderMouse();
         return slot != null && com.pvpciv.inv.InvLock.isPlug(slot.getItem());
+    }
+
+    private static boolean crawlSent;
+    /** 1.4: Z — ползти, пока держишь: поза «плавание» на суше (высота 0.6 — пролезает в дыру в 1 блок). */
+    private static void crawlTick(Minecraft mc) {
+        if (mc.player == null) { crawlSent = false; return; }
+        var p = mc.player;
+        boolean want = CRAWL.isDown() && !p.isPassenger() && !p.getAbilities().flying && !p.isInWater() && !p.isFallFlying()
+                && (p.onGround() || crawlSent);
+        if (want != crawlSent) {
+            crawlSent = want;
+            PacketDistributor.sendToServer(new Network.PhoneCmd(want ? "crawl:1" : "crawl:0"));
+        }
+        p.setForcedPose(want ? net.minecraft.world.entity.Pose.SWIMMING : null);
     }
 }

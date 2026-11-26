@@ -85,7 +85,11 @@ public class CarmillaEntity extends GeoNpc {
         if (onlyFor != null) { if (tickCount > 600) discard(); return; }
         if (busy > 0) { busy--; return; }
         if (wings > 0) { wings--; setAnim(wings > 0 ? "sit_spread" : ""); }
-        else if (tickCount % 400 == 200 && random.nextFloat() < 0.6f) showWings(70);
+        else if (tickCount % 400 == 200 && random.nextFloat() < 0.6f) {
+            showWings(70);
+            if (level().getNearestPlayer(this, 10) != null && random.nextFloat() < 0.5f)   // 1.4: хихикает, когда рядом кто-то есть
+                level().playSound(null, blockPosition(), com.pvpciv.registry.ModRegistry.CARMILLA_GIGGLE.get(), SoundSource.NEUTRAL, 0.8f, 1f);
+        }
         if (position().distanceToSqr(THRONE) > 0.3) {
             puff((ServerLevel) level(), position());
             teleportTo(THRONE.x, THRONE.y, THRONE.z);
@@ -114,6 +118,7 @@ public class CarmillaEntity extends GeoNpc {
         if (DialogueManager.inDialogue(p)) return;
         showWings(120);
         level().playSound(null, blockPosition(), SoundEvents.PHANTOM_FLAP, SoundSource.NEUTRAL, 0.8f, 0.7f);
+        level().playSound(null, blockPosition(), com.pvpciv.registry.ModRegistry.CARMILLA_GREET.get(), SoundSource.NEUTRAL, 1f, 1f);
         DialogueManager.open(p, this, Vampire.dialogue(p, this));
     }
 
@@ -122,7 +127,7 @@ public class CarmillaEntity extends GeoNpc {
         if (onlyFor != null) return;
         String[] lines = {"Ах. Как пылко. Ещё раз — и это будет считаться приглашением.", "Ты бьёшь вампира в её же склепе? Смело. Глупо, но смело.", "Хм-м. Кровь у тебя быстрее, когда ты злишься."};
         Story.say(p, "Кармилла", COLOR, lines[random.nextInt(lines.length)]);
-        level().playSound(null, blockPosition(), SoundEvents.WITCH_CELEBRATE, SoundSource.NEUTRAL, 0.8f, 0.7f);
+        level().playSound(null, blockPosition(), (random.nextInt(3) == 0 ? com.pvpciv.registry.ModRegistry.CARMILLA_GIGGLE : com.pvpciv.registry.ModRegistry.CARMILLA_OUCH).get(), SoundSource.NEUTRAL, 1f, 1f);   // 1.4: свой голос вместо ведьмы
     }
 
     @Override public boolean shouldBeSaved() { return false; }

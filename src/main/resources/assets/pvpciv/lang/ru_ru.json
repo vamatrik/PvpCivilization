@@ -306,5 +306,18 @@
   "item.pvpciv.scrap_legendary": "Лом (легендарный)",
   "item.pvpciv.scrap_mythic": "Лом (мифический)",
   "block.pvpciv.grip_stone": "Камень (держит)",
-  "block.pvpciv.slick_gravel": "Гравий (скользкий)"
+  "block.pvpciv.slick_gravel": "Гравий (скользкий)",
+  "block.pvpciv.rift_neon_red": "Неон (красный)",
+  "block.pvpciv.rift_neon_blue": "Неон (синий)",
+  "block.pvpciv.rift_neon_yellow": "Неон (жёлтый)",
+  "block.pvpciv.rift_neon_green": "Неон (зелёный)",
+  "block.pvpciv.rift_neon_off": "Неон (погас)",
+  "block.pvpciv.rift_floor": "Пол разлома",
+  "block.pvpciv.rift_wall": "Стена разлома",
+  "block.pvpciv.rift_wall_weak": "Хрупкая стена разлома",
+  "block.pvpciv.rift_step": "Ступень разлома",
+  "block.pvpciv.rift_pad": "Телепорт разлома",
+  "key.pvpciv.crawl": "Ползти (держать)",
+  "block.pvpciv.dark_crystal": "Тёмный кристалл",
+  "subtitles.pvpciv.carmilla": "Кармилла"
 }

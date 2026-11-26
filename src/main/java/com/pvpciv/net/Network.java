@@ -208,7 +208,8 @@ public final class Network {
                 else if (p.cmd().equals("almanac")) com.pvpciv.game.Library.almanacFromHero(sp);
                 else if (p.cmd().equals("about")) com.pvpciv.game.About.send(sp);   // 1.2: «О себе»   // 0.10: вкладка «Альманах» в герое
                 else if (p.cmd().startsWith("off:")) { try { com.pvpciv.combat.Melee.offHit(sp, Integer.parseInt(p.cmd().substring(4))); } catch (NumberFormatException ignored) {} }   // 0.10.3: удар второй рукой
-                else if (p.cmd().equals("swing")) com.pvpciv.combat.Melee.airSwing(sp);
+                else if (p.cmd().equals("swing")) { com.pvpciv.game.VoidRift.onSwing(sp); com.pvpciv.combat.Melee.airSwing(sp); }
+                else if (p.cmd().startsWith("crawl:")) sp.setForcedPose(p.cmd().endsWith("1") && !sp.isPassenger() ? net.minecraft.world.entity.Pose.SWIMMING : null);   // 1.4: ползком
                 else if (p.cmd().equals("bagls")) com.pvpciv.inv.Bag.listTo(sp);   // 1.1.1: поиск в сумке
                 else if (p.cmd().startsWith("bagmap:") && sp.containerMenu instanceof com.pvpciv.menu.CivMenu m) {
                     String a = p.cmd().substring(7);

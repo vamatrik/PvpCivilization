@@ -89,6 +89,9 @@ public final class GameEvents {
         bus.addListener(GameEvents::onPickup);
         bus.addListener(GameEvents::onEntityJoin);
         bus.addListener(GameEvents::onRightClickBlock);
+        bus.addListener((net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.LeftClickBlock e) -> {   // 1.4: хрупкая стена разлома — рукой
+            if (e.getEntity() instanceof ServerPlayer sp && VoidRift.tryBreak(sp, e.getPos())) e.setCanceled(true);
+        });
         bus.addListener(GameEvents::onTrample);
         bus.addListener(GameEvents::onMount);
         bus.addListener((net.neoforged.neoforge.event.entity.living.LivingDeathEvent e) -> {
@@ -273,6 +276,7 @@ public final class GameEvents {
         if (!(e.getEntity() instanceof ServerPlayer p) || e.getHand() != net.minecraft.world.InteractionHand.MAIN_HAND) return;
         if (!com.pvpciv.world.CivWorld.is(p.level())) return;
         net.minecraft.core.BlockPos pos = e.getPos();
+        if (VoidRift.blockedChest(p, pos)) { e.setCanceled(true); return; }   // 1.4: личные сундуки демоницы
         if (harvest(p, pos)) { e.setCanceled(true); return; }   // 1.2: сбор урожая ПКМ с пересадкой
         if (Rocket.onUse(p, pos)) { e.setCanceled(true); return; }   // 0.12: ракета «Заря-5»
         if (com.pvpciv.floor.Belt.onUse(p, pos)) { e.setCanceled(true); return; }   // 1.0: шлюз к поясу астероидов
@@ -431,7 +435,7 @@ public final class GameEvents {
                         .then(Commands.literal("full4").executes(c -> AdminKit.full4(c.getSource().getPlayerOrException(), c.getSource())))
                         .then(Commands.literal("full5").executes(c -> AdminKit.full5(c.getSource().getPlayerOrException(), c.getSource())))
                         .then(Commands.literal("shelves").executes(c -> { Showcases.build(com.pvpciv.world.CivWorld.level(c.getSource().getServer()), CivData.get(c.getSource().getServer())); Showcases.refresh(c.getSource().getPlayerOrException()); return 1; }))
-                        .then(Commands.literal("ritual").executes(c -> { Ritual.debugLight(c.getSource().getServer()); return 1; }))
+                        .then(Commands.literal("ritual").executes(c -> { Ritual.debugLight(c.getSource().getServer()); if (c.getSource().getEntity() instanceof ServerPlayer sp) Ritual.debugPrep(sp); return 1; }))
                         .then(Commands.literal("shaft").executes(c -> { LiftShaft.start(c.getSource().getPlayerOrException()); return 1; }))
                         .then(Commands.literal("darkstars").executes(c -> { com.pvpciv.inv.Bag.give(c.getSource().getPlayerOrException(), new net.minecraft.world.item.ItemStack(com.pvpciv.registry.ModF5.DARK_STAR.get(), 2)); return 1; }))
                         .then(Commands.literal("trophies").executes(c -> { var pl = c.getSource().getPlayerOrException(); for (var tr : Showcases.ALL) com.pvpciv.inv.Bag.give(pl, new net.minecraft.world.item.ItemStack(tr.item().get())); return 1; }))

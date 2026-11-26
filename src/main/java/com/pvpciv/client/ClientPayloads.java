@@ -136,6 +136,7 @@ public final class ClientPayloads {
             case 10 -> { if (mc.screen instanceof com.pvpciv.client.screen.WordScreen ws) ws.data(j); else mc.setScreen(new com.pvpciv.client.screen.WordScreen(j)); }
             case 8 -> { ClientState.gatesFixed.clear(); for (var el : j.getAsJsonArray("fixed")) ClientState.gatesFixed.add(el.getAsString()); }
             case 6 -> { ClientState.pvpShield = j.has("pvpShield") && j.get("pvpShield").getAsBoolean(); ClientState.armPvp = j.has("armPvp") && j.get("armPvp").getAsBoolean(); }
+            case 31 -> com.pvpciv.client.RiftFx.sync(j);   // 1.4: лучи разлома
             case 30 -> mc.setScreen(new com.pvpciv.client.screen.AboutScreen(j));   // 1.2: «О себе»
             case 29 -> ClientState.armorHide.put(j.get("e").getAsInt(), j.get("m").getAsInt());
             case 3 -> ClientState.callUntil = System.currentTimeMillis() + (j.has("sec") ? j.get("sec").getAsInt() : 10) * 1000L;

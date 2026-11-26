@@ -167,5 +167,131 @@
         "stream": true
       }
     ]
+  },
+  "music.brute_rage": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/brute_rage",
+        "stream": true
+      }
+    ]
+  },
+  "music.keeper_rage": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/keeper_rage",
+        "stream": true
+      }
+    ]
+  },
+  "music.don_rage": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/don_rage",
+        "stream": true
+      }
+    ]
+  },
+  "music.rat_king_rage": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/rat_king_rage",
+        "stream": true
+      }
+    ]
+  },
+  "music.kappa_rage": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/kappa_rage",
+        "stream": true
+      }
+    ]
+  },
+  "music.kumiho_rage": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/kumiho_rage",
+        "stream": true
+      }
+    ]
+  },
+  "music.noel_rage": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/noel_rage",
+        "stream": true
+      }
+    ]
+  },
+  "music.luna_rage": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/luna_rage",
+        "stream": true
+      }
+    ]
+  },
+  "music.diplomat_rage": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/diplomat_rage",
+        "stream": true
+      }
+    ]
+  },
+  "music.worm_rage": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/worm_rage",
+        "stream": true
+      }
+    ]
+  },
+  "music.demon_rage": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "pvpciv:music/demon_rage",
+        "stream": true
+      }
+    ]
+  },
+  "npc.carmilla.giggle": {
+    "category": "neutral",
+    "subtitle": "subtitles.pvpciv.carmilla",
+    "sounds": [
+      "pvpciv:npc/carmilla/giggle1",
+      "pvpciv:npc/carmilla/giggle2",
+      "pvpciv:npc/carmilla/giggle3"
+    ]
+  },
+  "npc.carmilla.ouch": {
+    "category": "neutral",
+    "subtitle": "subtitles.pvpciv.carmilla",
+    "sounds": [
+      "pvpciv:npc/carmilla/ouch1",
+      "pvpciv:npc/carmilla/ouch2",
+      "pvpciv:npc/carmilla/ouch3"
+    ]
+  },
+  "npc.carmilla.greet": {
+    "category": "neutral",
+    "subtitle": "subtitles.pvpciv.carmilla",
+    "sounds": [
+      "pvpciv:npc/carmilla/greet1",
+      "pvpciv:npc/carmilla/greet2",
+      "pvpciv:npc/carmilla/greet3"
+    ]
   }
 }

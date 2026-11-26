@@ -46,7 +46,7 @@ public final class Ritual {
     public static final BlockPos CENTER = new BlockPos(13, Y, -23);
     public static final double CHANCE = 0.5;
     public static final String GATE = "ritual_open";
-    private static final int RISE = 90, BOOM = 120, END = 160;
+    private static final int RISE = 90, BOOM = 120, GROW = 150, BLAST = 180, END = 230;   // 1.4: BOOM — пауза (сгусток тьмы), GROW — сфера растёт, BLAST — взрыв и итог
 
     public static BlockPos hubOff(int x, int z) { BlockPos c = Floor5.HUB.center(); return c.offset(x, 0, z); }
     public static BlockPos center() { return hubOff(CENTER.getX(), CENTER.getZ()); }
@@ -112,10 +112,16 @@ public final class Ritual {
         for (BlockPos p : injectors())
             l.setBlock(p, ModV11.RITUAL_INJECTOR.get().defaultBlockState().setValue(RitualBlock.FACING, toCenter(p)), Block.UPDATE_ALL);
         // кристаллы «·x·» между инжекторами
-        for (Direction d : Direction.Plane.HORIZONTAL) l.setBlock(c.relative(d, 4).above(1), Blocks.AMETHYST_CLUSTER.defaultBlockState(), 2);
+        placeCrystals(l);
         // таблички
         com.pvpciv.world.Signs.place(l, hubOff(8, -14).above(3), Direction.SOUTH, 5, "РИТУАЛЬНЫЙ ЗАЛ", "только для тех,", "кто изгнал", "Демоницу");
         com.pvpciv.world.Signs.place(l, hubOff(13, -17).above(2), Direction.NORTH, 5, "РИТУАЛ ТЬМЫ", "1) зажги 16 ★тьмой", "2) оружие +10", "3) ПКМ — 50/50");
+    }
+
+    /** 1.4: тёмные кристаллы «·x·» между инжекторами (были аметисты). */
+    public static void placeCrystals(ServerLevel l) {
+        BlockPos c = center();
+        for (Direction d : Direction.Plane.HORIZONTAL) l.setBlock(c.relative(d, 4).above(1), ModRegistry.DARK_CRYSTAL.get().defaultBlockState(), 2);
     }
 
     /** Админ: перестроить зал и зажечь все инжекторы. */
@@ -123,6 +129,14 @@ public final class Ritual {
         ServerLevel l = CivWorld.f5(s);
         build(l);
         for (BlockPos p : injectors()) if (l.getBlockEntity(p) instanceof RitualBlockEntity b) { b.lit = true; b.sync(); l.setBlock(p, l.getBlockState(p).setValue(RitualBlock.LIT, true), Block.UPDATE_ALL); }
+    }
+
+    /** Админ (1.4): оружие в руке → +10, игрока — к ядру лицом. */
+    public static void debugPrep(ServerPlayer p) {
+        ItemStack h = p.getMainHandItem();
+        if (h.getItem() instanceof CivWeaponItem) Gear.setStars(h, Gear.MAX_STARS);
+        BlockPos c = center();
+        p.teleportTo(CivWorld.f5(p.getServer()), c.getX() + 0.5, Y, c.getZ() + 3.5, 180, 20);
     }
 
     // ------------------------------------------------------------------ 1.2: печать тьмы в проёме
@@ -184,8 +198,9 @@ public final class Ritual {
             if (l.isLoaded(d0)) l.sendParticles(ParticleTypes.SQUID_INK, d0.getX() + 0.5, d0.getY() + 1.5, d0.getZ() + 0.5, 2, 1.0, 1.0, 0.2, 0.01);
         }
         BlockPos c = center();
-        if (!l.isLoaded(c) || !(l.getBlockEntity(c) instanceof RitualBlockEntity core) || core.anim <= 0) return;
-        animate(l, core);
+        if (!l.isLoaded(c) || !(l.getBlockEntity(c) instanceof RitualBlockEntity core)) return;
+        if (core.anim > 0) { animate(l, core); return; }
+        if (core.wait > 0 && !core.item.isEmpty()) waitTick(l, core);
     }
 
     // ------------------------------------------------------------------ взаимодействие
@@ -219,11 +234,16 @@ public final class Ritual {
             sp.displayClientMessage(Component.literal("Ядро ритуала: положи оружие +10 (ПКМ оружием). Инжекторов зажжено: " + lit(l) + "/16.").withStyle(ChatFormatting.GRAY), true);
             return;
         }
-        if (core.owner != null && !core.owner.equals(sp.getUUID())) { sp.displayClientMessage(Component.literal("Это оружие положил(а) " + core.ownerName + ".").withStyle(ChatFormatting.RED), true); return; }
+        if (core.owner != null && !core.owner.equals(sp.getUUID())) {
+            sp.displayClientMessage(Component.literal((core.wait > 0 ? "Итог ритуала " + core.ownerName + " — забрать может только он(а). Через " + (core.wait / 20 + 1) + " с ядро освободится."
+                    : "Это оружие положил(а) " + core.ownerName + ".")).withStyle(ChatFormatting.RED), true);
+            return;
+        }
         boolean result = !(core.item.getItem() instanceof CivWeaponItem) || Gear.stars(core.item) != Gear.MAX_STARS;   // итог ритуала, пока владельца не было
         if (sp.isShiftKeyDown() || result) {
-            com.pvpciv.inv.Bag.give(sp, core.item.copy()); core.item = ItemStack.EMPTY; core.owner = null; core.ownerName = ""; core.sync();
+            com.pvpciv.inv.Bag.give(sp, core.item.copy()); core.item = ItemStack.EMPTY; core.owner = null; core.ownerName = ""; core.wait = 0; core.sync();
             l.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.8f, 1f);
+            l.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1f, 1.2f);
             return;
         }
         int n = lit(l);
@@ -233,6 +253,24 @@ public final class Ritual {
         l.playSound(null, pos, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 2f, 0.5f);
         l.playSound(null, pos, SoundEvents.WARDEN_EMERGE, SoundSource.BLOCKS, 1.2f, 1.4f);
         for (ServerPlayer o : l.players()) if (inside(o)) Story.title(o, "РИТУАЛ ТЬМЫ", core.item.getHoverName().getString() + " · 50 на 50", 0xB040FF);
+    }
+
+    public static final int LIE = 600;   // 30 с итог лежит на ядре
+
+    /** 1.4: итог ритуала лежит 30 с — забрать может только проводивший; потом сам улетит ему в сумку. */
+    private static void waitTick(ServerLevel l, RitualBlockEntity core) {
+        core.wait--;
+        BlockPos c = center();
+        if (core.wait % 20 == 0) core.sync();
+        if (core.wait % 10 == 0) l.sendParticles(ParticleTypes.WITCH, c.getX() + 0.5, c.getY() + 1.6, c.getZ() + 0.5, 2, 0.25, 0.25, 0.25, 0);
+        if (core.wait > 0) return;
+        ServerPlayer p = core.owner == null ? null : l.getServer().getPlayerList().getPlayer(core.owner);
+        if (p == null) { core.wait = 0; core.sync(); return; }   // не в сети — ждёт на ядре
+        com.pvpciv.inv.Bag.give(p, core.item.copy());
+        p.sendSystemMessage(Component.literal("☾ Итог ритуала улетел в сумку: " + core.item.getHoverName().getString()).withStyle(ChatFormatting.LIGHT_PURPLE));
+        l.sendParticles(ParticleTypes.REVERSE_PORTAL, c.getX() + 0.5, c.getY() + 1.6, c.getZ() + 0.5, 40, 0.3, 0.3, 0.3, 0.15);
+        l.playSound(null, c, SoundEvents.ENDERMAN_TELEPORT, SoundSource.BLOCKS, 0.8f, 1.4f);
+        core.item = ItemStack.EMPTY; core.owner = null; core.ownerName = ""; core.sync();
     }
 
     private static int lit(ServerLevel l) {
@@ -271,13 +309,10 @@ public final class Ritual {
                 if (!(l.getBlockEntity(p) instanceof RitualBlockEntity b) || !b.lit) continue;
                 Vec3 tip = Vec3.atCenterOf(p).add(Vec3.atLowerCornerOf(toCenter(p).getNormal()).scale(0.6));
                 double ph = ((t * 0.06) + i * 0.13) % 1.0;
-                for (int k = 0; k < 3; k++) {
-                    Vec3 q = tip.lerp(mid, (ph + k / 3.0) % 1.0);
-                    l.sendParticles(DARK, q.x, q.y, q.z, 1, 0, 0, 0, 0);
-                }
+                if (t % 3 == 0) { Vec3 q = tip.lerp(mid, ph); l.sendParticles(DARK, q.x, q.y, q.z, 1, 0, 0, 0, 0); }   // 1.4: основное — 3D-лучи на клиенте
                 if (t % 4 == 0) l.sendParticles(ParticleTypes.REVERSE_PORTAL, tip.x, tip.y, tip.z, 2, 0.05, 0.05, 0.05, 0.01);
                 // инжекторы гаснут один за другим — энергия ушла в ядро
-                if (t == 30 + i * 4) {
+                if (t == 58 + i * 3) {
                     b.lit = false; b.sync();
                     l.setBlock(p, l.getBlockState(p).setValue(RitualBlock.LIT, false), Block.UPDATE_ALL);
                     l.playSound(null, p, SoundEvents.RESPAWN_ANCHOR_DEPLETE.value(), SoundSource.BLOCKS, 0.6f, 1.2f);
@@ -293,12 +328,24 @@ public final class Ritual {
             if (t == RISE) l.playSound(null, c, SoundEvents.WARDEN_SONIC_CHARGE, SoundSource.BLOCKS, 2f, 0.8f);
             return;
         }
-        if (t == BOOM) {
-            l.sendParticles(ParticleTypes.EXPLOSION_EMITTER, mid.x, mid.y, mid.z, 2, 0.3, 0.3, 0.3, 0);
+        if (t < BLAST) {   // 1.4: пауза — сгусток тьмы дрожит; затем сфера набухает
+            if (t == BOOM) {
+                l.playSound(null, c, SoundEvents.WARDEN_HEARTBEAT, SoundSource.BLOCKS, 2f, 0.6f);
+                l.sendParticles(ParticleTypes.REVERSE_PORTAL, mid.x, mid.y, mid.z, 40, 0.1, 0.1, 0.1, 0.4);
+            }
+            if (t == BOOM + 18) l.playSound(null, c, SoundEvents.WARDEN_HEARTBEAT, SoundSource.BLOCKS, 2.2f, 0.55f);
+            if (t == GROW) { l.playSound(null, c, SoundEvents.WARDEN_SONIC_CHARGE, SoundSource.BLOCKS, 2f, 0.6f); l.playSound(null, c, SoundEvents.AMBIENT_CAVE.value(), SoundSource.BLOCKS, 2f, 0.5f); }
+            if (t > GROW && t % 4 == 0) l.sendParticles(ParticleTypes.SQUID_INK, mid.x, mid.y, mid.z, 6, 1.5, 1.2, 1.5, 0.02);
+            return;
+        }
+        if (t == BLAST) {
+            // тёмный взрыв — чёрная сфера лопается на клиенте; здесь — чернила, души и звук
             l.sendParticles(ParticleTypes.SONIC_BOOM, mid.x, mid.y, mid.z, 1, 0, 0, 0, 0);
-            l.sendParticles(ParticleTypes.DRAGON_BREATH, mid.x, mid.y, mid.z, 120, 1.5, 0.8, 1.5, 0.05);
-            l.playSound(null, c, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.BLOCKS, 2f, 0.6f);
-            l.playSound(null, c, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.BLOCKS, 2f, 0.7f);
+            l.sendParticles(ParticleTypes.SQUID_INK, mid.x, mid.y, mid.z, 200, 2.0, 1.2, 2.0, 0.45);
+            l.sendParticles(ParticleTypes.SCULK_SOUL, mid.x, mid.y, mid.z, 50, 2.0, 1.0, 2.0, 0.1);
+            l.sendParticles(ParticleTypes.REVERSE_PORTAL, mid.x, mid.y, mid.z, 150, 0.4, 0.4, 0.4, 0.8);
+            l.playSound(null, c, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.BLOCKS, 2f, 0.5f);
+            l.playSound(null, c, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.BLOCKS, 2f, 0.6f);
             outcome(l, core);
             return;
         }
@@ -320,18 +367,15 @@ public final class Ritual {
             Gear.setStars(w, Gear.MAX_STARS + 1);
             l.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, center().getX() + 0.5, Y + 2.5, center().getZ() + 0.5, 80, 0.6, 0.8, 0.6, 0.4);
             l.playSound(null, center(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.BLOCKS, 1.5f, 0.8f);
-            if (p != null) { com.pvpciv.inv.Bag.give(p, w); Story.title(p, "+11!", "оружие впитало тьму", 0xD060FF); }
-            else { core.item = w; core.owner = owner; core.ownerName = who; }
+            core.item = w; core.owner = owner; core.ownerName = who; core.wait = LIE;
+            if (p != null) Story.title(p, "+11!", "оружие впитало тьму · забери с ядра", 0xD060FF);
             for (ServerPlayer o : l.getServer().getPlayerList().getPlayers())
                 o.sendSystemMessage(Component.literal("☾ " + who + ": ритуал тьмы удался — «" + name + "» теперь +11!").withStyle(ChatFormatting.LIGHT_PURPLE));
         } else {
             int n = 2 + l.random.nextInt(3);
             l.sendParticles(ParticleTypes.SQUID_INK, center().getX() + 0.5, Y + 2.2, center().getZ() + 0.5, 60, 0.5, 0.5, 0.5, 0.05);
-            if (p == null) { core.item = new ItemStack(ModV11.DARK_SHARD.get(), n); core.owner = owner; core.ownerName = who; }
-            else {
-                com.pvpciv.inv.Bag.give(p, new ItemStack(ModV11.DARK_SHARD.get(), n));
-                Story.title(p, "Провал", "оружие рассыпалось · осколок темноты ×" + n, 0x8040A0);
-            }
+            core.item = new ItemStack(ModV11.DARK_SHARD.get(), n); core.owner = owner; core.ownerName = who; core.wait = LIE;
+            if (p != null) Story.title(p, "Провал", "оружие рассыпалось · осколок темноты ×" + n, 0x8040A0);
             for (ServerPlayer o : l.getServer().getPlayerList().getPlayers())
                 o.sendSystemMessage(Component.literal("☾ " + who + ": ритуал тьмы поглотил «" + name + "». Остались осколки…").withStyle(ChatFormatting.DARK_PURPLE));
         }

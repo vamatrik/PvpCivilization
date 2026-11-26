@@ -15,9 +15,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class HumanoidModelMixin<T extends LivingEntity> {
     @Shadow @Final public ModelPart rightArm;
     @Shadow @Final public ModelPart leftArm;
+    @Shadow @Final public ModelPart rightLeg;
+    @Shadow @Final public ModelPart leftLeg;
 
     @Inject(method = "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V", at = @At("TAIL"))
     private void pvpciv$pose(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch, CallbackInfo ci) {
+        com.pvpciv.client.Poses.crawl(entity, limbSwing, limbSwingAmount, rightArm, leftArm, rightLeg, leftLeg);
         com.pvpciv.client.Poses.apply(entity, rightArm, leftArm);
     }
 }

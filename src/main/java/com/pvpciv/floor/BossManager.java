@@ -97,6 +97,7 @@ public final class BossManager {
         boolean locked; final Set<UUID> inside = new HashSet<>();
         /** 1.2: состав боя — кто был на арене при пробуждении. Только они могут вернуться (после смерти); остальным вход закрыт, пока босс не уснёт. */
         final Set<UUID> roster = new HashSet<>();
+        long rageAt = -1;   // 1.4: когда босс впал в ярость (музыка → рейдж-ремикс)
         long fightStart;   // 1.0.1: игровое время пробуждения — общий отсчёт музыки
         int idle;          // 1.1: тики без боя — через минуту босс снова запечатывается в алтарь
         final Map<UUID, Float> dmg = new HashMap<>();
@@ -133,6 +134,19 @@ public final class BossManager {
     // ------------------------------------------------------------------ 1.0.1: купола арен, алтари и музыка
     private static final Map<UUID, String> MUSIC = new HashMap<>();
 
+    /** 1.4: рейдж-ремикс в 1.12 раза быстрее; продолжает с того же места трека. */
+    public static final double RAGE_TEMPO = 1.12;
+    public static String[] musicAt(String id, long start, long rageAt, long gt) {
+        if (rageAt < 0 || rageAt > gt) return new String[]{id, String.valueOf((gt - start) / 20.0)};
+        return new String[]{id + "_rage", String.valueOf((rageAt - start) / 20.0 / RAGE_TEMPO + (gt - rageAt) / 20.0)};
+    }
+    private static boolean enraged(ServerLevel lvl, St s) {
+        var e = s.id == null ? null : lvl.getEntity(s.id);
+        if (e instanceof com.pvpciv.entity.boss.CivBoss b) return b.enraged();
+        if (e instanceof com.pvpciv.entity.boss.NoelBoss nb) return nb.enraged();
+        return false;
+    }
+
     private static void arenaSync(MinecraftServer server) {
         long gt = server.overworld().getGameTime();
         Map<UUID, com.google.gson.JsonArray> arenas = new HashMap<>();
@@ -160,7 +174,10 @@ public final class BossManager {
                 o.addProperty("ax", a.getX()); o.addProperty("ay", a.getY()); o.addProperty("az", a.getZ());
                 arenas.computeIfAbsent(p.getUUID(), k -> new com.google.gson.JsonArray()).add(o);
                 // музыка — тем, кто на арене, пока босс бодрствует
-                if (alive && (r <= d.lairR() + 1 || s.inside.contains(p.getUUID()))) music.put(p.getUUID(), new String[]{d.id(), String.valueOf((gt - s.fightStart) / 20.0)});
+                if (alive && (r <= d.lairR() + 1 || s.inside.contains(p.getUUID()))) {
+                    if (s.rageAt < 0 && enraged(lvl, s)) s.rageAt = gt;
+                    music.put(p.getUUID(), musicAt(d.id(), s.fightStart, s.rageAt, gt));
+                }
             }
         }
         com.pvpciv.game.LunaTrial.music(server, music);
@@ -321,6 +338,7 @@ public final class BossManager {
         if (b == null) return null;
         St s = st(d);
         s.fightStart = lvl.getServer().overworld().getGameTime();
+        s.rageAt = -1;
         Vec3 c = center(d), at = c.add(d.spawnOffset());
         b.moveTo(at.x, at.y, at.z, 180, 0);
         b.setHome(c);

@@ -39,4 +39,14 @@ public final class Poses {
         right.xRot = 0; right.yRot = 0; right.zRot = rad;
         left.xRot = 0; left.yRot = 0; left.zRot = -rad;
     }
+
+    /** 1.4: ползком (Z) — «по-пластунски»: руки тянутся вперёд по очереди, ноги толкаются. */
+    public static void crawl(net.minecraft.world.entity.LivingEntity e, float ls, float amt, ModelPart ra, ModelPart la, ModelPart rl, ModelPart ll) {
+        if (!e.isVisuallyCrawling()) return;
+        float s = (float) Math.sin(ls * 0.75f), k = Math.min(1f, amt * 1.6f) + 0.15f;
+        ra.xRot = -2.7f + 0.55f * s * k; ra.yRot = 0; ra.zRot = 0.35f + 0.25f * Math.max(0, s) * k;
+        la.xRot = -2.7f - 0.55f * s * k; la.yRot = 0; la.zRot = -0.35f - 0.25f * Math.max(0, -s) * k;
+        rl.xRot = 0.35f * s * k; rl.zRot = 0.12f;
+        ll.xRot = -0.35f * s * k; ll.zRot = -0.12f;
+    }
 }
