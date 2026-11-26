@@ -379,7 +379,9 @@ public final class Library {
             o.addProperty("id", BuiltInRegistries.ENTITY_TYPE.getKey(k.type()).toString());
             o.addProperty("loc", k.loot.startsWith("floor1b") ? "Этаж 1 · Ледяной кряж" : k.loot.startsWith("floor1") ? "Этаж 1 · Пепельная пустошь"
                     : k.loot.startsWith("floor2b") ? "Этаж 2 · Канализация" : k.loot.startsWith("floor2") ? "Этаж 2 · Неоновый город"
-                    : k.loot.startsWith("floor3b") ? "Этаж 3 · Деревня Кумихо" : "Этаж 3 · Деревня самураев");
+                    : k.loot.startsWith("floor3b") ? "Этаж 3 · Деревня Кумихо" : k.loot.startsWith("floor3") ? "Этаж 3 · Деревня самураев"
+                    : k.loot.startsWith("floor4b") ? "Этаж 4 · Закрытые лаборатории" : k.loot.startsWith("floor4") ? "Этаж 4 · НТЦ «NaZa»"
+                    : k.loot.startsWith("floor5") ? "Этаж 5 · Станция «Орбита»" : "Прочее");
             if (n > 0) {
                 o.addProperty("lvl", k.defLevel);
                 o.addProperty("where", where(k));
@@ -439,7 +441,7 @@ public final class Library {
                 o.addProperty("tier", a.tier);
                 o.addProperty("armor", String.format("%.1f", a.armor(st)));
                 o.addProperty("hp", String.format("%.1f%%", a.health(st) * 100));
-                o.addProperty("core", "в центре алтаря — " + (a.tier < 2 ? "Медальон инея" : a.tier < 3 ? "Фильтр противогаза" : "Нефритовая печать") + ", по краям — звёзды (ядро подходит только к броне своего этажа и ниже)");
+                o.addProperty("core", "в центре алтаря — " + com.pvpciv.item.ArmorCoreItem.centerName(com.pvpciv.item.ArmorCoreItem.tierFor(a.tier)) + ", по краям — звёзды (ядро подходит только к броне своего этажа и ниже)");
                 o.addProperty("junk", "любой хлам, родной ×1,5 — " + (a.set.startsWith("Инеевый") ? "Инеевый осколок" : a.set.contains("ликвидатора") ? "Обрезки резины" : a.set.startsWith("Самурай") ? "Обрезки шёлка" : a.set.startsWith("Лисий") ? "Лисий мех" : "—"));
                 o.add("src", sources(id.toString()));
                 arms.add(o);

@@ -28,7 +28,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 public class RitualBlock extends HorizontalDirectionalBlock implements EntityBlock {
     public static final BooleanProperty LIT = BlockStateProperties.LIT;
     public final boolean core;
-    private static final VoxelShape CORE = Block.box(1, 0, 1, 15, 14, 15), INJ = Block.box(3, 0, 3, 13, 12, 13);
+    private static final VoxelShape CORE = Block.box(1, 0, 1, 15, 14, 15), INJ = Block.box(2, 2, 2, 14, 14, 14);
 
     public RitualBlock(Properties p, boolean core) {
         super(p);

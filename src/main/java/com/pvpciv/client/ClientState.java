@@ -7,7 +7,7 @@ public final class ClientState {
     /** 0.9.9: стаки кровотечения и момент «разрыва» (кровь по краям экрана). */
     public static int bleed = 0;
     /** 0.10.5: навыки — выбранные id по слотам, готовность (мс), все навыки (json). */
-    public static final String[] skillSel = {"dash", "", ""};
+    public static final String[] skillSel = {"dash", "", "", ""};
     /** 1.0: классы — последняя синхронизация (PhoneData 23). */
     public static com.google.gson.JsonObject classes;
     public static boolean dancer;
@@ -15,7 +15,7 @@ public final class ClientState {
         var mc = net.minecraft.client.Minecraft.getInstance();
         return dancer && mc.player != null && mc.player.getMainHandItem().getItem() instanceof com.pvpciv.item.CivWeaponItem w && w.cls == com.pvpciv.item.CivWeaponItem.WClass.SABER ? 10 : com.pvpciv.combat.Melee.COMBO_MAX;
     }
-    public static final long[] skillReady = new long[3], skillCdMs = new long[3];
+    public static final long[] skillReady = new long[4], skillCdMs = new long[4];
     public static com.google.gson.JsonArray skillsAll = new com.google.gson.JsonArray();
     public static long bleedBurst = 0;
     public static long xp = 0, xpNext = 60, money = 0;
@@ -71,6 +71,9 @@ public final class ClientState {
     /** Лавка Элеоноры: ≥0 — цены в жетонах (баланс). */
     public static int shopTokens = -1;
     public static boolean pvpShield = false;
+    /** 1.2: показ брони — маски игроков (id сущности → биты скрытых частей) и «всегда показывать в PvP-зонах». */
+    public static final java.util.Map<Integer, Integer> armorHide = new java.util.HashMap<>();
+    public static boolean armPvp = false;
     public static final java.util.Set<String> gatesFixed = new java.util.HashSet<>();
     /** Входящий звонок (до какого момента звонит, мс) и ожидающее такси. */
     public static long callUntil = 0;

@@ -73,7 +73,7 @@ public final class StubScreens {
                 new B("rat_king", "Крысиный король", "Этаж 2 • Тронный сток (PvP)", "ур. 13", true),
                 new B("kappa", "Братья-каппы", "Этаж 3 • Пруд деревни самураев (PvP)", "ур. 13", true),
                 new B("kumiho", "Кумихо", "Этаж 3 • Святилище девяти хвостов (PvP)", "ур. 16", true)};
-        public Bosses() { super("Боссы и задания", 300, 192, true); }
+        public Bosses() { super("Журнал: боссы и задания", 300, 192, true); }
         private java.util.List<java.util.Map.Entry<String, String>> quests() { return new java.util.ArrayList<>(ClientState.quests().entrySet()); }
         private int rows() { return LIST.length + quests().size() + 1; }
         @Override protected void drawContent(GuiGraphics g, int mx, int my, float pt) {
@@ -146,13 +146,14 @@ public final class StubScreens {
     /** Гараж лодок: все открытые лодки, при себе — выбранная. */
     /** Настройки героя: всё, что не влезает в отдельные вкладки. Пока — PvP. */
     public static class Settings extends PlainScreen {
-        private static final String[] TITLE = {"Защита от сильных"};
-        private static final String[] DESC = {"Не драться с игроками на " + com.pvpciv.combat.CombatEvents.PVP_GAP + "+ уровней выше: ни они тебя, ни ты их."};
+        private static final String[] TITLE = {"Защита от сильных", "Всегда показывать броню в PvP-зонах"};
+        private static final String[] DESC = {"Не драться с игроками на " + com.pvpciv.combat.CombatEvents.PVP_GAP + "+ уровней выше: ни они тебя, ни ты их.",
+                "В PvP-зоне видишь всю броню других игроков, даже скрытую ими (глазки у слотов брони)."};
         public Settings() {
             super("Настройки", 340, 200, true);
             net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd("opt:get"));
         }
-        private boolean val(int i) { return ClientState.pvpShield; }
+        private boolean val(int i) { return i == 0 ? ClientState.pvpShield : ClientState.armPvp; }
         @Override protected void drawContent(GuiGraphics g, int mx, int my, float pt) {
             g.drawString(font, "PvP", left + 14, top + 20, Skin.GOLD_L, false);
             for (int i = 0; i < TITLE.length; i++) {
@@ -167,9 +168,15 @@ public final class StubScreens {
                 g.fill(sx, sy, sx + 28, sy + 12, on ? 0xFF2E9E5A : 0xFF3A3A48);
                 g.fill(on ? sx + 16 : sx + 2, sy + 2, on ? sx + 26 : sx + 12, sy + 10, 0xFFE8ECF4);
             }
-            Skin.para(g, font, "Обычные PvP-зоны остаются PvP-зонами — защита действует только по уровню.", left + 14, top + 80, 312, 10, 2, Skin.DIM, false);
+            Skin.para(g, font, "Обычные PvP-зоны остаются PvP-зонами — защита действует только по уровню.", left + 14, top + 122, 312, 10, 2, Skin.DIM, false);
         }
         @Override public boolean mouseClicked(double mx, double my, int b) {
+            if (in(mx, my, 12, 74, 316, 40)) {
+                ClientState.armPvp = !ClientState.armPvp;
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd("opt:armPvp:" + (ClientState.armPvp ? 1 : 0)));
+                minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1f));
+                return true;
+            }
             if (in(mx, my, 12, 32, 316, 40)) {
                 ClientState.pvpShield = !ClientState.pvpShield;
                 net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd("opt:pvpShield:" + (ClientState.pvpShield ? 1 : 0)));

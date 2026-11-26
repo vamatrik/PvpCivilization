@@ -340,7 +340,10 @@ public final class Vampire {
             com.pvpciv.inv.Bag.give(p, b);
             Story.announceRareDrop(p.level(), b, p.getGameProfile().getName());
         }
-        p.sendSystemMessage(Component.literal("Плата Кармиллы: " + money + " ✦" + (stars > 0 ? ", звёзды ×" + stars : "") + (blessed > 0 ? ", благословенные ×" + blessed : ""))
+        // 1.2: Кармилла и Элеонора — подруги: за контракт капает немного очков Элеоноры
+        int ele = 0;
+        { var sd = Progress.d(p); if (sd.eleStage >= 2) { ele = elite ? 3 : 1 + r.nextInt(2); sd.eleTokens += ele; p.setData(ModRegistry.STORY.get(), sd); } }
+        p.sendSystemMessage(Component.literal("Плата Кармиллы: " + money + " ✦" + (stars > 0 ? ", звёзды ×" + stars : "") + (blessed > 0 ? ", благословенные ×" + blessed : "") + (ele > 0 ? ", очки Элеоноры +" + ele : ""))
                 .withStyle(s -> s.withColor(C)));
         p.level().playSound(null, p.blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 1f, 0.8f);
         if (d.questsDone >= 5) Titles.grant(p, "contractor");
@@ -385,14 +388,16 @@ public final class Vampire {
         Vec3 look0 = p.getLookAngle().multiply(1, 0, 1);
         final Vec3 look = look0.lengthSqr() < 1e-4 ? new Vec3(0, 0, 1) : look0.normalize();
         Vec3 at = p.position().add(look.scale(3.2));
-        CarmillaEntity c = CarmillaEntity.phantom(lvl, p, at);
+        // 1.2: Кармилла появляется там, где жертва (раньше — всегда в мире общежития: с этажей 2–5 её было не видно)
+        final CarmillaEntity[] cc = {CarmillaEntity.phantom(p.serverLevel(), p, at)};
+        CarmillaEntity c = cc[0];
         p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 110, 10, false, false));
         com.pvpciv.combat.CombatEvents.noJump(p, 110);   // прыжок отключён
         p.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, 230, 0, false, false));
         PacketDistributor.sendToPlayer(p, new Network.Cinematic(1, 110, blood ? "Звезда крови требует платы…" : ele ? "Элеонора нажаловалась…" : "Кармилла пришла за долгом…"));
         lvl.playSound(null, p.blockPosition(), SoundEvents.WARDEN_HEARTBEAT, SoundSource.HOSTILE, 2f, 0.7f);
         if (c != null) {
-            CarmillaEntity.puff(lvl, at);
+            CarmillaEntity.puff(p.serverLevel(), at);
             c.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, p.getEyePosition());
             c.setAnim("spread");
             lvl.playSound(null, p.blockPosition(), SoundEvents.PHANTOM_BITE, SoundSource.HOSTILE, 1.5f, 0.6f);
@@ -400,28 +405,31 @@ public final class Vampire {
         Story.say(p, NAME, C, blood ? "Звезда на крови треснула? Значит, кровь — моя." : ele ? "Мне тут позвонили. Говорят, ты грубишь хорошим девочкам." : "Попался.");
         final Vec3 side = new Vec3(-look.z, 0, look.x);
         GameEvents.later(server, 35, () -> {
-            if (c == null || !p.isAlive()) return;
+            CarmillaEntity c2 = cc[0];
+            if (c2 == null || !p.isAlive()) return;
+            ServerLevel cl = (ServerLevel) c2.level();
             Vec3 s2 = p.position().add(side.scale(2.2)).add(look.scale(1.2));
-            CarmillaEntity.puff(lvl, c.position());
-            c.teleportTo(s2.x, p.getY(), s2.z);
-            c.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, p.getEyePosition());
-            c.setAnim("cross");
+            CarmillaEntity.puff(cl, c2.position());
+            c2.teleportTo(s2.x, p.getY(), s2.z);
+            c2.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, p.getEyePosition());
+            c2.setAnim("cross");
             lvl.playSound(null, p.blockPosition(), SoundEvents.BAT_AMBIENT, SoundSource.HOSTILE, 1f, 0.6f);
             Story.say(p, NAME, C, blood ? "Ты же читал мелкий шрифт? Звезда — моя кровь. Провал — твоя." : ele ? "Элеонора всхлипывала в трубку десять минут. Ты в курсе, что она звонит МНЕ, когда обижается?" : "Двадцать минут. Ты потратил их на что угодно, кроме меня. Обидно, знаешь ли.");
         });
         GameEvents.later(server, 70, () -> {
-            if (c == null || !p.isAlive()) return;
+            CarmillaEntity c3 = cc[0];
+            if (c3 == null || !p.isAlive()) return;
             Vec3 s3 = p.position().add(look.scale(1.1));
-            c.teleportTo(s3.x, p.getY(), s3.z);
-            c.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, p.getEyePosition());
-            c.setAnim("drag");
+            c3.teleportTo(s3.x, p.getY(), s3.z);
+            c3.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, p.getEyePosition());
+            c3.setAnim("drag");
             p.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 60, 0, false, false));
             lvl.sendParticles(new DustParticleOptions(new Vector3f(0.7f, 0, 0.1f), 2f), p.getX(), p.getY() + 1, p.getZ(), 60, 0.5, 0.8, 0.5, 0);
             lvl.playSound(null, p.blockPosition(), SoundEvents.ENDER_DRAGON_FLAP, SoundSource.HOSTILE, 1.2f, 1.3f);
             Story.say(p, NAME, C, "Не дёргайся. Пойдём вниз — там тихо и никто не мешает.");
         });
         GameEvents.later(server, 105, () -> {
-            if (!p.isAlive() || p.hasDisconnected()) { ABDUCTING.remove(p.getUUID()); if (c != null) c.discard(); return; }
+            if (!p.isAlive() || p.hasDisconnected()) { ABDUCTING.remove(p.getUUID()); if (cc[0] != null) cc[0].discard(); return; }
             StoryData d = Progress.d(p);
             d.jailUntil = real() + jailTicks;
             if (hasQuest(d) && d.questDeadline > 0) d.questDeadline += jailTicks;   // время в клетке не съедает контракт
@@ -430,11 +438,12 @@ public final class Vampire {
             p.setData(ModRegistry.STORY.get(), d);
             Basement.setDoor(lvl, false);
             toCell(p);
-            if (c != null) {
-                Vec3 cs = Vec3.atBottomCenterOf(Basement.CELL_SPOT);
-                c.teleportTo(cs.x - 1.2, cs.y, cs.z);
-                c.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, p.getEyePosition());
-                c.setAnim("bite");
+            Vec3 cs = Vec3.atBottomCenterOf(Basement.CELL_SPOT);
+            if (cc[0] != null && cc[0].level() != lvl) { cc[0].discard(); cc[0] = CarmillaEntity.phantom(lvl, p, new Vec3(cs.x - 1.2, cs.y, cs.z)); }
+            if (cc[0] != null) {
+                cc[0].teleportTo(cs.x - 1.2, cs.y, cs.z);
+                cc[0].lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, p.getEyePosition());
+                cc[0].setAnim("bite");
             }
             PacketDistributor.sendToPlayer(p, new Network.Cinematic(2, 70, "Укус"));
             lvl.playSound(null, p.blockPosition(), SoundEvents.GENERIC_DRINK, SoundSource.HOSTILE, 1.5f, 0.6f);
@@ -444,14 +453,14 @@ public final class Vampire {
             p.getFoodData().setSaturation(0);
         });
         GameEvents.later(server, 175, () -> {
-            if (c == null || !p.isAlive()) return;
-            c.setAnim("spread");
+            if (cc[0] == null || !p.isAlive()) return;
+            cc[0].setAnim("spread");
             lvl.playSound(null, p.blockPosition(), SoundEvents.PHANTOM_FLAP, SoundSource.HOSTILE, 1f, 0.7f);
             Story.say(p, NAME, C, ele ? "М-м-м… Вкусно. Передам Элеоноре, что ты извиняешься." : "М-м-м… Вкусно. Даже жаль, что ты так редко опаздываешь.");
         });
         GameEvents.later(server, 220, () -> {
             ABDUCTING.remove(p.getUUID());
-            if (c != null) { CarmillaEntity.puff(lvl, c.position()); c.discard(); }
+            if (cc[0] != null) { CarmillaEntity.puff(lvl, cc[0].position()); cc[0].discard(); }
             p.removeEffect(MobEffects.INVISIBILITY);
             long mins = Math.max(1, jailTicks / 1200);
             Story.say(p, NAME, C, blood

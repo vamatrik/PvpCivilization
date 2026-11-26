@@ -159,7 +159,7 @@ public class ForgeMenu extends CivMenu {
         } else {
             int tier = w.getItem() instanceof CivWeaponItem cw ? cw.tier : 1;
             String name = com.pvpciv.util.Ru.name(w);
-            box.setItem(0, w.is(ModRegistry.YUKI_KATANA.get()) ? com.pvpciv.game.Assassin.remainsOf(w, pendingFrom) : new ItemStack(ModRegistry.WEAPON_SHARDS.get(), 1 + tier + pendingFrom / 2));
+            box.setItem(0, w.is(ModRegistry.YUKI_KATANA.get()) ? com.pvpciv.game.Assassin.remainsOf(w, pendingFrom) : ModRegistry.scrapOf(w));   // 1.2: лом своей редкости
             result.set(3);
             lvl.playSound(null, pos, SoundEvents.ANVIL_DESTROY, SoundSource.BLOCKS, 1f, 0.8f);
             lvl.playSound(null, pos, SoundEvents.ITEM_BREAK, SoundSource.BLOCKS, 1f, 0.6f);

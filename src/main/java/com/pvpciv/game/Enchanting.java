@@ -22,6 +22,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.*;
+import net.minecraft.world.item.Item;
 
 /**
  * 0.11 — молекулярное зачарование (этаж 4, стол Чарователя в вестибюле NaZa).
@@ -115,7 +116,7 @@ public final class Enchanting {
 
     /** По игроку бьют: уворот (true — отменить удар), снижение урона, отражение. */
     public static boolean dodge(ServerPlayer p) {
-        double d = val(p, "dodge");
+        double d = val(p, "dodge") + Classes.dodge(p);   // 1.2: древо классов
         if (d > 0 && p.getRandom().nextDouble() * 100 < d) {
             if (p.level() instanceof ServerLevel sl) {
                 sl.sendParticles(net.minecraft.core.particles.ParticleTypes.PORTAL, p.getX(), p.getY() + 1, p.getZ(), 20, 0.3, 0.6, 0.3, 0.3);
@@ -295,28 +296,67 @@ public final class Enchanting {
         sync(p);
     }
 
+    // ---- 1.2: ресурсы лежат в своих слотах стола (кладёшь из сумки сам)
+    private static final String[] RES = {"laz", "cmp", "focus", "reso"};
+    private static Item resItem(String k) {
+        return switch (k) { case "laz" -> ModF4.LAZURATRON.get(); case "cmp" -> com.pvpciv.registry.ModF5.CMP_LAZURATRON.get(); case "focus" -> ModF4.CAT_FOCUS.get(); default -> ModF4.CAT_RESONATOR.get(); };
+    }
+    public static int tRes(StoryData d, String k) { return d.gates.getInt("ench_" + k); }
+    private static void setRes(ServerPlayer p, String k, int n) { StoryData d = Progress.d(p); d.gates.putInt("ench_" + k, Math.max(0, n)); p.setData(ModRegistry.STORY.get(), d); }
+    /** Лазуратрон в столе (сжатый = 8). */
+    public static int tLaz(StoryData d) { return tRes(d, "laz") + com.pvpciv.registry.ModF5.CMP * tRes(d, "cmp"); }
+
+    private static void load(ServerPlayer p, String k) {
+        if (!Arrays.asList(RES).contains(k)) return;
+        Item it = resItem(k);
+        int n = Bag.count(p, s -> s.is(it));
+        if (n <= 0) return;
+        Bag.take(p, s -> s.is(it), n);
+        setRes(p, k, tRes(Progress.d(p), k) + n);
+        p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.AMETHYST_BLOCK_PLACE, SoundSource.PLAYERS, 0.8f, 1.4f);
+        sync(p);
+    }
+    private static void unload(ServerPlayer p, String k) {
+        if (!Arrays.asList(RES).contains(k)) return;
+        int n = tRes(Progress.d(p), k);
+        if (n <= 0) return;
+        setRes(p, k, 0);
+        Item it = resItem(k);
+        while (n > 0) { int c = Math.min(n, it.getDefaultMaxStackSize()); Bag.give(p, new ItemStack(it, c)); n -= c; }
+        sync(p);
+    }
+    /** Оплата из стола: сначала сжатым (сдача — обычным, в стол), остаток — обычным. */
+    private static void payTable(ServerPlayer p, int price) {
+        StoryData d = Progress.d(p);
+        int cmp = tRes(d, "cmp"), laz = tRes(d, "laz");
+        int k = Math.min(cmp, (price + com.pvpciv.registry.ModF5.CMP - 1) / com.pvpciv.registry.ModF5.CMP);
+        cmp -= k;
+        laz -= price - k * com.pvpciv.registry.ModF5.CMP;   // отрицательная разница — сдача
+        d.gates.putInt("ench_cmp", cmp); d.gates.putInt("ench_laz", Math.max(0, laz));
+        p.setData(ModRegistry.STORY.get(), d);
+    }
+
     public static void sync(ServerPlayer p) {
         StoryData d = Progress.d(p);
         ItemStack st = stored(p);
         JsonObject o = new JsonObject();
-        JsonArray cand = new JsonArray();   // что можно положить в стол
-        if (st.isEmpty()) {
-            for (int i = 0; i < 9; i++) addCand(cand, p.getInventory().getItem(i), "inv@" + i);
-            addCand(cand, p.getOffhandItem(), "off");
-            for (int i = 3; i >= 0; i--) addCand(cand, p.getInventory().armor.get(i), "arm@" + i);
-            for (int i = 0; i < Bag.get(p).getSlots(); i++) addCand(cand, Bag.get(p).getStackInSlot(i), "bag@" + i);
-        }
+        JsonArray cand = new JsonArray();   // снаряжение, которое можно положить в стол (иконками)
+        for (int i = 0; i < 9; i++) addCand(cand, p.getInventory().getItem(i), "inv@" + i);
+        addCand(cand, p.getOffhandItem(), "off");
+        for (int i = 3; i >= 0; i--) addCand(cand, p.getInventory().armor.get(i), "arm@" + i);
+        for (int i = 0; i < Bag.get(p).getSlots(); i++) addCand(cand, Bag.get(p).getStackInSlot(i), "bag@" + i);
         o.add("cand", cand);
         o.addProperty("ok", ok(st));
+        o.addProperty("itemId", st.isEmpty() ? "" : net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem()).toString());
         o.addProperty("item", st.isEmpty() ? "" : st.getHoverName().getString());
+        o.addProperty("rar", st.isEmpty() ? 0 : com.pvpciv.loot.Gear.rarity(st).color);
         o.addProperty("weapon", weapon(st));
         o.addProperty("cur", ench(st) == null ? "" : ench(st).name + " " + ROMAN[Math.min(4, rank(st))] + " — " + ench(st).desc(rank(st)));
         o.addProperty("cost", ok(st) ? cost(st) : 0);
-        o.addProperty("laz", lazTotal(p));
-        o.addProperty("cmp", Bag.count(p, s -> s.is(com.pvpciv.registry.ModF5.CMP_LAZURATRON.get())));
-        o.addProperty("focus", Bag.count(p, s -> s.is(ModF4.CAT_FOCUS.get())));
-        o.addProperty("anchor", Bag.count(p, s -> s.is(ModF4.CAT_ANCHOR.get())));
-        o.addProperty("reso", Bag.count(p, s -> s.is(ModF4.CAT_RESONATOR.get())));
+        o.addProperty("tlaz", tLaz(d));
+        JsonObject bag = new JsonObject(), table = new JsonObject();
+        for (String k : RES) { Item it = resItem(k); bag.addProperty(k, Bag.count(p, s -> s.is(it))); table.addProperty(k, tRes(d, k)); }
+        o.add("bag", bag); o.add("table", table);
         JsonArray mods = new JsonArray();
         for (int m : modules(d)) mods.add(m);
         o.add("mods", mods);
@@ -334,7 +374,7 @@ public final class Enchanting {
             opts.add(j);
         }
         o.add("opts", opts);
-        o.addProperty("keep", pd != null && pd.anchor);
+        o.addProperty("keep", pd != null);
         PacketDistributor.sendToPlayer(p, new Network.PhoneData(19, o.toString()));
     }
 
@@ -342,7 +382,10 @@ public final class Enchanting {
         if (!ok(st)) return;
         JsonObject j = new JsonObject();
         j.addProperty("src", src);
+        j.addProperty("id", net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem()).toString());
         j.addProperty("name", st.getHoverName().getString());
+        j.addProperty("rar", com.pvpciv.loot.Gear.rarity(st).color);
+        j.addProperty("stars", com.pvpciv.loot.Gear.stars(st));
         Ench e = ench(st);
         j.addProperty("ench", e == null ? "" : e.name + " " + ROMAN[Math.min(4, rank(st))]);
         a.add(j);
@@ -356,31 +399,32 @@ public final class Enchanting {
             case "open" -> sync(p);
             case "roll" -> { try { roll(p, Integer.parseInt(a[2])); } catch (Exception ignored) {} }
             case "pick" -> { try { pick(p, Integer.parseInt(a[2])); } catch (Exception ignored) {} }
-            case "put" -> { try { put(p, a[2]); } catch (Exception ignored) {} }
+            case "put" -> { try { if (!stored(p).isEmpty()) take(p); put(p, a[2]); } catch (Exception ignored) {} }
             case "take" -> take(p);
+            case "load" -> { if (a.length == 3) load(p, a[2]); }
+            case "unload" -> { if (a.length == 3) unload(p, a[2]); }
         }
     }
 
+    /**
+     * 1.2: синтез тратит лазуратрон и катализаторы ИЗ СТОЛА. Каждый синтез берёт по 1 из каждого заполненного слота катализатора:
+     * Фокус — +1 вариант, Резонатор — +1 ранг случайному варианту. Старое зачарование можно оставить всегда (Якорь больше не нужен).
+     */
     private static void roll(ServerPlayer p, int mode) {
         if (mode != 1 && mode != 3 && mode != 10) return;
         ItemStack st = stored(p);
         if (!ok(st)) { p.displayClientMessage(Component.literal("Положи в стол оружие или броню").withStyle(ChatFormatting.RED), true); return; }
         StoryData d = Progress.d(p);
         int price = cost(st) * mode;
-        if (lazTotal(p) < price) { p.displayClientMessage(Component.literal("Нужно лазуратрона: " + price).withStyle(ChatFormatting.RED), true); return; }
-        payLaz(p, price);
+        if (tLaz(d) < price) { p.displayClientMessage(Component.literal("В столе мало лазуратрона: нужно " + price + " (положи из сумки)").withStyle(ChatFormatting.RED), true); return; }
+        payTable(p, price);
+        d = Progress.d(p);
         int nMods = 0, best = 0;
         for (int m : modules(d)) if (m > 0) { nMods++; best = Math.max(best, m); }
         int cap = Math.max(2, best + 1);                       // базовый — до II, улучшенный — III, продвинутый — IV
-        int left = mode;                                       // режим xN забирает до N катализаторов
-        int focus = Math.min(left, Bag.count(p, s -> s.is(ModF4.CAT_FOCUS.get())));
-        left -= focus;
-        int anchor = Math.min(Math.min(left, 1), Bag.count(p, s -> s.is(ModF4.CAT_ANCHOR.get())));
-        left -= anchor;
-        int reso = Math.min(left, Bag.count(p, s -> s.is(ModF4.CAT_RESONATOR.get())));
-        if (focus > 0) Bag.take(p, s -> s.is(ModF4.CAT_FOCUS.get()), focus);
-        if (anchor > 0) Bag.take(p, s -> s.is(ModF4.CAT_ANCHOR.get()), anchor);
-        if (reso > 0) Bag.take(p, s -> s.is(ModF4.CAT_RESONATOR.get()), reso);
+        int focus = Math.min(1, tRes(d, "focus")), reso = Math.min(1, tRes(d, "reso"));
+        if (focus > 0) setRes(p, "focus", tRes(d, "focus") - 1);
+        if (reso > 0) setRes(p, "reso", tRes(Progress.d(p), "reso") - 1);
         int n = Math.min(8, Math.max(1, nMods) + (mode == 3 ? 1 : mode == 10 ? 2 : 0) + focus);
         int tries = mode == 1 ? 1 : mode == 3 ? 2 : 3;
         List<Ench> pool = new ArrayList<>();
@@ -397,7 +441,7 @@ public final class Enchanting {
             int k = p.getRandom().nextInt(opts.size());
             opts.set(k, new Opt(opts.get(k).id, Math.min(4, opts.get(k).rank + 1)));
         }
-        PENDING.put(p.getUUID(), new Pending(opts, anchor > 0 || ench(st) == null));
+        PENDING.put(p.getUUID(), new Pending(opts, true));
         p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.PLAYERS, 1f, 0.8f);
         p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 0.6f, 1.6f);
         p.serverLevel().sendParticles(net.minecraft.core.particles.ParticleTypes.ENCHANT, com.pvpciv.floor.Floor4.ENCH_TABLE.getX() + 0.5, com.pvpciv.floor.Floor4.ENCH_TABLE.getY() + 1.5,

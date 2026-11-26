@@ -113,6 +113,11 @@ public final class ModRegistry {
     public static final DeferredBlock<Block> SLICK_STONE = BLOCKS.register("slick_stone",
             () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.POLISHED_ANDESITE).friction(0.98f).strength(-1.0F, 3600000.0F).noLootTable()));
     public static final DeferredItem<BlockItem> SLICK_STONE_ITEM = ITEMS.registerSimpleBlockItem(SLICK_STONE);
+    /** 1.2: обманка на Каменном пути — выглядит как скользкий камень, но держит; и «гравий», который скользит. */
+    public static final DeferredBlock<Block> GRIP_STONE = BLOCKS.register("grip_stone",
+            () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.POLISHED_ANDESITE).strength(-1.0F, 3600000.0F).noLootTable()));
+    public static final DeferredBlock<Block> SLICK_GRAVEL = BLOCKS.register("slick_gravel",
+            () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).sound(net.minecraft.world.level.block.SoundType.GRAVEL).friction(0.98f).strength(-1.0F, 3600000.0F).noLootTable()));
     public static final DeferredBlock<Block> NEON_ROAD_LINE = BLOCKS.register("neon_road_line",
             () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.BLACK_CONCRETE).friction(0.98f).strength(-1.0F, 3600000.0F).noLootTable()));
     public static final DeferredItem<BlockItem> NEON_ROAD_LINE_ITEM = ITEMS.registerSimpleBlockItem(NEON_ROAD_LINE);
@@ -146,10 +151,22 @@ public final class ModRegistry {
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> RUSTY_GEAR = simple("rusty_gear", 5, false, 99, "Хлам. Скупщику нравится.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> CHARRED_COIN = simple("charred_coin", 12, false, 64, "Старая монета, оплавленная пеплом.", "Хлам, но ценный.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> ASH_RELIC = simple("ash_relic", 60, true, 16, "Реликвия Пепельной пустоши.", "Очень ценный хлам.");
+    /** 1.2: лом по редкости (при поломке на заточке и при разборе) — пока только на продажу. */
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> SCRAP_COMMON = simple("scrap_common", 25, false, 64, "Лом обычного оружия.", "Продаётся скупщику. Скоро: ритуал повышения качества.");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> SCRAP_UNCOMMON = simple("scrap_uncommon", 60, false, 64, "Лом необычного оружия.", "Продаётся скупщику. Скоро: ритуал повышения качества.");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> SCRAP_RARE = simple("scrap_rare", 140, false, 64, "Лом редкого оружия.", "Продаётся скупщику. Скоро: ритуал повышения качества.");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> SCRAP_EPIC = simple("scrap_epic", 320, true, 64, "Лом эпического оружия.", "Продаётся скупщику. Скоро: ритуал повышения качества.");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> SCRAP_LEGENDARY = simple("scrap_legendary", 750, true, 64, "Лом легендарного оружия.", "Продаётся скупщику. Скоро: ритуал повышения качества.");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> SCRAP_MYTHIC = simple("scrap_mythic", 1800, true, 64, "Лом мифического оружия.", "Продаётся скупщику. Скоро: ритуал повышения качества.");
+    public static net.minecraft.world.item.ItemStack scrapOf(net.minecraft.world.item.ItemStack weapon) {
+        int r = com.pvpciv.loot.Gear.rarity(weapon).ordinal();
+        var it = switch (r) { case 0 -> SCRAP_COMMON; case 1 -> SCRAP_UNCOMMON; case 2 -> SCRAP_RARE; case 3 -> SCRAP_EPIC; case 4 -> SCRAP_LEGENDARY; default -> SCRAP_MYTHIC; };
+        return new net.minecraft.world.item.ItemStack(it.get());
+    }
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> WEAPON_SHARDS = simple("weapon_shards", 15, false, 64, "Всё, что осталось от оружия после неудачной заточки.", "Скоро: разбор в кузнице.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> STAR_W1 = simple("star_w1", 25, false, 99, "Звезда заточки мира 1.", "Наковальня в квартире: оружие + звезда.", "Неудача — оружие ЛОМАЕТСЯ. Алтарь: 8 звёзд → ✦.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> BLESSED_STAR_W1 = simple("blessed_star_w1", 150, true, 64, "Благословенная звезда мира 1.", "Наковальня: неудача — заточка −1, оружие цело.", "Алтарь инфузии: из оружия +4 и 4 звёзд заточки.");
-    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> BRUTE_CRYSTAL = simple("brute_crystal", 40, true, 99, "Кристалл Гнилого Громилы.", "10 шт. — обмен на Тесак Громилы (скоро).");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> BRUTE_CRYSTAL = simple("brute_crystal", 120, true, 99, "Кристалл Гнилого Громилы.", "10 шт. — обмен на Тесак Громилы (скоро).");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> BRUTE_TROPHY = simple("brute_trophy", 0, true, 1, "Трофей: Гнилой Громила повержен.", "ПКМ по витрине в квартире — выставить.");
     public static final DeferredItem<com.pvpciv.item.BoatSummonItem> OAK_BOAT_T1 = ITEMS.register("oak_boat_t1",
             () -> new com.pvpciv.item.BoatSummonItem(new Item.Properties().stacksTo(1)));
@@ -182,7 +199,7 @@ public final class ModRegistry {
     });
     public static final DeferredItem<com.pvpciv.item.CivWeaponItem> KEEPER_SPEAR = ITEMS.register("keeper_spear",
             () -> new com.pvpciv.item.CivWeaponItem(1, true, com.pvpciv.item.CivWeaponItem.WClass.SABER, com.pvpciv.loot.Rarity.EPIC, "Копьё Хранительницы Склепа. Холодное даже сквозь перчатку.").skill(com.pvpciv.game.WeaponSkills.Skill.FROST_LUNGE));
-    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> KEEPER_CRYSTAL = simple("keeper_crystal", 70, true, 99, "Осколок короны Хранительницы Склепа.", "Редкий материал Кряжа: ядро брони и инфузия.");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> KEEPER_CRYSTAL = simple("keeper_crystal", 150, true, 99, "Осколок короны Хранительницы Склепа.", "Редкий материал Кряжа: ядро брони и инфузия.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> KEEPER_TROPHY = simple("keeper_trophy", 0, true, 1, "Трофей: Хранительница Склепа повержена.", "ПКМ по витрине в квартире — выставить.");
     public static final DeferredItem<com.pvpciv.item.ArmorCoreItem> ARMOR_CORE = ITEMS.register("armor_core", () -> new com.pvpciv.item.ArmorCoreItem(new Item.Properties().stacksTo(16)));
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> TEMPER_SCROLL = simple("temper_scroll", 50, true, 16, "Свиток закалки.", "Стол брони: нужен для улучшения до +5 и до +10.");
@@ -298,7 +315,7 @@ public final class ModRegistry {
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> RUBBER_SCRAP = simple("rubber_scrap", 5, false, 99, "Обрезки резины.", "Материал брони тира 2+.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> DON_TROPHY = simple("don_trophy", 0, true, 1, "Трофей: Дон Витторио повержен.", "Для витрины в квартире.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> RAT_KING_TROPHY = simple("rat_king_trophy", 0, true, 1, "Трофей: Крысиный король повержен.", "Для витрины в квартире.");
-    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> DON_RING = simple("don_ring", 80, true, 99, "Перстень Дона.", "Редкий материал этажа 2.");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> DON_RING = simple("don_ring", 300, true, 99, "Перстень Дона.", "Редкий материал этажа 2.");
     // этаж 3 — Тихая библиотека (0.9.0)
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> TOME_ASH = simple("tome_ash", 0, true, 1, "Утерянный том: «Пепел и кости».", "Хранитель Сёдо давно его ищет.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> TOME_NEON = simple("tome_neon", 0, true, 1, "Утерянный том: «Песни неона».", "Хранитель Сёдо давно его ищет.");
@@ -310,11 +327,11 @@ public final class ModRegistry {
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> RUSTY_TSUBA = simple("rusty_tsuba", 9, false, 99, "Цуба — гарда меча. Ржавая.", "Хлам деревни самураев.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> SILK_SCRAP = simple("silk_scrap", 7, false, 99, "Обрезки шёлка.", "Материал самурайской брони.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> JADE_SEAL = simple("jade_seal", 70, true, 16, "Нефритовая печать.", "Сердце ядра брони этажа 3 (алтарь).");
-    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> KAPPA_DISH = simple("kappa_dish", 120, true, 16, "Блюдце каппы. Всё ещё мокрое.", "Редкий материал этажа 3.");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> KAPPA_DISH = simple("kappa_dish", 250, true, 16, "Блюдце каппы. Всё ещё мокрое.", "Редкий материал этажа 3.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> KAPPA_TROPHY = simple("kappa_trophy", 0, true, 1, "Трофей: братья-каппы повержены.", "Для витрины в квартире.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> FOX_FUR = simple("fox_fur", 8, false, 99, "Лисий мех.", "Материал лисьего костюма.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> FOXFIRE = simple("foxfire", 90, true, 16, "Кицунэби — лисий огонёк.", "Редкий материал этажа 3.");
-    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> KUMIHO_TAIL = simple("kumiho_tail", 140, true, 16, "Хвост Кумихо. Один из девяти.", "Очень редкий материал.");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> KUMIHO_TAIL = simple("kumiho_tail", 500, true, 16, "Хвост Кумихо. Один из девяти.", "Очень редкий материал.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> KUMIHO_TROPHY = simple("kumiho_trophy", 0, true, 1, "Трофей: Кумихо повержена.", "Для витрины в квартире.");
     private static DeferredItem<com.pvpciv.item.CivWeaponItem> w3(String id, boolean plus, com.pvpciv.item.CivWeaponItem.WClass c, com.pvpciv.loot.Rarity min, String lore) {
         return ITEMS.register(id, () -> new com.pvpciv.item.CivWeaponItem(3, plus, c, min, lore));
@@ -374,7 +391,7 @@ public final class ModRegistry {
             new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.DAMAGE_RESISTANCE, 1800, 0),
             new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE, 1800, 0));
     public static final DeferredItem<com.pvpciv.item.AlmanacItem> ALMANAC = ITEMS.register("almanac", () -> new com.pvpciv.item.AlmanacItem(new Item.Properties().stacksTo(1)));
-    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> RAT_CROWN_SHARD = simple("rat_crown_shard", 90, true, 99, "Обломок крысиной короны.", "Редкий материал этажа 2.");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> RAT_CROWN_SHARD = simple("rat_crown_shard", 320, true, 99, "Обломок крысиной короны.", "Редкий материал этажа 2.");
     public static final DeferredItem<com.pvpciv.item.BagBuckleItem> SMUGGLER_PACK = ITEMS.register("smuggler_pack",
             () -> new com.pvpciv.item.BagBuckleItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC), 4));
     public static final DeferredItem<com.pvpciv.item.CivWeaponItem> SAMURAI_KATANA = ITEMS.register("samurai_katana",

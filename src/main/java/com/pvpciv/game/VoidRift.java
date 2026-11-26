@@ -56,7 +56,7 @@ public final class VoidRift {
     private static final ChatFormatting[] COLOR_FMT = {ChatFormatting.RED, ChatFormatting.BLUE, ChatFormatting.YELLOW, ChatFormatting.GREEN};
 
     private static boolean active;
-    private static int t, stage, sub, round, demonLevel = 38;
+    private static int t, stage, sub, round, demonLevel = 34;   // 1.2: было 38 (мобы станции — до 30)
     private static float mana;
     private static UUID demon;
     private static final Set<UUID> FIGHTERS = new LinkedHashSet<>();
@@ -73,6 +73,12 @@ public final class VoidRift {
     private static int endT = -1;
     private static long started;
     private static final Map<UUID, List<ItemStack>> PENDING = new HashMap<>();
+    /** 1.2: выбывшие (умерли / ушли) — могут вернуться через телепорт у алтаря червя. */
+    private static final Set<UUID> OUT = new LinkedHashSet<>();
+    /** 1.2: все выбыли — ждём 2.5 мин, вдруг кто-то вернётся (тогда разлом с начала). */
+    private static int waitT = -1;
+    private static final int WAIT_MAX = 3000;
+    private static Vec3 tpPoint() { return Vec3.atBottomCenterOf(com.pvpciv.floor.Belt.CENTER).add(0, 0, 3.5); }
 
     public static boolean active() { return active; }
     /** 1.0.1: музыка разлома — бойцам. */
@@ -99,7 +105,7 @@ public final class VoidRift {
             if (p != null && p.isAlive() && p.level() == belt && (debug || p.position().distanceTo(Vec3.atCenterOf(com.pvpciv.floor.Belt.CENTER)) < 90)) FIGHTERS.add(u);
         }
         if (FIGHTERS.isEmpty()) return;
-        active = true; t = 0; stage = 0; sub = 0; round = 0; mana = 100; endT = -1;
+        active = true; t = 0; stage = 0; sub = 0; round = 0; mana = 100; endT = -1; waitT = -1; OUT.clear();
         started = s.overworld().getGameTime();
         LASERS.clear(); PATH.clear(); LAP_T.clear(); FINISHED.clear(); MOBS.clear();
         bar = new ServerBossEvent(Component.literal("Демоница Пустоты · мана"), BossEvent.BossBarColor.PURPLE, BossEvent.BossBarOverlay.NOTCHED_20);
@@ -155,9 +161,26 @@ public final class VoidRift {
             ServerPlayer p = server.getPlayerList().getPlayer(u);
             boolean gone = p == null || !p.isAlive() || p.level() != l || p.position().distanceTo(Vec3.atCenterOf(C)) > 70;
             if (gone && p != null) bar.removePlayer(p);
+            if (gone && endT < 0) {
+                OUT.add(u);
+                if (p != null) p.sendSystemMessage(Component.literal("☄ Ты выпал из разлома. Телепорт у алтаря червя (пояс астероидов) вернёт тебя в бой — успей, пока там кто-то держится" + (FIGHTERS.size() <= 1 ? " (или 2.5 мин, если не останется никого)." : ".")).withStyle(ChatFormatting.LIGHT_PURPLE));
+            }
             return gone;
         });
-        if (FIGHTERS.isEmpty()) { fail(l); return; }
+        if (endT < 0) returnTick(l);
+        if (FIGHTERS.isEmpty()) {
+            if (endT >= 0 || OUT.isEmpty()) { fail(l); return; }
+            if (waitT < 0) {   // 1.2: все выбыли — разлом замирает, 2.5 мин на возвращение
+                waitT = 0;
+                clearMobs(l); LASERS.clear();
+                if (demon != null && l.getEntity(demon) != null) l.getEntity(demon).discard();
+                demon = null;
+                for (UUID u : OUT) { ServerPlayer p = server.getPlayerList().getPlayer(u); if (p != null) p.sendSystemMessage(Component.literal("☠ В разломе никого. 2:30 — вернись через телепорт у алтаря червя, и разлом начнётся заново.").withStyle(ChatFormatting.DARK_PURPLE)); }
+            }
+            if (++waitT >= WAIT_MAX) { fail(l); return; }
+            if (waitT % 600 == 0) for (UUID u : OUT) { ServerPlayer p = server.getPlayerList().getPlayer(u); if (p != null) p.displayClientMessage(Component.literal("Разлом закроется через " + (WAIT_MAX - waitT) / 20 + " с").withStyle(ChatFormatting.LIGHT_PURPLE), true); }
+            return;
+        }
         VoidDemon d = demon == null ? null : (l.getEntity(demon) instanceof VoidDemon vd ? vd : null);
         if (endT >= 0) { finishTick(l, d); return; }
         for (ServerPlayer p : fighters(server)) fallCheck(l, p);
@@ -198,6 +221,7 @@ public final class VoidRift {
             p.connection.send(new ClientboundSetTitleTextPacket(Component.literal(names[stage]).withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD)));
             p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("Стадия " + stage + "/4 · " + hints[stage]).withStyle(ChatFormatting.GRAY)));
         }
+        SkySpin.start(l, Vec3.atCenterOf(C), 140, 80);   // 1.2: небо закручивается на смене стадии
         clearLayer(l, C.getY());
         clearPath(l);
         HALF = false;
@@ -464,7 +488,7 @@ public final class VoidRift {
             if (m == null) continue;
             m.moveTo(at.x, at.y, at.z, 0, 0);
             Mobs.setupDefault(m);
-            Mobs.setup(m, demonLevel, false, "Тень: " + k.title, "floor5_mob");   // 1.1.1: урон — как у мобов пояса (ур. 38), без поправок вида
+            Mobs.setup(m, demonLevel, false, "Тень: " + k.title, "floor5_mob");   // 1.1.1: урон — как у мобов пояса (ур. 34), без поправок вида
             m.setInvulnerable(true);
             m.addTag("boss_minion");
             m.setCustomName(Component.literal("Тень: " + k.title + " (неуязвима)").withStyle(ChatFormatting.DARK_PURPLE));
@@ -626,6 +650,36 @@ public final class VoidRift {
             if (!wall) continue;
             BlockPos q = c.offset(x, y, z);
             l.setBlock(q, on ? Blocks.BARRIER.defaultBlockState() : Blocks.AIR.defaultBlockState(), 2);
+        }
+    }
+
+    /** 1.2: телепорт у алтаря червя — выбывшие возвращаются (если все выбыли — разлом начинается заново). */
+    private static void returnTick(ServerLevel l) {
+        if (OUT.isEmpty()) return;
+        Vec3 tp = tpPoint();
+        if (t % 4 == 0) {
+            l.sendParticles(ParticleTypes.REVERSE_PORTAL, tp.x, tp.y + 1, tp.z, 12, 0.4, 1.0, 0.4, 0.05);
+            l.sendParticles(ParticleTypes.WITCH, tp.x, tp.y + 0.1, tp.z, 4, 0.6, 0.05, 0.6, 0);
+        }
+        for (var it = OUT.iterator(); it.hasNext(); ) {
+            ServerPlayer p = l.getServer().getPlayerList().getPlayer(it.next());
+            if (p == null || !p.isAlive() || p.level() != l || p.position().distanceTo(tp) > 1.8) continue;
+            it.remove();
+            FIGHTERS.add(p.getUUID());
+            bar.addPlayer(p);
+            l.playSound(null, p.blockPosition(), SoundEvents.PORTAL_TRAVEL, SoundSource.PLAYERS, 0.6f, 1.4f);
+            if (waitT >= 0) {   // все выбыли — с начала
+                waitT = -1;
+                stage = 0; sub = 0; round = 0; mana = 100; t = 44;
+                LASERS.clear(); PATH.clear(); LAP_T.clear(); FINISHED.clear();
+                PacketDistributor.sendToPlayer(p, new Network.PhoneData(22, "{\"cut\":\"rift\",\"len\":50}"));
+                p.sendSystemMessage(Component.literal("☄ Разлом открывается заново!").withStyle(ChatFormatting.LIGHT_PURPLE));
+                continue;
+            }
+            if (stage == 3) toCheck(p);
+            else { p.teleportTo(l, C.getX() + 0.5 + 9, C.getY(), C.getZ() + 0.5, 90, 0); p.resetFallDistance(); }
+            PacketDistributor.sendToPlayer(p, new Network.PhoneData(22, "{\"cut\":\"arrive\",\"len\":30}"));
+            p.sendSystemMessage(Component.literal("☄ Ты снова в разломе!").withStyle(ChatFormatting.LIGHT_PURPLE));
         }
     }
 

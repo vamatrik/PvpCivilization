@@ -343,13 +343,33 @@ public final class Gates {
     public static void request(ServerPlayer p, String from, String to) {
         StoryData d = Progress.d(p);
         long cd = CD.getOrDefault(p.getUUID(), 0L) - System.currentTimeMillis();
-        if (cd > 0) { msg(p, "Врата ещё не остыли: " + (cd / 1000 + 1) + " с.", ChatFormatting.RED); return; }
         if (Vampire.jailed(p)) { msg(p, "Из темницы врата не ведут.", ChatFormatting.RED); return; }
+        boolean pocket = from.startsWith("pocket-");
+        if (pocket) {   // 1.2: карманный телепорт — как врата текущего этажа, но без привязки к месту
+            int pf;
+            try { pf = Integer.parseInt(from.substring(7)); } catch (NumberFormatException e) { return; }
+            if (!Classes.pocketReady(p) || CivWorld.floor(p.level()) != pf && !(pf == 1 && CivWorld.floor(p.level()) <= 1)) { msg(p, "Карманный телепорт рассеялся — подними руки ещё раз.", ChatFormatting.RED); return; }
+            if (!to.equals("home")) {
+                Gate g = byId(to);
+                if (g == null || !fixed(d, to)) { msg(p, "Эти врата ещё не починены.", ChatFormatting.RED); return; }
+                boolean upOk = g.floor <= home(d) && (g.floor != 2 || d.liftOk) && (g.floor != 3 || SkyLift.f3Ok(d)) && (g.floor != 4 || SkyLift.f4Ok(d)) && (g.floor != 5 || SkyLift.f5Ok(d));
+                if (g.floor > pf && !upOk) { msg(p, "Врата общежития пока не достают до этого этажа — улучши их.", ChatFormatting.RED); return; }
+            }
+            Classes.pocketUsed(p);
+            go(p, to);
+            Classes.purple(p.serverLevel(), p.position());
+            return;
+        }
+        if (cd > 0) { msg(p, "Врата ещё не остыли: " + (cd / 1000 + 1) + " с.", ChatFormatting.RED); return; }
         if (!to.equals("home")) {
             Gate g = byId(to);
             if (g == null || !fixed(d, to)) { msg(p, "Эти врата ещё не починены.", ChatFormatting.RED); return; }
-            if (from.equals("home") ? g.floor > home(d) || (g.floor == 2 && !d.liftOk) || (g.floor == 3 && !SkyLift.f3Ok(d)) || (g.floor == 4 && !SkyLift.f4Ok(d)) || (g.floor == 5 && !SkyLift.f5Ok(d)) : byId(from) == null || byId(from).floor != g.floor) {
-                msg(p, from.equals("home") ? "Врата общежития пока не достают до этого этажа — улучши их." : "С этих врат — только по своему этажу и домой.", ChatFormatting.RED);
+            // 1.2: улучшения врат ограничивают только путь ВВЕРХ; по своему этажу и вниз — всегда
+            boolean upOk = g.floor <= home(d) && (g.floor != 2 || d.liftOk) && (g.floor != 3 || SkyLift.f3Ok(d)) && (g.floor != 4 || SkyLift.f4Ok(d)) && (g.floor != 5 || SkyLift.f5Ok(d));
+            Gate fg0 = from.equals("home") ? null : byId(from);
+            int fromFloor = from.equals("home") ? 1 : fg0 == null ? -1 : fg0.floor;
+            if (fromFloor < 0 || (g.floor > fromFloor && !upOk)) {
+                msg(p, "Врата общежития пока не достают до этого этажа — улучши их (вниз и по этажу — можно всегда).", ChatFormatting.RED);
                 return;
             }
         }

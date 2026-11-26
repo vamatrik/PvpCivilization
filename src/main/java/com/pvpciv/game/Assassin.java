@@ -72,6 +72,7 @@ public final class Assassin {
         c += weaponCrit(w)[0];
         if (TOUCH.getOrDefault(p.getUUID(), 0L) > System.currentTimeMillis()) c += 40;
         if (fullSet(p, "Самурай")) c += 5;   // полный самурайский доспех
+        c += Classes.critBonus(p);   // 1.2: древо классов
         return Math.min(0.85, c / 100.0);
     }
 
@@ -81,6 +82,7 @@ public final class Assassin {
         double m = BASE_CRIT_DMG + d.critDmg;
         ItemStack w = com.pvpciv.combat.Melee.striking(p);
         m += weaponCrit(w)[1];
+        m += Classes.critDmgBonus(p);
         if (TOUCH.getOrDefault(p.getUUID(), 0L) > System.currentTimeMillis()) m += 50;
         return 1 + m / 100.0;
     }
@@ -347,13 +349,29 @@ public final class Assassin {
 
     private static void wordReward(ServerPlayer p, int tries) {
         friend(p, 5);
-        String table = p.getRandom().nextBoolean() ? "floor2_elite" : "floor2b_elite";
+        // 1.2: награда — с твоего самого высокого открытого этажа (было — всегда этаж 2)
+        int top = 32 - Integer.numberOfLeadingZeros(SkyLift.unlocked(Progress.d(p)));
+        top = Math.max(1, Math.min(5, top));
+        String table = "floor" + top + (top < 5 && p.getRandom().nextBoolean() ? "b" : "") + "_elite";
         ItemStack prize = ItemStack.EMPTY;
+        // редкий джекпот: звезда крови (3%) или оружие эпик/лега/мифик (7%)
+        float jr = p.getRandom().nextFloat();
+        if (jr < 0.03f) {
+            ItemStack bs = new ItemStack(ModRegistry.BLOOD_STAR_W1.get());
+            Story.announceRareDrop(p.serverLevel(), bs, p.getGameProfile().getName());
+            Bag.give(p, bs);
+            Story.say(p, "Юки", C, "…Это я нашла в старом храме. Тебе нужнее.");
+        }
         for (int i = 0; i < 12 && prize.isEmpty(); i++)
             for (ItemStack st : LootTables.roll(table, p.getRandom(), 3.0))
                 if (st.getItem() instanceof com.pvpciv.item.CivWeaponItem || st.getItem() instanceof com.pvpciv.item.CivArmorItem) { prize = st; break; }
         if (prize.isEmpty()) prize = new ItemStack(ModRegistry.BLESSED_STAR_W1.get());
         if (tries <= 3 && prize.getItem() instanceof com.pvpciv.item.CivWeaponItem && Gear.rarity(prize).ordinal() < Rarity.EPIC.ordinal()) Gear.withRarity(prize, Rarity.EPIC);
+        if (jr >= 0.03f && jr < 0.10f && prize.getItem() instanceof com.pvpciv.item.CivWeaponItem) {
+            float k = p.getRandom().nextFloat();
+            Rarity want = k < 0.08f ? Rarity.MYTHIC : k < 0.35f ? Rarity.LEGENDARY : Rarity.EPIC;
+            if (Gear.rarity(prize).ordinal() < want.ordinal()) Gear.withRarity(prize, want);
+        }
         Story.announceRareDrop(p.serverLevel(), prize, p.getGameProfile().getName());
         Bag.give(p, prize);
         Story.say(p, "Юки", C, tries <= 2 ? "…Быстро. Подозрительно быстро. Держи." : "Угадал. Держи — заслужил.");

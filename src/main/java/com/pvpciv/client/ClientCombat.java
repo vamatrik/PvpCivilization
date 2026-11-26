@@ -91,7 +91,8 @@ public final class ClientCombat {
     private static final int[] DUR = new int[2];
 
     private static boolean weapon(ItemStack st) { return st.getItem() instanceof CivWeaponItem; }
-    private static boolean dual(LocalPlayer p) { return weapon(p.getMainHandItem()) && weapon(p.getOffhandItem()); }
+    private static boolean dual(LocalPlayer p) { return false; }   // 1.2: пара — одна вещь (см. Melee.pair)
+    private static boolean pairFlip = true;
 
     public static float offCharge(LocalPlayer p) {
         double d = com.pvpciv.combat.Melee.delay(p, p.getOffhandItem(), true);
@@ -138,7 +139,8 @@ public final class ClientCombat {
         if (!off && ch >= 0.92f) {   // основная рука: ваниль дальше сделает атаку/взмах
             judge(0, pendingPrecise); pendingPrecise = false; pending = 0;
             mainStrike(mc, p);
-            if (plant) p.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            if (com.pvpciv.combat.Melee.pair(p.getMainHandItem())) { e.setSwingHand(false); p.swing(swingHand()); }
+            else if (plant) p.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             if (dual) nextOff = true;
             return;
         }
@@ -160,14 +162,20 @@ public final class ClientCombat {
             offLast = Math.max(offLast, p.level().getGameTime() - (long) Math.floor(d * 0.5));
             wasOff = false;
         }
-        anim(0, p.getMainHandItem());
+        boolean pr = com.pvpciv.combat.Melee.pair(p.getMainHandItem());
+        int hand = 0;
+        if (pr) { pairFlip = !pairFlip; hand = pairFlip ? 1 : 0; } else pairFlip = true;
+        anim(hand, p.getMainHandItem());
         boolean miss = mc.hitResult == null || mc.hitResult.getType() == HitResult.Type.MISS;
         if (miss) {
             PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd("swing"));
             p.resetAttackStrengthTicker();
         }
-        Lines.slash(p, p.getMainHandItem(), false);
+        Lines.slash(p, p.getMainHandItem(), hand == 1);
     }
+
+    /** 1.2: какой рукой махнуть (пара чередует руки). */
+    private static net.minecraft.world.InteractionHand swingHand() { return pairFlip ? net.minecraft.world.InteractionHand.OFF_HAND : net.minecraft.world.InteractionHand.MAIN_HAND; }
 
     private static void offStrike(Minecraft mc, LocalPlayer p) {
         pending = 0;
@@ -241,10 +249,11 @@ public final class ClientCombat {
     /** Своя отрисовка оружия в руке от первого лица: без руки, взмах по дуге. */
     public static void onRenderHand(RenderHandEvent e) {
         ItemStack st = e.getItemStack();
-        if (!weapon(st)) return;
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer p = mc.player;
         if (p == null) return;
+        if (e.getHand() == InteractionHand.OFF_HAND && st.isEmpty() && com.pvpciv.combat.Melee.pair(p.getMainHandItem())) st = p.getMainHandItem();   // 1.2: копия парного оружия
+        if (!weapon(st)) return;
         int hand = e.getHand() == InteractionHand.MAIN_HAND ? 0 : 1;
         boolean right = (p.getMainArm() == HumanoidArm.RIGHT) == (hand == 0);
         e.setCanceled(true);
@@ -298,5 +307,34 @@ public final class ClientCombat {
                 right ? ItemDisplayContext.FIRST_PERSON_RIGHT_HAND : ItemDisplayContext.FIRST_PERSON_LEFT_HAND, !right,
                 ps, e.getMultiBufferSource(), e.getPackedLight());
         ps.popPose();
+    }
+
+    // 1.2: от третьего лица — на время отрисовки кладём копию парного оружия во вторую руку (только на клиенте, только кадр)
+    private static boolean mirrored;
+    private static final ItemStack[] savedArmor = new ItemStack[4];
+    private static net.minecraft.world.entity.player.Player armored;
+    public static void onPlayerPre(net.neoforged.neoforge.client.event.RenderPlayerEvent.Pre e) {
+        var pl = e.getEntity();
+        mirrored = false;
+        armored = null;
+        // 1.2: скрытые части брони (вид), если смотрящий не в PvP-зоне с «всегда показывать»
+        int m = com.pvpciv.client.ClientState.armorHide.getOrDefault(pl.getId(), 0);
+        if (m != 0 && !(com.pvpciv.client.ClientState.armPvp && com.pvpciv.client.ClientState.zoneType == 2 && pl != Minecraft.getInstance().player)) {
+            armored = pl;
+            for (int i = 0; i < 4; i++) {
+                savedArmor[i] = pl.getInventory().armor.get(3 - i);
+                if ((m & (1 << i)) != 0) pl.getInventory().armor.set(3 - i, ItemStack.EMPTY);
+            }
+        }
+        if (pl.getOffhandItem().isEmpty() && com.pvpciv.combat.Melee.pair(pl.getMainHandItem())) {
+            pl.getInventory().offhand.set(0, pl.getMainHandItem());
+            mirrored = true;
+        }
+    }
+    public static void onPlayerPost(net.neoforged.neoforge.client.event.RenderPlayerEvent.Post e) {
+        if (mirrored) e.getEntity().getInventory().offhand.set(0, ItemStack.EMPTY);
+        mirrored = false;
+        if (armored == e.getEntity()) for (int i = 0; i < 4; i++) armored.getInventory().armor.set(3 - i, savedArmor[i]);
+        armored = null;
     }
 }

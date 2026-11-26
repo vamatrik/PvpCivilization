@@ -37,7 +37,7 @@ public class RitualRenderer implements BlockEntityRenderer<RitualBlockEntity> {
         if (ORB == null) ORB = new ItemStack(com.pvpciv.registry.ModF5.DARK_STAR.get());
         Direction f = be.getBlockState().getValue(RitualBlock.FACING);
         pose.pushPose();
-        pose.translate(0.5 + f.getStepX() * 0.28, 0.92 + Math.sin(t / 10f + be.getBlockPos().hashCode()) * 0.03, 0.5 + f.getStepZ() * 0.28);
+        pose.translate(0.5 + f.getStepX() * 0.62, 0.5 + Math.sin(t / 10f + be.getBlockPos().hashCode()) * 0.03, 0.5 + f.getStepZ() * 0.62);   // 1.2: инжектор лежит на боку, остриё — к ядру
         pose.mulPose(Axis.YP.rotationDegrees(t * 6f));
         pose.scale(0.32f, 0.32f, 0.32f);
         ir.renderStatic(ORB, ItemDisplayContext.FIXED, 0xF000F0, OverlayTexture.NO_OVERLAY, pose, buf, be.getLevel(), 0);

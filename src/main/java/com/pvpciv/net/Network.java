@@ -205,7 +205,8 @@ public final class Network {
         r.playToServer(PhoneCmd.TYPE, PhoneCmd.CODEC, (p, ctx) -> {
             if (ctx.player() instanceof ServerPlayer sp) {
                 if (p.cmd().equals("open")) com.pvpciv.game.Phone.open(sp);
-                else if (p.cmd().equals("almanac")) com.pvpciv.game.Library.almanacFromHero(sp);   // 0.10: вкладка «Альманах» в герое
+                else if (p.cmd().equals("almanac")) com.pvpciv.game.Library.almanacFromHero(sp);
+                else if (p.cmd().equals("about")) com.pvpciv.game.About.send(sp);   // 1.2: «О себе»   // 0.10: вкладка «Альманах» в герое
                 else if (p.cmd().startsWith("off:")) { try { com.pvpciv.combat.Melee.offHit(sp, Integer.parseInt(p.cmd().substring(4))); } catch (NumberFormatException ignored) {} }   // 0.10.3: удар второй рукой
                 else if (p.cmd().equals("swing")) com.pvpciv.combat.Melee.airSwing(sp);
                 else if (p.cmd().equals("bagls")) com.pvpciv.inv.Bag.listTo(sp);   // 1.1.1: поиск в сумке

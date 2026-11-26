@@ -27,7 +27,14 @@ public final class Phone {
     /** Цена выкупа: 100 ✦ за каждую начатую минуту оставшегося срока. */
     public static int bailPrice(ServerPlayer p) {
         int s = Vampire.jailSeconds(p);
-        return s < 0 ? 0 : ((s + 59) / 60) * BAIL_PER_MIN;
+        return s < 0 ? 0 : ((s + 59) / 60) * perMin(p);
+    }
+
+    /** 1.2: минута выкупа дороже с высотой: ты сильнее — кровь вкуснее. Этаж 1 — 100, 2 — 200, 3 — 400, 4 — 700, 5 — 1200. */
+    public static int perMin(ServerPlayer p) {
+        int bits = SkyLift.unlocked(Progress.d(p));
+        int top = 32 - Integer.numberOfLeadingZeros(bits);
+        return new int[]{100, 100, 200, 400, 700, 1200}[Math.max(0, Math.min(5, top))];
     }
 
     public static void open(ServerPlayer p) {
@@ -50,7 +57,8 @@ public final class Phone {
         if (a[0].equals("gate") && a.length == 3) { Gates.request(p, a[1], a[2]); return; }
         if (a[0].equals("gate_up")) { Gates.upgradeHome(p); return; }
         if (a[0].equals("word") && a.length == 2) { Assassin.guess(p, a[1]); return; }
-        if (a[0].equals("skill") && a.length == 2) { if (a[1].equals("2")) Skills.use(p, 2); else if (a[1].equals("3")) Skills.use(p, 3); return; }
+        if (a[0].equals("skill") && a.length == 2) { if (a[1].equals("2")) Skills.use(p, 2); else if (a[1].equals("3")) Skills.use(p, 3); else if (a[1].equals("4")) Skills.use(p, 4); return; }
+        if (a[0].equals("armvis") && a.length == 2) { try { ArmorVis.set(p, Integer.parseInt(a[1])); } catch (NumberFormatException ignored) {} return; }
         if (a[0].equals("opt")) { option(p, a.length > 1 ? a[1] : "", a.length > 2 && a[2].equals("1")); return; }
         if (!has(p)) return;
         try {
@@ -74,7 +82,8 @@ public final class Phone {
     public static void option(ServerPlayer p, String key, boolean on) {
         StoryData d = Progress.d(p);
         if (key.equals("pvpShield")) { d.pvpShield = on; p.setData(ModRegistry.STORY.get(), d); }
-        PacketDistributor.sendToPlayer(p, new Network.PhoneData(6, "{\"pvpShield\":" + d.pvpShield + "}"));
+        if (key.equals("armPvp")) { d.gates.putBoolean("arm_pvp", on); p.setData(ModRegistry.STORY.get(), d); }
+        PacketDistributor.sendToPlayer(p, new Network.PhoneData(6, "{\"pvpShield\":" + d.pvpShield + ",\"armPvp\":" + d.gates.getBoolean("arm_pvp") + "}"));
     }
 
     private static void bail(ServerPlayer p) {
@@ -83,7 +92,7 @@ public final class Phone {
         long left = d.phoneCd.getLong("a0") - now();
         if (left > 0) { msg(p, "Элеонора ещё не остыла после прошлого раза: " + (left / 60000 + 1) + " мин.", ChatFormatting.RED); return; }
         int price = bailPrice(p);
-        if (d.money < price) { msg(p, "Не хватает Искр: выкуп стоит " + price + " ✦ (" + BAIL_PER_MIN + " ✦ за минуту срока).", ChatFormatting.RED); return; }
+        if (d.money < price) { msg(p, "Не хватает Искр: выкуп стоит " + price + " ✦ (" + perMin(p) + " ✦ за минуту срока).", ChatFormatting.RED); return; }
         d.money -= price;
         d.phoneCd.putLong("a0", now() + BAIL_CD_MS);
         p.setData(ModRegistry.STORY.get(), d);

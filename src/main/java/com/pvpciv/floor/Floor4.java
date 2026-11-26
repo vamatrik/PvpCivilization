@@ -238,6 +238,9 @@ public final class Floor4 extends Builder {
     public static BlockPos ROCKET() { return new BlockPos(COSMO.getX(), Y, COSMO.getZ() + 2); }
 
     /** 1.1: блоки ракеты «Заря-5» относительно {@link #ROCKET()} — и для стройки, и для анимации взлёта. */
+    /** 1.2: пульт в кабине ракеты (от {@link #ROCKET()}); люк — (0, 7..8, −3). */
+    public static final BlockPos ROCKET_CONSOLE_OFF = new BlockPos(0, 7, 1);
+    public static final BlockPos[] ROCKET_HATCH = {new BlockPos(0, 7, -3), new BlockPos(0, 8, -3)};
     public static java.util.Map<BlockPos, BlockState> rocketVoxels() {
         java.util.Map<BlockPos, BlockState> m = new java.util.LinkedHashMap<>();
         for (int y = 0; y < 30; y++) for (int x = -3; x <= 3; x++) for (int z = -3; z <= 3; z++) {
@@ -248,6 +251,12 @@ public final class Floor4 extends Builder {
             Block b = y >= 27 ? Blocks.RED_CONCRETE : y % 7 == 3 ? Blocks.BLACK_CONCRETE : (y == 14 && x == 0 && z < 0) ? Blocks.LIGHT_BLUE_STAINED_GLASS : Blocks.WHITE_CONCRETE;
             m.put(new BlockPos(x, 3 + y, z), b.defaultBlockState());
         }
+        // 1.2: лестница снаружи (с опорой под корпусом), люк, пол кабины и пульт внутри
+        for (BlockPos h : ROCKET_HATCH) m.remove(h);
+        for (int y = 0; y <= 2; y++) m.put(new BlockPos(0, y, -3), Blocks.WHITE_CONCRETE.defaultBlockState());
+        for (int y = 0; y <= 6; y++) m.put(new BlockPos(0, y, -4), Blocks.LADDER.defaultBlockState().setValue(net.minecraft.world.level.block.LadderBlock.FACING, net.minecraft.core.Direction.NORTH));
+        for (int x = -2; x <= 2; x++) for (int z = -2; z <= 2; z++) if (Math.hypot(x, z) < 2.1) m.put(new BlockPos(x, 6, z), Blocks.IRON_BLOCK.defaultBlockState());
+        m.put(ROCKET_CONSOLE_OFF, com.pvpciv.block.ConsoleBlock.of(com.pvpciv.block.ConsoleBlock.Kind.STATION, net.minecraft.core.Direction.NORTH));
         for (int[] o : new int[][]{{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}) {   // сопла
             m.put(new BlockPos(o[0], 2, o[1]), Blocks.POLISHED_BLACKSTONE.defaultBlockState());
             m.put(new BlockPos(o[0], 1, o[1]), Blocks.BLACKSTONE_WALL.defaultBlockState());
@@ -402,6 +411,18 @@ public final class Floor4 extends Builder {
         }
     }
 
+    /** 1.2: кольца трубопроводов реактора — на 2 блока выше (патч мира). */
+    public static void fixReactorRings(net.minecraft.server.level.ServerLevel l) {
+        int cx = REACTOR.getX(), cz = REACTOR.getZ();
+        for (int ring = 9; ring <= 21; ring += 6) for (int i = 0; i < ring * 8; i++) {
+            double a = Math.PI * 2 * i / (ring * 8);
+            int x = cx + (int) Math.round(Math.cos(a) * ring), z = cz + (int) Math.round(Math.sin(a) * ring);
+            BlockPos old = new BlockPos(x, Y + 2 + (ring - 9) / 3, z);
+            if (l.getBlockState(old).is(Blocks.WAXED_CUT_COPPER)) l.setBlock(old, Blocks.AIR.defaultBlockState(), 2);
+            l.setBlock(new BlockPos(x, Y + 4 + (ring - 9) / 3, z), Blocks.WAXED_CUT_COPPER.defaultBlockState(), 2);
+        }
+    }
+
     private void reactor(int cx, int cz) {
         // ядро реактора: колонна магмы и морских фонарей за решёткой, кольца трубопроводов
         for (int y = 0; y < 14; y++) for (int x = -2; x <= 2; x++) for (int z = -2; z <= 2; z++) {
@@ -412,7 +433,7 @@ public final class Floor4 extends Builder {
         for (int ring = 9; ring <= 21; ring += 6) for (int i = 0; i < ring * 8; i++) {
             double a = Math.PI * 2 * i / (ring * 8);
             int x = cx + (int) Math.round(Math.cos(a) * ring), z = cz + (int) Math.round(Math.sin(a) * ring);
-            set(x, Y + 2 + (ring - 9) / 3, z, Blocks.WAXED_CUT_COPPER);
+            set(x, Y + 4 + (ring - 9) / 3, z, Blocks.WAXED_CUT_COPPER);   // 1.2: выше на 2 — высокие мобы проходят под нижним кольцом
         }
         for (int i = 0; i < 10; i++) {
             double a = rnd.nextDouble() * Math.PI * 2, r = 6 + rnd.nextDouble() * (DOME_R - 9);

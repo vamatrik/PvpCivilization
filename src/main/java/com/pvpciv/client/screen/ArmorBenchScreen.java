@@ -131,7 +131,7 @@ public class ArmorBenchScreen extends CivScreen<ArmorBenchMenu> {
                             l.accept("Ядро не нужно", net.minecraft.ChatFormatting.GOLD);
                             l.accept("+11 — благословенные и кровавые звёзды, 50%.", net.minecraft.ChatFormatting.GRAY);
                         } else {
-                            String center = ca.tier < 2 ? "Медальон инея" : ca.tier < 3 ? "Фильтр противогаза" : "Нефритовая печать";
+                            String center = com.pvpciv.item.ArmorCoreItem.centerName(com.pvpciv.item.ArmorCoreItem.tierFor(ca.tier));
                             l.accept("Нужно ядро +" + tg + " (или сильнее)", net.minecraft.ChatFormatting.GOLD);
                             l.accept("для: " + ca.set + " +" + lv + " → +" + tg, net.minecraft.ChatFormatting.GRAY);
                             l.accept("Алтарь инфузии (подвал Кармиллы):", net.minecraft.ChatFormatting.GRAY);
@@ -146,8 +146,8 @@ public class ArmorBenchScreen extends CivScreen<ArmorBenchMenu> {
                     l.accept("Ядро брони", net.minecraft.ChatFormatting.GOLD);
                     l.accept("Нужно ядро уровня цели (+N) или выше — тратится.", net.minecraft.ChatFormatting.GRAY);
                     l.accept("Крафт — алтарь инфузии в подвале Кармиллы:", net.minecraft.ChatFormatting.GRAY);
-                    l.accept(" центр: медальон инея / фильтр противогаза /", net.minecraft.ChatFormatting.DARK_AQUA);
-                    l.accept("        нефритовая печать (любой подходит)", net.minecraft.ChatFormatting.DARK_AQUA);
+                    l.accept(" центр: материал этажа брони — медальон / фильтр /", net.minecraft.ChatFormatting.DARK_AQUA);
+                    l.accept("        печать / квантовый чип / астроядро", net.minecraft.ChatFormatting.DARK_AQUA);
                     l.accept(" по кругу: звёзды заточки — ядро +N из N звёзд;", net.minecraft.ChatFormatting.DARK_AQUA);
                     l.accept(" для +9…+10 часть звёзд — благословенные.", net.minecraft.ChatFormatting.DARK_AQUA);
                     l.accept("Подробно — кнопка «Гайд» у алтаря.", net.minecraft.ChatFormatting.DARK_GRAY);

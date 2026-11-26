@@ -5,7 +5,7 @@
   "block.pvpciv.arena_core": "Ядро Арены",
   "entity.pvpciv.guard": "Тимофей Глыба",
   "entity.pvpciv.luna": "Луна",
-  "key.pvpciv.dash": "Навык: Рывок",
+  "key.pvpciv.dash": "Навык 1",
   "key.categories.pvpciv": "PvP Цивилизация",
   "generator.pvpciv.abyss": "PvP Цивилизация (Бездна)",
   "item.pvpciv.novice_sword": "Меч новичка",
@@ -129,6 +129,7 @@
   "item.pvpciv.phone": "Телефон «Поко X3 Про»",
   "key.pvpciv.skill2": "Навык 2",
   "key.pvpciv.skill3": "Навык 3",
+  "key.pvpciv.skill4": "Навык 4",
   "key.pvpciv.phone": "Телефон (ответить на звонок)",
   "item.pvpciv.potion_heal": "Зелье лечения",
   "item.pvpciv.potion_regen": "Зелье регенерации",
@@ -297,5 +298,13 @@
   "block.pvpciv.console": "Пульт",
   "block.pvpciv.ritual_core": "Ядро ритуала",
   "block.pvpciv.ritual_injector": "Инжектор тьмы",
-  "item.pvpciv.void_bolt": "Сгусток пустоты"
+  "item.pvpciv.void_bolt": "Сгусток пустоты",
+  "item.pvpciv.scrap_common": "Лом (обычный)",
+  "item.pvpciv.scrap_uncommon": "Лом (необычный)",
+  "item.pvpciv.scrap_rare": "Лом (редкий)",
+  "item.pvpciv.scrap_epic": "Лом (эпический)",
+  "item.pvpciv.scrap_legendary": "Лом (легендарный)",
+  "item.pvpciv.scrap_mythic": "Лом (мифический)",
+  "block.pvpciv.grip_stone": "Камень (держит)",
+  "block.pvpciv.slick_gravel": "Гравий (скользкий)"
 }

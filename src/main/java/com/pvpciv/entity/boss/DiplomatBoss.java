@@ -86,10 +86,11 @@ public class DiplomatBoss extends CivBoss {
     private void papers(ServerLevel lvl, ServerPlayer t) {
         faceTo(t.position());
         play("throw", 18);
-        int n = enraged ? 7 : 5;
-        for (int k = 0; k < (enraged ? 2 : 1); k++) later(6 + k * 12, () -> {
-            if (!isAlive()) return;
-            Vec3 dir = t.getEyePosition().subtract(getEyePosition()).normalize();
+        List<ServerPlayer> tg = spread(lvl, t, 3);   // 1.2: много игроков — бумаги делятся на нескольких
+        int n = tg.size() > 1 ? (enraged ? 5 : 4) : (enraged ? 7 : 5);
+        for (int k = 0; k < (enraged ? 2 : 1); k++) for (ServerPlayer tt : tg) later(6 + k * 12, () -> {
+            if (!isAlive() || !tt.isAlive()) return;
+            Vec3 dir = tt.getEyePosition().subtract(getEyePosition()).normalize();
             for (int i = 0; i < n; i++) {
                 double a = Math.toRadians((i - (n - 1) / 2.0) * 9);
                 Vec3 d = new Vec3(dir.x * Math.cos(a) - dir.z * Math.sin(a), dir.y, dir.x * Math.sin(a) + dir.z * Math.cos(a));
@@ -144,7 +145,8 @@ public class DiplomatBoss extends CivBoss {
         play("audit", 26);
         castYaw = getYRot();
         lvl.playSound(null, blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.HOSTILE, 2f, 1.4f);
-        zone(lvl, t.position(), 6.5, 24, AUDIT).onHit(p -> {
+        List<ServerPlayer> tg = spread(lvl, t, 2);
+        for (ServerPlayer tt : tg) zone(lvl, tt.position(), tg.size() > 1 ? 5.0 : 6.5, 24, AUDIT).onHit(p -> {
             AUDITED.put(p.getUUID(), System.currentTimeMillis() + 6000);
             p.hurt(damageSources().indirectMagic(this, this), dmg() * 0.8f);
             p.connection.send(new net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket(Component.literal("АУДИТ").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD)));

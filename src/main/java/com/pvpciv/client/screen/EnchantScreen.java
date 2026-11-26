@@ -1,145 +1,234 @@
 package com.pvpciv.client.screen;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.pvpciv.client.ClientState;
 import com.pvpciv.client.ui.Skin;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
- * 0.11 — молекулярный стол NaZa. Слева: предмет в руке, текущее зачарование, 8 гнёзд модулей, катализаторы, доступные чары.
- * Справа: режимы x1/x3/x10 и варианты синтеза (выбор 1 из N; «Оставить старое» — при Якоре).
+ * 1.2 — молекулярный стол NaZa, свои слоты под всё.
+ * Слева — снаряжение иконками (колесо — прокрутка), под ним — ресурсы в сумке (щелчок — положить в стол).
+ * В центре — слот предмета, слоты лазуратрона и катализаторов в столе (щелчок — вернуть в сумку), гнёзда модулей.
+ * Справа — синтез x1/x3/x10 и варианты; «Оставить старое» — всегда.
  */
 public class EnchantScreen extends PlainScreen {
     private static final int[] MODES = {1, 3, 10};
     private static final int CYAN = 0xFF40D0FF;
     private static final int[] TIER_COL = {0xFF2A2236, 0xFF40D0FF, 0xFF60FF90, 0xFFC060FF};
     private static final int[] RANK_COL = {0, 0xFFCFCFCF, 0xFF6AD0FF, 0xFFC070FF, 0xFFFFB030};
+    private static final String[] RES = {"laz", "cmp", "focus", "reso"};
+    private static final String[] RES_ID = {"pvpciv:lazuratron", "pvpciv:cmp_lazuratron", "pvpciv:cat_focus", "pvpciv:cat_resonator"};
+    private static final String[] RES_NAME = {"Лазуратрон", "Сжатый лазуратрон (= 8)", "Фокус", "Резонатор"};
+    private static final String[] RES_TIP = {"Плата за синтез.", "Плата за синтез: один сжатый = 8 обычных (сдача — обычным).",
+            "Каждый синтез тратит 1: +1 вариант на выбор.", "Каждый синтез тратит 1: случайный вариант на ранг выше."};
+    private static final int COLS = 8, ROWS = 5, CELL = 19;
+    private static final int LX = 8, LW = 166, MX = 180, MW = 112, RX = 298;
 
-    public EnchantScreen() { super("Молекулярный стол", 440, 252, false); }
+    public EnchantScreen() { super("Молекулярный стол", 456, 252, false); }
 
     private JsonObject j() { return ClientState.ench; }
-    private static final int ROWS = 5;
     private int scroll;
-    private com.google.gson.JsonArray cand() { return j().has("cand") ? j().getAsJsonArray("cand") : new com.google.gson.JsonArray(); }
+    private final Map<String, ItemStack> icons = new HashMap<>();
+    private ItemStack icon(String id) {
+        return icons.computeIfAbsent(id, k -> { var it = BuiltInRegistries.ITEM.get(ResourceLocation.parse(k)); return new ItemStack(it); });
+    }
+    private JsonArray cand() { return j().has("cand") ? j().getAsJsonArray("cand") : new JsonArray(); }
+    private int i(String k) { return j().has(k) ? j().get(k).getAsInt() : 0; }
+    private String s(String k) { return j().has(k) ? j().get(k).getAsString() : ""; }
+    private int res(String where, String k) { return j().has(where) && j().getAsJsonObject(where).has(k) ? j().getAsJsonObject(where).get(k).getAsInt() : 0; }
 
     @Override
     public boolean mouseScrolled(double mx, double my, double dx, double dy) {
-        int n = cand().size();
-        scroll = Math.max(0, Math.min(Math.max(0, n - ROWS), scroll - (int) Math.signum(dy)));
+        int rows = (cand().size() + COLS - 1) / COLS;
+        scroll = Math.max(0, Math.min(Math.max(0, rows - ROWS), scroll - (int) Math.signum(dy)));
         return true;
     }
-    private int i(String k) { return j().has(k) ? j().get(k).getAsInt() : 0; }
-    private String s(String k) { return j().has(k) ? j().get(k).getAsString() : ""; }
+
+    private void slotBox(GuiGraphics g, int x, int y, int size, int border) {
+        g.fill(x, y, x + size, y + size, border);
+        g.fill(x + 1, y + 1, x + size - 1, y + size - 1, 0xFF0E0B14);
+    }
 
     @Override
     protected void drawContent(GuiGraphics g, int mx, int my, float pt) {
-        int lx = left + 10, ly = top + 14, lw = 160;
-        Skin.inset(g, lx, ly, lw, h - 24);
-        boolean ok = j().has("ok") && j().get("ok").getAsBoolean();
-        if (ok) {   // 0.11.2: предмет лежит в столе
-            g.drawString(font, Skin.fit(font, s("item"), lw - 10), lx + 5, ly + 5, Skin.GOLD_L, false);
-            String cur = s("cur");
-            Skin.para(g, font, cur.isEmpty() ? "Без зачарования" : "⚛ " + cur, lx + 5, ly + 16, lw - 10, 9, 2, cur.isEmpty() ? Skin.FAINT : CYAN, false);
-            Skin.button(g, font, lx + 5, ly + 42, lw - 10, "Забрать из стола", mx, my, true, false);
-        } else {
-            g.drawString(font, "Положи в стол:", lx + 5, ly + 5, Skin.DIM, false);
-            var cand = cand();
-            if (cand.isEmpty()) g.drawString(font, "нет оружия и брони", lx + 5, ly + 18, Skin.FAINT, false);
-            for (int k = 0; k < ROWS && k + scroll < cand.size(); k++) {
-                JsonObject c = cand.get(k + scroll).getAsJsonObject();
-                int ry0 = ly + 15 + k * 11;
-                boolean hv = Skin.hover(mx, my, lx + 3, ry0, lw - 6, 11);
-                if (hv) g.fill(lx + 3, ry0, lx + lw - 3, ry0 + 11, 0x4040D0FF);
-                String e = c.get("ench").getAsString();
-                g.drawString(font, Skin.fit(font, c.get("name").getAsString() + (e.isEmpty() ? "" : " ⚛"), lw - 12), lx + 6, ry0 + 2, hv ? 0xFFFFFFFF : Skin.TEXT, false);
+        if (j() == null) return;
+        List<Component> tip = null;
+        int ly = top + 14;
+        // ---------------- слева: снаряжение
+        Skin.inset(g, left + LX, ly, LW, h - 24);
+        g.drawString(font, "Снаряжение", left + LX + 5, ly + 4, Skin.GOLD_L, false);
+        JsonArray cand = cand();
+        int gx = left + LX + 6, gy = ly + 15;
+        for (int r = 0; r < ROWS; r++) for (int c = 0; c < COLS; c++) {
+            int idx = (r + scroll) * COLS + c, x = gx + c * CELL, y = gy + r * CELL;
+            slotBox(g, x, y, 18, 0xFF2A2236);
+            if (idx >= cand.size()) continue;
+            JsonObject o = cand.get(idx).getAsJsonObject();
+            boolean hv = Skin.hover(mx, my, x, y, 18, 18);
+            int rc = 0xFF000000 | o.get("rar").getAsInt();
+            g.fill(x, y, x + 18, y + 18, hv ? 0xFFFFFFFF : rc);
+            g.fill(x + 1, y + 1, x + 17, y + 17, 0xFF0E0B14);
+            g.renderItem(icon(o.get("id").getAsString()), x + 1, y + 1);
+            if (!o.get("ench").getAsString().isEmpty()) g.fill(x + 13, y + 2, x + 16, y + 5, CYAN);
+            if (hv) {
+                tip = new ArrayList<>();
+                tip.add(Component.literal(o.get("name").getAsString()).withStyle(st -> st.withColor(rc & 0xFFFFFF)));
+                int stars = o.get("stars").getAsInt();
+                if (stars > 0) tip.add(Component.literal("+" + stars).withStyle(net.minecraft.ChatFormatting.GOLD));
+                String e = o.get("ench").getAsString();
+                tip.add(Component.literal(e.isEmpty() ? "без зачарования" : "⚛ " + e).withStyle(st -> st.withColor(e.isEmpty() ? 0x7A7088 : 0x40D0FF)));
+                tip.add(Component.literal("щелчок — положить в стол").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
             }
-            if (cand.size() > ROWS) g.drawString(font, (scroll + 1) + "–" + Math.min(cand.size(), scroll + ROWS) + " из " + cand.size() + " (колесо)", lx + 5, ly + 15 + ROWS * 11, Skin.FAINT, false);
         }
-        int ly2 = ly + 48;   // дальше всё ниже
-        // гнёзда модулей
-        g.drawString(font, "Модули (ПКМ у стола):", lx + 5, ly2 + 38, Skin.DIM, false);
-        var mods = j().has("mods") ? j().getAsJsonArray("mods") : new com.google.gson.JsonArray();
+        int rows = (cand.size() + COLS - 1) / COLS;
+        if (cand.isEmpty()) Skin.paraCentered(g, font, "Нет оружия и брони в хотбаре, броне и сумке", left + LX + LW / 2, gy + 40, LW - 20, 10, 3, Skin.FAINT);
+        if (rows > ROWS) {   // полоса прокрутки
+            int bh = ROWS * CELL, th = Math.max(10, bh * ROWS / rows), ty = gy + (bh - th) * scroll / Math.max(1, rows - ROWS);
+            g.fill(gx + COLS * CELL + 1, gy, gx + COLS * CELL + 3, gy + bh, 0xFF1A1622);
+            g.fill(gx + COLS * CELL + 1, ty, gx + COLS * CELL + 3, ty + th, 0xFF8A70B0);
+        }
+        // ресурсы в сумке
+        int by = gy + ROWS * CELL + 8;
+        g.drawString(font, "В сумке (щелчок — в стол)", left + LX + 5, by, Skin.DIM, false);
+        for (int k = 0; k < 4; k++) {
+            int x = gx + k * 40, y = by + 11, n = res("bag", RES[k]);
+            boolean hv = n > 0 && Skin.hover(mx, my, x, y, 18, 18);
+            slotBox(g, x, y, 18, hv ? 0xFFFFE08A : 0xFF2A2236);
+            g.renderItem(icon(RES_ID[k]), x + 1, y + 1);
+            if (n == 0) g.fill(x + 1, y + 1, x + 17, y + 17, 0xB00E0B14);
+            g.drawString(font, "×" + n, x + 20, y + 5, n > 0 ? Skin.TEXT : Skin.FAINT, false);
+            if (Skin.hover(mx, my, x, y, 18, 18)) tip = List.of(Component.literal(RES_NAME[k]), Component.literal(RES_TIP[k]).withStyle(net.minecraft.ChatFormatting.GRAY),
+                    Component.literal(n > 0 ? "щелчок — положить все " + n + " в стол" : "в сумке нет").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+        }
+        Skin.paraCentered(g, font, "Колесо мыши — прокрутка снаряжения", left + LX + LW / 2, top + h - 20, LW - 10, 9, 1, Skin.FAINT);
+
+        // ---------------- центр: стол
+        int cx = left + MX;
+        Skin.inset(g, cx, ly, MW, h - 24);
+        g.drawString(font, "Стол", cx + 5, ly + 4, Skin.GOLD_L, false);
+        boolean ok = j().has("ok") && j().get("ok").getAsBoolean();
+        int sx = cx + MW / 2 - 13, sy = ly + 16;
+        boolean hvItem = ok && Skin.hover(mx, my, sx, sy, 26, 26);
+        slotBox(g, sx, sy, 26, ok ? (0xFF000000 | i("rar")) : 0xFF3A3048);
+        if (ok) {
+            g.pose().pushPose(); g.pose().translate(sx + 1, sy + 1, 0); g.pose().scale(1.5f, 1.5f, 1);
+            g.renderItem(icon(s("itemId")), 0, 0);
+            g.pose().popPose();
+            if (hvItem) tip = List.of(Component.literal(s("item")), Component.literal(s("cur").isEmpty() ? "без зачарования" : "⚛ " + s("cur")).withStyle(net.minecraft.ChatFormatting.AQUA),
+                    Component.literal("щелчок — забрать в сумку").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+        } else g.drawCenteredString(font, "?", sx + 13, sy + 9, Skin.FAINT);
+        int ty = sy + 30;
+        if (ok) {
+            g.drawCenteredString(font, Skin.fit(font, s("item"), MW - 8), cx + MW / 2, ty, Skin.TEXT);
+            String cur = s("cur");
+            g.drawCenteredString(font, Skin.fit(font, cur.isEmpty() ? "без зачарования" : "⚛ " + cur.split(" — ")[0], MW - 8), cx + MW / 2, ty + 10, cur.isEmpty() ? Skin.FAINT : CYAN);
+        } else Skin.paraCentered(g, font, "Выбери предмет слева", cx + MW / 2, ty + 2, MW - 10, 10, 2, Skin.FAINT);
+        // ресурсы в столе
+        int ry = ty + 26;
+        g.drawString(font, "В столе", cx + 5, ry, Skin.DIM, false);
+        for (int k = 0; k < 4; k++) {
+            int x = cx + 6 + (k % 2) * 52, y = ry + 11 + (k / 2) * 22, n = res("table", RES[k]);
+            boolean hv = Skin.hover(mx, my, x, y, 18, 18);
+            slotBox(g, x, y, 18, hv && n > 0 ? 0xFFFFE08A : n > 0 ? CYAN : 0xFF2A2236);
+            g.renderItem(icon(RES_ID[k]), x + 1, y + 1);
+            if (n == 0) g.fill(x + 1, y + 1, x + 17, y + 17, 0xB00E0B14);
+            g.drawString(font, String.valueOf(n), x + 21, y + 5, n > 0 ? Skin.TEXT : Skin.FAINT, false);
+            if (hv) tip = List.of(Component.literal(RES_NAME[k] + " в столе: " + n), Component.literal(RES_TIP[k]).withStyle(net.minecraft.ChatFormatting.GRAY),
+                    Component.literal(n > 0 ? "щелчок — вернуть в сумку" : "положи из сумки (слева)").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+        }
+        // модули
+        int my0 = ry + 60;
+        g.drawString(font, "Модули (ПКМ у стола)", cx + 5, my0, Skin.DIM, false);
+        var mods = j().has("mods") ? j().getAsJsonArray("mods") : new JsonArray();
         for (int k = 0; k < 8; k++) {
             int t = k < mods.size() ? mods.get(k).getAsInt() : 0;
-            int sx = lx + 6 + (k % 4) * 37, sy = ly2 + 49 + (k / 4) * 16;
-            g.fill(sx, sy, sx + 34, sy + 13, 0xFF0C0A12);
-            g.fill(sx + 1, sy + 1, sx + 33, sy + 12, t > 0 ? (TIER_COL[t] & 0x60FFFFFF) : 0xFF16121E);
-            g.drawCenteredString(font, t == 0 ? "—" : new String[]{"", "I", "II", "III"}[t], sx + 17, sy + 3, t > 0 ? TIER_COL[t] : Skin.FAINT);
+            int x = cx + 6 + (k % 4) * 25, y = my0 + 11 + (k / 4) * 15;
+            g.fill(x, y, x + 23, y + 13, 0xFF0C0A12);
+            g.fill(x + 1, y + 1, x + 22, y + 12, t > 0 ? (TIER_COL[t] & 0x60FFFFFF) : 0xFF16121E);
+            g.drawCenteredString(font, t == 0 ? "—" : new String[]{"", "I", "II", "III"}[t], x + 12, y + 3, t > 0 ? TIER_COL[t] : Skin.FAINT);
         }
-        // ресурсы
-        int ry = ly2 + 86;
-        g.drawString(font, "Лазуратрон: " + i("laz") + (ok ? "  (x1 = " + i("cost") + ")" : ""), lx + 5, ry, i("laz") >= i("cost") && ok ? Skin.TEXT : Skin.BAD, false);
-        g.drawString(font, "Фокус " + i("focus") + " · Якорь " + i("anchor") + " · Резон. " + i("reso"), lx + 5, ry + 11, Skin.DIM, false);
-        g.pose().pushPose(); g.pose().translate(lx + 5, ry + 23, 0); g.pose().scale(0.75f, 0.75f, 1);
-        Skin.para(g, font, "Режим xN забирает до N катализаторов, все действуют: Фокус +1 вариант, Якорь — можно оставить старое, Резонатор — +1 ранг.", 0, 0, (int) ((lw - 10) / 0.75f), 10, 4, Skin.FAINT, false);
-        g.pose().popPose();
-        // доступные чары
-        var pool = j().has("pool") ? j().getAsJsonArray("pool") : new com.google.gson.JsonArray();
-        StringBuilder sb = new StringBuilder();
-        for (var e : pool) { if (sb.length() > 0) sb.append(", "); sb.append(e.getAsString()); }
-        g.drawString(font, "Доступно:", lx + 5, ry + 58, Skin.DIM, false);
-        g.pose().pushPose(); g.pose().translate(lx + 5, ry + 69, 0); g.pose().scale(0.75f, 0.75f, 1);
-        Skin.para(g, font, sb.length() == 0 ? "—" : sb.toString(), 0, 0, (int) ((lw - 10) / 0.75f), 10, 4, Skin.TEXT, false);
-        g.pose().popPose();
+        var pool = j().has("pool") ? j().getAsJsonArray("pool") : new JsonArray();
+        String pl = "Доступно чар: " + pool.size() + " (?)";
+        int ply = my0 + 44;
+        g.drawString(font, pl, cx + 5, ply, Skin.DIM, false);
+        if (Skin.hover(mx, my, cx + 5, ply - 1, font.width(pl), 10)) {
+            tip = new ArrayList<>();
+            tip.add(Component.literal("Может выпасть:"));
+            for (var e : pool) tip.add(Component.literal("· " + e.getAsString()).withStyle(net.minecraft.ChatFormatting.AQUA));
+        }
 
-        // справа: режимы и варианты
-        int rx = left + 178, rw = h > 0 ? w - 188 : 0;
+        // ---------------- справа: синтез
+        int rx = left + RX, rw = w - RX - 8;
         Skin.inset(g, rx, ly, rw, h - 24);
-        g.drawString(font, "Синтез", rx + 5, ly + 5, Skin.GOLD_L, false);
+        g.drawString(font, "Синтез", rx + 5, ly + 4, Skin.GOLD_L, false);
+        int cost = i("cost"), tl = i("tlaz");
+        String lz = "лазуратрона: " + tl;
+        g.drawString(font, lz, rx + rw - 5 - font.width(lz), ly + 4, ok && tl >= cost ? Skin.DIM : Skin.BAD, false);
+        int bw = (rw - 10) / 3;
         for (int k = 0; k < 3; k++) {
-            int m = MODES[k], bx = rx + 5 + k * ((rw - 10) / 3);
-            boolean can = ok && i("laz") >= i("cost") * m;
-            Skin.button(g, font, bx, ly + 16, (rw - 10) / 3 - 3, "x" + m + " · " + i("cost") * m, mx, my, can, k == 0);
+            int m = MODES[k], bx = rx + 5 + k * bw;
+            boolean can = ok && tl >= cost * m;
+            Skin.button(g, font, bx, ly + 15, bw - 3, "x" + m + "·" + cost * m, mx, my, can, k == 0);
+            if (Skin.hover(mx, my, bx, ly + 15, bw - 3, 16)) tip = List.of(Component.literal("Синтез x" + m + " — " + cost * m + " лазуратрона"),
+                    Component.literal(m == 1 ? "Варианты = модули стола" : m == 3 ? "+1 вариант, ранг — лучший из 2 бросков" : "+2 варианта, ранг — лучший из 3 бросков").withStyle(net.minecraft.ChatFormatting.GRAY),
+                    Component.literal("Фокус и Резонатор в столе — по 1 за синтез").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
         }
-        g.pose().pushPose(); g.pose().translate(rx + 5, ly + 35, 0); g.pose().scale(0.7f, 0.7f, 1);
-        g.drawString(font, Skin.fit(font, "x3: +1 вариант, ранг — лучший из 2 · x10: +2 варианта, лучший из 3", (int) ((rw - 10) / 0.7f)), 0, 0, Skin.FAINT, false);
-        g.pose().popPose();
-        var opts = j().has("opts") ? j().getAsJsonArray("opts") : new com.google.gson.JsonArray();
-        if (opts.isEmpty()) {
-            Skin.paraCentered(g, font, "Выбери режим — стол предложит варианты, оставишь один.", rx + rw / 2, ly + 80, rw - 20, 10, 3, Skin.FAINT);
-        }
+        var opts = j().has("opts") ? j().getAsJsonArray("opts") : new JsonArray();
+        if (opts.isEmpty()) Skin.paraCentered(g, font, ok ? "Выбери режим — стол предложит варианты, оставишь один (или старое)." : "Сначала положи предмет в стол.", rx + rw / 2, ly + 80, rw - 16, 10, 4, Skin.FAINT);
         for (int k = 0; k < opts.size() && k < 8; k++) {
             JsonObject o = opts.get(k).getAsJsonObject();
-            int oy = ly + 46 + k * 19;
-            boolean hv = Skin.hover(mx, my, rx + 4, oy, rw - 8, 17);
+            int oy = ly + 36 + k * 22;
+            boolean hv = Skin.hover(mx, my, rx + 4, oy, rw - 8, 20);
             int rank = o.get("rank").getAsInt();
-            g.fill(rx + 4, oy, rx + rw - 4, oy + 17, hv ? 0xFF40D0FF : 0xFF2A2236);
-            g.fill(rx + 5, oy + 1, rx + rw - 5, oy + 16, hv ? 0xFF102030 : 0xFF14101C);
-            g.drawString(font, o.get("name").getAsString(), rx + 9, oy + 5, RANK_COL[Math.min(4, rank)], false);
-            String nm = o.get("name").getAsString();
-            String d = Skin.fit(font, o.get("desc").getAsString(), (int) ((rw - 24 - font.width(nm)) / 0.75f));
-            g.pose().pushPose(); g.pose().translate(rx + rw - 8 - font.width(d) * 0.75f, oy + 6, 0); g.pose().scale(0.75f, 0.75f, 1);
-            g.drawString(font, d, 0, 0, Skin.DIM, false);
+            g.fill(rx + 4, oy, rx + rw - 4, oy + 20, hv ? CYAN : 0xFF2A2236);
+            g.fill(rx + 5, oy + 1, rx + rw - 5, oy + 19, hv ? 0xFF102030 : 0xFF14101C);
+            g.drawString(font, Skin.fit(font, o.get("name").getAsString(), rw - 16), rx + 8, oy + 2, RANK_COL[Math.min(4, rank)], false);
+            g.pose().pushPose(); g.pose().translate(rx + 8, oy + 12, 0); g.pose().scale(0.7f, 0.7f, 1);
+            g.drawString(font, Skin.fit(font, o.get("desc").getAsString(), (int) ((rw - 16) / 0.7f)), 0, 0, Skin.DIM, false);
             g.pose().popPose();
+            if (hv) tip = List.of(Component.literal(o.get("name").getAsString()), Component.literal(o.get("desc").getAsString()).withStyle(net.minecraft.ChatFormatting.GRAY),
+                    Component.literal("щелчок — оставить это").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
         }
-        if (!opts.isEmpty() && j().has("keep") && j().get("keep").getAsBoolean())
-            Skin.button(g, font, rx + 5, top + h - 30, rw - 10, s("cur").isEmpty() ? "Отказаться от вариантов" : "Оставить старое (Якорь)", mx, my, true, false);
+        if (!opts.isEmpty()) Skin.button(g, font, rx + 5, top + h - 30, rw - 10, s("cur").isEmpty() ? "Отказаться" : "Оставить старое", mx, my, true, false);
+        if (tip != null) g.renderComponentTooltip(font, tip, mx, my);
     }
 
     @Override
-    public boolean mouseClicked(double mx, double my, int b) {
-        int rx = left + 178, rw = w - 188, ly = top + 14;
+    public boolean mouseClicked(double mxd, double myd, int b) {
+        if (j() == null) return super.mouseClicked(mxd, myd, b);
+        int mx = (int) mxd, my = (int) myd, ly = top + 14;
+        JsonArray cand = cand();
+        int gx = left + LX + 6, gy = ly + 15;
+        for (int r = 0; r < ROWS; r++) for (int c = 0; c < COLS; c++) {
+            int idx = (r + scroll) * COLS + c;
+            if (idx < cand.size() && Skin.hover(mx, my, gx + c * CELL, gy + r * CELL, 18, 18)) { send("ench:put:" + cand.get(idx).getAsJsonObject().get("src").getAsString()); return true; }
+        }
+        int by = gy + ROWS * CELL + 8;
+        for (int k = 0; k < 4; k++) if (res("bag", RES[k]) > 0 && Skin.hover(mx, my, gx + k * 40, by + 11, 18, 18)) { send("ench:load:" + RES[k]); return true; }
+        int cx = left + MX, sx = cx + MW / 2 - 13, sy = ly + 16;
         boolean ok = j().has("ok") && j().get("ok").getAsBoolean();
-        int lx = left + 10, lw = 160;
-        if (ok && Skin.hover((int) mx, (int) my, lx + 5, ly + 42, lw - 10, 16)) { send("ench:take"); return true; }
-        if (!ok) {
-            var cand = cand();
-            for (int k = 0; k < ROWS && k + scroll < cand.size(); k++)
-                if (Skin.hover((int) mx, (int) my, lx + 3, ly + 15 + k * 11, lw - 6, 11)) { send("ench:put:" + cand.get(k + scroll).getAsJsonObject().get("src").getAsString()); scroll = 0; return true; }
-        }
-        for (int k = 0; k < 3; k++) {
-            int bx = rx + 5 + k * ((rw - 10) / 3);
-            if (ok && Skin.hover((int) mx, (int) my, bx, ly + 16, (rw - 10) / 3 - 3, 16) && i("laz") >= i("cost") * MODES[k]) {
-                send("ench:roll:" + MODES[k]);
-                return true;
-            }
-        }
-        var opts = j().has("opts") ? j().getAsJsonArray("opts") : new com.google.gson.JsonArray();
+        if (ok && Skin.hover(mx, my, sx, sy, 26, 26)) { send("ench:take"); return true; }
+        int ry = sy + 30 + 26;
+        for (int k = 0; k < 4; k++) if (res("table", RES[k]) > 0 && Skin.hover(mx, my, cx + 6 + (k % 2) * 52, ry + 11 + (k / 2) * 22, 18, 18)) { send("ench:unload:" + RES[k]); return true; }
+        int rx = left + RX, rw = w - RX - 8, bw = (rw - 10) / 3;
+        for (int k = 0; k < 3; k++)
+            if (ok && Skin.hover(mx, my, rx + 5 + k * bw, ly + 15, bw - 3, 16) && i("tlaz") >= i("cost") * MODES[k]) { send("ench:roll:" + MODES[k]); return true; }
+        var opts = j().has("opts") ? j().getAsJsonArray("opts") : new JsonArray();
         for (int k = 0; k < opts.size() && k < 8; k++)
-            if (Skin.hover((int) mx, (int) my, rx + 4, ly + 46 + k * 19, rw - 8, 17)) { send("ench:pick:" + k); return true; }
-        if (!opts.isEmpty() && j().has("keep") && j().get("keep").getAsBoolean() && Skin.hover((int) mx, (int) my, rx + 5, top + h - 30, rw - 10, 16)) { send("ench:pick:-1"); return true; }
-        return super.mouseClicked(mx, my, b);
+            if (Skin.hover(mx, my, rx + 4, ly + 36 + k * 22, rw - 8, 20)) { send("ench:pick:" + k); return true; }
+        if (!opts.isEmpty() && Skin.hover(mx, my, rx + 5, top + h - 30, rw - 10, 16)) { send("ench:pick:-1"); return true; }
+        return super.mouseClicked(mxd, myd, b);
     }
 
     private static void send(String c) { PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd(c)); }

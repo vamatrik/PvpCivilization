@@ -94,7 +94,7 @@ public final class Forge {
                 if (pp != null) Story.title(pp, "Неудача", "Благословение спасло оружие: +" + Math.max(0, s - 1), 0xAAAAAA);
             } else {
                 int tier = held.getItem() instanceof CivWeaponItem cw ? cw.tier : 1;
-                result = held.is(ModRegistry.YUKI_KATANA.get()) ? com.pvpciv.game.Assassin.remainsOf(held, s) : new ItemStack(ModRegistry.WEAPON_SHARDS.get(), 1 + tier + s / 2);
+                result = held.is(ModRegistry.YUKI_KATANA.get()) ? com.pvpciv.game.Assassin.remainsOf(held, s) : ModRegistry.scrapOf(held);   // 1.2: лом своей редкости
                 lvl.playSound(null, forge, SoundEvents.ANVIL_DESTROY, SoundSource.BLOCKS, 1f, 0.8f);
                 lvl.playSound(null, forge, SoundEvents.ITEM_BREAK, SoundSource.BLOCKS, 1f, 0.6f);
                 lvl.sendParticles(ParticleTypes.LARGE_SMOKE, fx, fy, fz, 40, 0.4, 0.4, 0.4, 0.03);

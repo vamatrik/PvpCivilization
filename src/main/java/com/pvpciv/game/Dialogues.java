@@ -109,7 +109,8 @@ public final class Dialogues {
     private static final Set<Item> JUNK = Set.of();
 
     private static boolean isJunk(Item it) {
-        return it == ModRegistry.RUSTY_GEAR.get() || it == ModRegistry.CHARRED_COIN.get() || it == ModRegistry.ASH_RELIC.get() || it == ModRegistry.WEAPON_SHARDS.get() || it == ModRegistry.FROZEN_LOCKET.get();
+        return it == ModRegistry.RUSTY_GEAR.get() || it == ModRegistry.CHARRED_COIN.get() || it == ModRegistry.ASH_RELIC.get() || it == ModRegistry.WEAPON_SHARDS.get() || it == ModRegistry.FROZEN_LOCKET.get()
+                || it == ModRegistry.SCRAP_COMMON.get() || it == ModRegistry.SCRAP_UNCOMMON.get() || it == ModRegistry.SCRAP_RARE.get() || it == ModRegistry.SCRAP_EPIC.get() || it == ModRegistry.SCRAP_LEGENDARY.get() || it == ModRegistry.SCRAP_MYTHIC.get();
     }
 
     private static long valueOf(ServerPlayer p, boolean withDust) {

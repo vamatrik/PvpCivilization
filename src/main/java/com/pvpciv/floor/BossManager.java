@@ -75,11 +75,11 @@ public final class BossManager {
             () -> Floor4.ARK_ARENA, 13, new Vec3(-7, 0, 0), () -> com.pvpciv.registry.ModMobs.NOEL_BOSS.get(),
             "floor4_boss_personal", "floor4_boss_ground", 64, com.pvpciv.registry.ModF4.NAZA_TROPHY, BossEvent.BossBarColor.GREEN, ChatFormatting.GREEN,
             "ДОКТОР НОЭЛЬ ВЫПУСТИЛ ЛИАНУ! Биокупол «Ковчег», этаж 4.", false);
-    public static final Def DIPLOMAT = new Def("diplomat", "Инопланетный дипломат", "Мостик станции «Орбита» (этаж 5)", 32, 40 * MIN, 11, 1.5,
+    public static final Def DIPLOMAT = new Def("diplomat", "Инопланетный дипломат", "Мостик станции «Орбита» (этаж 5)", 29, 40 * MIN, 11, 1.5,
             () -> Floor5.BRIDGE_M.center(), 13, new Vec3(0, 0, -4), () -> com.pvpciv.registry.ModMobs.DIPLOMAT_BOSS.get(),
             "floor5_boss_personal", "floor5_boss_ground", 128, com.pvpciv.registry.ModF5.DIPLOMAT_TROPHY, BossEvent.BossBarColor.BLUE, ChatFormatting.AQUA,
             "ИНОПЛАНЕТНЫЙ ДИПЛОМАТ ПРИБЫЛ НА МОСТИК! Этаж 5. Не подписывайте ничего.", false);
-    public static final Def WORM = new Def("worm", "Галактический червь", "Пояс астероидов (шлюз ангара, этаж 5)", 38, 60 * MIN, 13, 1.6,
+    public static final Def WORM = new Def("worm", "Галактический червь", "Пояс астероидов (шлюз ангара, этаж 5)", 31, 60 * MIN, 13, 1.6,
             () -> Belt.CENTER, 30, new Vec3(0, 6, 0), () -> com.pvpciv.registry.ModMobs.WORM_BOSS.get(),
             "floor5_worm_personal", "floor5_worm_ground", 256, com.pvpciv.registry.ModF5.WORM_TROPHY, BossEvent.BossBarColor.PINK, ChatFormatting.LIGHT_PURPLE,
             "ГАЛАКТИЧЕСКИЙ ЧЕРВЬ ПРОСНУЛСЯ! Пояс астероидов, этаж 5.", false);
@@ -95,6 +95,8 @@ public final class BossManager {
         UUID id; ServerBossEvent bar; int alive; boolean w5, w1, scanned;
         /** 0.11.2: арена закрыта после первого удара; внутри — те, кто был там в этот момент. */
         boolean locked; final Set<UUID> inside = new HashSet<>();
+        /** 1.2: состав боя — кто был на арене при пробуждении. Только они могут вернуться (после смерти); остальным вход закрыт, пока босс не уснёт. */
+        final Set<UUID> roster = new HashSet<>();
         long fightStart;   // 1.0.1: игровое время пробуждения — общий отсчёт музыки
         int idle;          // 1.1: тики без боя — через минуту босс снова запечатывается в алтарь
         final Map<UUID, Float> dmg = new HashMap<>();
@@ -253,8 +255,8 @@ public final class BossManager {
         lockTick(lvl, d, s, c);
         // 1.1: минута без боя (арена открыта, рядом никого) — босс снова уходит в алтарь, алтарь горит сразу
         boolean anyone = false;
-        for (ServerPlayer p : lvl.players()) if (!p.isSpectator() && flat(p.position(), c) <= d.lairR() + 4) { anyone = true; break; }
-        s.idle = s.locked || anyone ? 0 : s.idle + 1;
+        for (ServerPlayer p : lvl.players()) if (!p.isSpectator() && (s.roster.isEmpty() || s.roster.contains(p.getUUID())) && flat(p.position(), c) <= d.lairR() + 4) { anyone = true; break; }
+        s.idle = (s.locked && !s.inside.isEmpty()) || anyone ? 0 : s.idle + 1;   // 1.2: бойцы все пали/ушли — минута, и босс засыпает
         if (s.idle > 1200) { reseal(lvl, d, boss); return; }
         for (ServerPlayer p : lvl.players()) {
             boolean near = p.position().distanceTo(c) < d.lairR() + 34;
@@ -270,11 +272,35 @@ public final class BossManager {
         }
         St s = st(d);
         if (s.bar != null) { s.bar.removeAllPlayers(); s.bar = null; }
-        s.id = null; s.dmg.clear(); s.locked = false; s.inside.clear(); s.idle = 0;
+        s.id = null; s.dmg.clear(); s.locked = false; s.inside.clear(); s.roster.clear(); s.idle = 0;
+        // 1.2: свита уходит вместе с боссом
+        for (Mob m : lvl.getEntitiesOfClass(Mob.class, new AABB(d.lair().get()).inflate(d.lairR() + 40)))
+            if (m.getTags().stream().anyMatch(t -> t.equals("boss_minion") || t.equals("don_goon") || t.equals("king_rat") || t.equals("kumiho_court"))) {
+                lvl.sendParticles(ParticleTypes.POOF, m.getX(), m.getY() + 1, m.getZ(), 8, 0.3, 0.5, 0.3, 0.02);
+                m.discard();
+            }
         CivData data = CivData.get(lvl.getServer());
         data.bossNext.put(d.id(), now());   // алтарь загорается снова сразу
         data.setDirty();
         broadcast(lvl.getServer(), d.name() + " заскучал и снова запечатан в алтаре.", d.chat());
+    }
+
+    /** 1.2: отрезок выстрела (хитскан) — обрезать о стенку закрытого купола, если концы по разные стороны. */
+    public static Vec3 domeClip(ServerLevel lvl, Vec3 a, Vec3 b) {
+        for (Def d : DEFS) {
+            St s = st(d);
+            if (!s.locked || lvl(lvl.getServer(), d) != lvl) continue;
+            Vec3 c = center(d);
+            double R = d.lairR();
+            boolean ia = flat(a, c) < R, ib = flat(b, c) < R;
+            if (ia == ib) continue;
+            double lo = 0, hi = 1;   // бинарный поиск точки пересечения
+            for (int i = 0; i < 20; i++) { double m = (lo + hi) / 2; if ((flat(a.lerp(b, m), c) < R) == ia) lo = m; else hi = m; }
+            Vec3 hit = a.lerp(b, lo);
+            lvl.sendParticles(ParticleTypes.ELECTRIC_SPARK, hit.x, hit.y, hit.z, 4, 0.1, 0.1, 0.1, 0.05);
+            return hit;
+        }
+        return b;
     }
 
     /** 1.1: идёт ли закрытый бой в этой точке (спавн мобов на арене выключен). */
@@ -362,7 +388,7 @@ public final class BossManager {
             St s = st(d);
             s.dmg.merge(p.getUUID(), dmg, Float::sum);
             if (!s.locked && mob.level() instanceof ServerLevel lvl) lock(lvl, d, s);
-            if (s.locked && !s.inside.contains(p.getUUID()) && flat(p.position(), center(d)) < d.lairR() + 8) s.inside.add(p.getUUID());   // 1.0.1: ударил с края — тоже в бою
+            if (s.locked && s.roster.contains(p.getUUID()) && !s.inside.contains(p.getUUID()) && flat(p.position(), center(d)) < d.lairR() + 8) s.inside.add(p.getUUID());   // 1.0.1: ударил с края — тоже в бою
         }
     }
 
@@ -424,6 +450,7 @@ public final class BossManager {
             spawn((ServerLevel) p.level(), d);
             lock((ServerLevel) p.level(), d, s);   // 1.1: бой — сразу с пробуждения
             s.inside.add(p.getUUID());
+            s.roster.add(p.getUUID());
             return true;
         }
         return false;
@@ -435,6 +462,8 @@ public final class BossManager {
         s.locked = true;
         s.inside.clear();
         for (ServerPlayer p : lvl.players()) if (!p.isSpectator() && flat(p.position(), c) <= d.lairR()) s.inside.add(p.getUUID());
+        s.roster.clear();
+        s.roster.addAll(s.inside);
         lvl.playSound(null, BlockPos.containing(c), SoundEvents.IRON_DOOR_CLOSE, SoundSource.HOSTILE, 3f, 0.5f);
         lvl.playSound(null, BlockPos.containing(c), SoundEvents.BEACON_ACTIVATE, SoundSource.HOSTILE, 2f, 0.6f);
         for (ServerPlayer p : lvl.players()) if (flat(p.position(), c) < d.lairR() + 30)
@@ -446,13 +475,14 @@ public final class BossManager {
     /** Каждый тик боя: стена-кольцо из частиц; своих не выпускает, чужих не пускает. Все свои ушли или погибли — арена открывается. */
     private static void lockTick(ServerLevel lvl, Def d, St s, Vec3 c) {
         if (!s.locked) return;
+        if (s.id == null) { s.locked = false; s.roster.clear(); return; }   // босс пал или уснул — арена открыта
         double R = d.lairR();
         s.inside.removeIf(u -> { ServerPlayer p = lvl.getServer().getPlayerList().getPlayer(u); return p == null || !p.isAlive() || p.level() != lvl; });
-        if (s.inside.isEmpty()) { s.locked = false; return; }
         if (lvl.getGameTime() % 5 == 0) clearMobs(lvl, c, R);
         // 1.1: снаряды купол не пересекают — ни внутрь, ни наружу
         for (net.minecraft.world.entity.projectile.Projectile pr : lvl.getEntitiesOfClass(net.minecraft.world.entity.projectile.Projectile.class, new AABB(c, c).inflate(R + 4, 20, R + 4))) {
-            double r0 = Math.hypot(pr.xo - c.x, pr.zo - c.z), r1 = flat(pr.position(), c);
+            double r1 = flat(pr.position(), c);
+            double r0 = pr.tickCount < 2 ? r1 : Math.hypot(pr.xo - c.x, pr.zo - c.z);   // 1.2: у нового снаряда xo/zo ещё нули — раньше купол гасил ВСЕ снаряды боссов в момент выстрела
             Vec3 nx = pr.position().add(pr.getDeltaMovement());
             double r2 = flat(nx, c);
             if ((r0 < R) != (r1 < R) || (r1 < R) != (r2 < R)) {
@@ -467,9 +497,10 @@ public final class BossManager {
             boolean in = s.inside.contains(p.getUUID());
             if (in && r > R + 8) { s.inside.remove(p.getUUID()); continue; }   // ушёл телепортом (врата, лифт) — выпускаем
             if (in && r > R - 0.6) push(p, c, -1, R - 1.2);
-            else if (!in && r < R - 0.8) {   // 1.0.1: войти можно — выйти нельзя
-                s.inside.add(p.getUUID());
-                p.displayClientMessage(Component.literal("Ты вошёл на арену — выхода нет до конца боя").withStyle(ChatFormatting.RED, ChatFormatting.BOLD), true);
+            else if (!in && r < R - 0.8) {
+                if (!s.roster.contains(p.getUUID())) { push(p, c, 1, R + 1.2); continue; }   // 1.2: опоздавшим вход закрыт, пока босс не уснёт
+                s.inside.add(p.getUUID());   // свой — вернулся после смерти
+                p.displayClientMessage(Component.literal("Ты вернулся в бой — выхода нет до конца").withStyle(ChatFormatting.RED, ChatFormatting.BOLD), true);
                 lvl.playSound(null, p.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.HOSTILE, 1f, 1.4f);
             }
         }
@@ -556,6 +587,7 @@ public final class BossManager {
             p.sendSystemMessage(Component.literal("Личная награда («" + d.name() + "»): " + loot.size() + " предметов (ты нанёс " + Math.round(share * 100) + "% урона)").withStyle(ChatFormatting.GOLD));
             Progress.addXp(p, Progress.xpFor(sd.level, d.level(), 12));
             com.pvpciv.game.Marks.onBossKill(p, d.id());
+            com.pvpciv.game.Story.questHints(p, d.id());   // 1.2: всплывающие подсказки «куда дальше»
             com.pvpciv.game.Library.onKillBoss(p, d.id());
             com.pvpciv.game.Assassin.onKill(p, com.pvpciv.game.Assassin.BOSS);
             if (d == NOEL) { com.pvpciv.game.Enchanter.onBoss(p); com.pvpciv.progress.Titles.grant(p, "gardener"); }

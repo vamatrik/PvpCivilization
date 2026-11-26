@@ -121,6 +121,21 @@ public final class Floor3Areas extends Builder {
     }
 
     // ------------------------------------------------------------------ Каменный путь
+    /** 1.2: обманка — на этом отрезке гладкая сторона держит, а «гравий» скользит. */
+    public static final int DECOY_SEG = 13;
+    private static Block decoy(int z, int roughSide) {
+        boolean gravelLook = Integer.signum(z) == roughSide;
+        return gravelLook ? ModRegistry.SLICK_GRAVEL.get() : z == 0 ? ModRegistry.SLICK_STONE.get() : ModRegistry.GRIP_STONE.get();
+    }
+    /** Для старых миров: переложить отрезок-обманку. */
+    public static void placeDecoy(net.minecraft.server.level.ServerLevel l) {
+        if (l == null) return;
+        int seg = DECOY_SEG, roughSide = Math.floorMod(seg * 7 + 3, 2) == 0 ? 1 : -1;
+        for (int x = ROAD_X1; x <= ROAD_X0; x++) {
+            if (Math.floorDiv(ROAD_X0 - x, 90) != seg || (ROAD_X0 - x) % 90 >= 55) continue;
+            for (int z = -3; z <= 3; z++) l.setBlock(new BlockPos(x, Y - 1, z), decoy(z, roughSide).defaultBlockState(), 2);
+        }
+    }
     private void road() {
         int len = ROAD_X0 - ROAD_X1;
         for (int x = ROAD_X1; x <= ROAD_X0; x++) {
@@ -129,6 +144,7 @@ public final class Floor3Areas extends Builder {
             int roughSide = Math.floorMod(seg * 7 + 3, 2) == 0 ? 1 : -1;
             for (int z = -3; z <= 3; z++) {
                 boolean slow = rough && Integer.signum(z) == roughSide;
+                if (rough && seg == DECOY_SEG) { set(x, Y - 1, z, decoy(z, roughSide)); set(x, Y - 2, z, Blocks.STONE); continue; }
                 set(x, Y - 1, z, slow ? (((x + z) & 3) == 0 ? Blocks.COARSE_DIRT : Blocks.GRAVEL) : ModRegistry.SLICK_STONE.get());
                 set(x, Y - 2, z, Blocks.STONE);
                 if (Math.abs(z) == 3 && x % 2 == 0) set(x, Y - 2, z, Blocks.COBBLED_DEEPSLATE);

@@ -90,7 +90,7 @@ public final class Shop {
         out.add(new Offer("l_cmp", new ItemStack(com.pvpciv.registry.ModF5.CMP_LAZURATRON.get(), 2), 900, 6));
         out.add(new Offer("l_forget", new ItemStack(com.pvpciv.registry.ModF5.FORGET_SCROLL.get()), 25000, 1));   // 1.0: сброс класса
         out.add(new Offer("l_focus", new ItemStack(com.pvpciv.registry.ModF4.CAT_FOCUS.get()), 650, 3));
-        out.add(new Offer("l_anchor", new ItemStack(com.pvpciv.registry.ModF4.CAT_ANCHOR.get()), 900, 2));
+        // 1.2: «Якорь» больше не продаётся — старое зачарование можно оставить всегда
         out.add(new Offer("l_reso", new ItemStack(com.pvpciv.registry.ModF4.CAT_RESONATOR.get()), 2200, 1));
         out.add(new Offer("l_mod", new ItemStack(com.pvpciv.registry.ModF4.MODULE_IMPROVED.get()), 5200, 1));
         out.add(new Offer("l_star", new ItemStack(ModRegistry.STAR_W1.get()), 700, 3));

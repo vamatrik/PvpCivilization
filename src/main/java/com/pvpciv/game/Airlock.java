@@ -51,10 +51,10 @@ public final class Airlock {
         LEAVES.clear(); BASE.clear(); SIDE.clear();
         // створка: плита + жёлто-чёрные полосы по кромке + иллюминатор
         for (int side = -1; side <= 1; side += 2) {
-            double x0 = side < 0 ? -3.0 : 0.0;
+            double x0 = side < 0 ? -3.5 : 0.0;   // 1.2: проём 7 блоков — без щели слева
             leaf(l, Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState(), x0, 0, 3.5f, 5f, 0.4f, side, 0);
-            leaf(l, Blocks.YELLOW_CONCRETE.defaultBlockState(), side < 0 ? 0.25 : 0.0, 0, 0.25f, 5f, 0.5f, side, -0.05);
-            for (int k = 0; k < 5; k++) leaf(l, Blocks.BLACK_CONCRETE.defaultBlockState(), side < 0 ? 0.24 : -0.01, k + 0.5, 0.27f, 0.45f, 0.52f, side, -0.06);
+            leaf(l, Blocks.YELLOW_CONCRETE.defaultBlockState(), side < 0 ? -0.25 : 0.0, 0, 0.25f, 5f, 0.5f, side, -0.05);
+            for (int k = 0; k < 5; k++) leaf(l, Blocks.BLACK_CONCRETE.defaultBlockState(), side < 0 ? -0.26 : -0.01, k + 0.5, 0.27f, 0.45f, 0.52f, side, -0.06);
             leaf(l, Blocks.LIGHT_BLUE_STAINED_GLASS.defaultBlockState(), x0 + 1.2, 2.6, 1.1f, 1.1f, 0.5f, side, -0.05);
             leaf(l, Blocks.POLISHED_DEEPSLATE.defaultBlockState(), x0, 4.6, 3.5f, 0.4f, 0.55f, side, -0.07);
         }
@@ -76,7 +76,7 @@ public final class Airlock {
     /** k — насколько открыто (0..1): створки уходят в стороны на 3.4 блока. */
     private static void moveLeaves(double k) {
         for (int i = 0; i < LEAVES.size(); i++) {
-            Vec3 b = BASE.get(i).add(SIDE.get(i) * 3.4 * k, 0, 0);
+            Vec3 b = BASE.get(i).add(SIDE.get(i) * 3.6 * k, 0, 0);
             LEAVES.get(i).teleportTo(b.x, b.y, b.z);
         }
     }

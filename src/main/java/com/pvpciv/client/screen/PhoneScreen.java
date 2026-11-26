@@ -37,6 +37,8 @@ public class PhoneScreen extends Screen {
     }
     // такси
     private int tFloor = 1, tFrom = -1, tTo = -1, hover = -1;
+    private boolean dropOpen;
+    private boolean floorOpen(int f) { int bits = data != null && data.has("open") ? data.get("open").getAsInt() : (data != null && data.get("f2").getAsBoolean() ? 3 : 1); return (bits & (1 << (f - 1))) != 0; }
 
     public PhoneScreen(int kind, JsonObject j) {
         super(Component.literal("Телефон"));
@@ -47,7 +49,7 @@ public class PhoneScreen extends Screen {
         if (kind != app) { java.util.Arrays.fill(cart, 0); }
         app = kind; data = j; dataAt = System.currentTimeMillis();
         if (kind == TAXI) {
-            tFloor = Math.min(2, j.get("floor").getAsInt());   // карта такси — пока этажи 1–2
+            tFloor = Math.max(1, Math.min(5, j.get("floor").getAsInt()));   // 1.2: такси по всем этажам
             tFrom = j.get("here").getAsInt(); tTo = -1;
             if (j.has("pf")) { tFrom = j.get("pf").getAsInt(); tTo = j.get("pt").getAsInt(); }
         }
@@ -125,7 +127,7 @@ public class PhoneScreen extends Screen {
             if (i == 0) {
                 int cd = secLeft("bailCd");
                 boolean jailed = data.get("jailed").getAsBoolean();
-                if (!jailed) { st = Phone.BAIL_PER_MIN + " ✦ / мин срока"; sc = 0xFF8A8A9A; }
+                if (!jailed) { st = "от " + Phone.BAIL_PER_MIN + " ✦ за минуту"; sc = 0xFF8A8A9A; }
                 else if (cd > 0) { st = "Элеонора остынет: " + (cd / 60 + 1) + " мин"; sc = 0xFF8A8A9A; }
                 else st = "Выкупить: " + data.get("bail").getAsInt() + " ✦";
             } else if (i == 1) {
@@ -230,24 +232,23 @@ public class PhoneScreen extends Screen {
 
     private int[] pt(Taxi.Pt p) {
         if (p.floor() == 1) return new int[]{mapX() + Math.round(p.mx() * MW), mapY() + Math.round(p.my() * MH)};
+        if (p.floor() >= 3) { float[] m = Taxi.mapPos(p); return new int[]{mapX() + Math.round(m[0] * MW), mapY() + Math.round(m[1] * MH)}; }
         int side = MH, ox = mapX() + (MW - side) / 2;
         return new int[]{ox + Math.round(p.mx() * side), mapY() + Math.round(p.my() * side)};
     }
 
     private void taxi(GuiGraphics g, int mx, int my) {
-        boolean f2ok = data.get("f2").getAsBoolean();
-        for (int f = 1; f <= 2; f++) {
-            int tx = sx + 4 + (f - 1) * 66;
-            boolean on = tFloor == f, ok = f == 1 || f2ok, hv = ok && Skin.hover(mx, my, tx, sy + 16, 62, 13);
-            g.fill(tx, sy + 16, tx + 62, sy + 29, on ? 0xC02E9E5A : hv ? 0x40FFFFFF : 0x20FFFFFF);
-            g.drawCenteredString(font, "Этаж " + f, tx + 31, sy + 19, ok ? 0xFFFFFFFF : 0xFF5A5A6A);
-        }
+        // 1.2: выпадающий список этажей
+        boolean dh = Skin.hover(mx, my, sx + 4, sy + 16, 128, 13);
+        g.fill(sx + 4, sy + 16, sx + 132, sy + 29, dropOpen ? 0xC02E9E5A : dh ? 0x40FFFFFF : 0x28FFFFFF);
+        g.drawString(font, Skin.fit(font, "Этаж " + tFloor + " · " + Taxi.FLOOR_NAMES[tFloor], 112), sx + 8, sy + 19, 0xFFFFFFFF, false);
+        g.drawString(font, dropOpen ? "▴" : "▾", sx + 124, sy + 19, 0xFFFFE08A, false);
         int hp = data.has("homePrice") ? data.get("homePrice").getAsInt() : -1;
         if (hp >= 0) btn2(g, sx + 136, sy + 16, 64, "Домой " + hp + " ✦", ClientState.money >= hp && ClientState.taxiUntil <= System.currentTimeMillis(), mx, my);
         // схема
         int x0 = mapX(), y0 = mapY();
         g.fill(x0, y0, x0 + MW, y0 + MH, 0xFF0C1222);
-        if (tFloor == 1) floor1(g); else floor2(g);
+        if (tFloor == 1) floor1(g); else if (tFloor == 2) floor2(g); else floorN(g);
         hover = -1;
         int here = data.get("here").getAsInt();
         for (int i = 0; i < Taxi.PTS.length; i++) {
@@ -294,6 +295,35 @@ public class PhoneScreen extends Screen {
             if (tFrom != here) Skin.para(g, font, "Таксист подождёт на точке 3 мин.", rx, ry + 20, rw, 9, 3, 0xFF5A6480, false);
         }
         g.drawString(font, "← назад", rx, sy + sh - 11, Skin.hover(mx, my, rx - 2, sy + sh - 13, 50, 12) ? 0xFFFFFFFF : 0xFF7A84A0, false);
+        if (dropOpen) {   // список поверх схемы
+            g.pose().pushPose(); g.pose().translate(0, 0, 300);
+            g.fill(sx + 4, sy + 29, sx + 132, sy + 29 + 5 * 13 + 2, 0xF0101622);
+            for (int f = 1; f <= 5; f++) {
+                int yy = sy + 30 + (f - 1) * 13;
+                boolean ok = floorOpen(f), hv = ok && Skin.hover(mx, my, sx + 4, yy, 128, 13);
+                if (hv || f == tFloor) g.fill(sx + 5, yy, sx + 131, yy + 13, f == tFloor ? 0x802E9E5A : 0x40FFFFFF);
+                g.drawString(font, Skin.fit(font, "Этаж " + f + " · " + Taxi.FLOOR_NAMES[f], 120), sx + 8, yy + 3, ok ? 0xFFFFFFFF : 0xFF5A5A6A, false);
+            }
+            g.pose().popPose();
+        }
+    }
+
+    /** 1.2: схема этажей 3–5 — сетка и подпись (точки раскладываются по рамке). */
+    private void floorN(GuiGraphics g) {
+        int x0 = mapX(), y0 = mapY();
+        for (int i = 1; i < 8; i++) g.fill(x0 + i * MW / 8, y0, x0 + i * MW / 8 + 1, y0 + MH, 0xFF151D32);
+        for (int i = 1; i < 6; i++) g.fill(x0, y0 + i * MH / 6, x0 + MW, y0 + i * MH / 6 + 1, 0xFF151D32);
+        g.drawCenteredString(font, Taxi.FLOOR_NAMES[tFloor], x0 + MW / 2, y0 + 2, 0xFF9AA4C0);
+        // линии от первой точки этажа (лифт) к остальным — «дороги»
+        Taxi.Pt hub = null;
+        for (Taxi.Pt p : Taxi.PTS) if (p.floor() == tFloor) { hub = p; break; }
+        if (hub == null) return;
+        int[] h = pt(hub);
+        for (Taxi.Pt p : Taxi.PTS) if (p.floor() == tFloor && p != hub) {
+            int[] c = pt(p);
+            int n = Math.max(Math.abs(c[0] - h[0]), Math.abs(c[1] - h[1]));
+            for (int i = 0; i <= n; i += 2) { int x = h[0] + (c[0] - h[0]) * i / Math.max(1, n), y = h[1] + (c[1] - h[1]) * i / Math.max(1, n); g.fill(x, y, x + 1, y + 1, 0xFF3A4A70); }
+        }
     }
 
     private void btn2(GuiGraphics g, int x, int y, int w, String s, boolean on, int mx, int my) {
@@ -387,7 +417,11 @@ public class PhoneScreen extends Screen {
                 int rx = mapX() + MW + 8, rw = sx + sw - 4 - rx;
                 if (Skin.hover(mx, my, rx - 2, sy + sh - 13, 50, 12)) { click(); cmd("open"); return true; }
                 if (Skin.hover(mx, my, sx + 136, sy + 16, 64, 13) && data.has("homePrice") && data.get("homePrice").getAsInt() >= 0) { cmd("taxi_home"); click(); onClose(); return true; }
-                for (int f = 1; f <= 2; f++) if (Skin.hover(mx, my, sx + 4 + (f - 1) * 66, sy + 16, 62, 13) && (f == 1 || data.get("f2").getAsBoolean())) { tFloor = f; click(); return true; }
+                if (dropOpen) {
+                    for (int f = 1; f <= 5; f++) if (Skin.hover(mx, my, sx + 4, sy + 30 + (f - 1) * 13, 128, 13) && floorOpen(f)) { tFloor = f; dropOpen = false; click(); return true; }
+                    dropOpen = false; return true;
+                }
+                if (Skin.hover(mx, my, sx + 4, sy + 16, 128, 13)) { dropOpen = true; click(); return true; }
                 boolean pending = ClientState.taxiUntil > System.currentTimeMillis();
                 if (Skin.hover(mx, my, rx, lastBtnY, rw, 16)) {
                     if (pending) { cmd("taxi_cancel"); click(); return true; }

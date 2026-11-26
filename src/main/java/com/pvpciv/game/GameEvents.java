@@ -52,6 +52,9 @@ public final class GameEvents {
         bus.addListener(GameEvents::onLogout);
         bus.addListener(GameEvents::onRespawn);
         bus.addListener(GameEvents::onTick);
+        // 1.2: крышки тайников — заново при смене этажа (иначе после тайника на другом этаже свои «закрывались»)
+        bus.addListener((net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerChangedDimensionEvent e) -> { if (e.getEntity() instanceof ServerPlayer sp) Stash.sync(sp); });
+        bus.addListener((net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent e) -> { if (e.getEntity() instanceof ServerPlayer sp) Stash.sync(sp); });
         bus.addListener((net.neoforged.neoforge.event.entity.EntityJoinLevelEvent e) -> { if (!e.getLevel().isClientSide && Rocket.stale(e.getEntity())) e.setCanceled(true); });
         bus.addListener((net.neoforged.neoforge.event.level.ChunkEvent.Load e) -> {
             if (e.getLevel() instanceof net.minecraft.server.level.ServerLevel sl && e.getChunk() instanceof net.minecraft.world.level.chunk.LevelChunk ch) com.pvpciv.world.Signs.onChunkLoad(sl, ch);
@@ -67,7 +70,7 @@ public final class GameEvents {
         bus.addListener((net.neoforged.neoforge.event.entity.living.LivingKnockBackEvent e) -> {
             if (com.pvpciv.entity.mob.CivGunner.NO_KB) { e.setCanceled(true); return; }
             // 1.1.1: пара клинков (кинжалы/сабли/любое в обеих руках) — откидывание вдвое меньше, иначе цель улетает из дуги
-            if (e.getEntity().getLastHurtByMob() instanceof ServerPlayer sp && e.getEntity().getLastHurtByMobTimestamp() == e.getEntity().tickCount && com.pvpciv.combat.Melee.dual(sp))
+            if (e.getEntity().getLastHurtByMob() instanceof ServerPlayer sp && e.getEntity().getLastHurtByMobTimestamp() == e.getEntity().tickCount && com.pvpciv.combat.Melee.pair(sp))
                 e.setStrength(e.getStrength() * 0.5f);
         });
         // 1.0: смерть на арене испытаний Луны — не смерть
@@ -86,6 +89,7 @@ public final class GameEvents {
         bus.addListener(GameEvents::onPickup);
         bus.addListener(GameEvents::onEntityJoin);
         bus.addListener(GameEvents::onRightClickBlock);
+        bus.addListener(GameEvents::onTrample);
         bus.addListener(GameEvents::onMount);
         bus.addListener((net.neoforged.neoforge.event.entity.living.LivingDeathEvent e) -> {
             if (e.getEntity() instanceof net.minecraft.world.entity.Mob m && !m.level().isClientSide) com.pvpciv.floor.EliteSpots.onDeath(m);
@@ -142,7 +146,7 @@ public final class GameEvents {
     }
 
     private static void onLogin(PlayerEvent.PlayerLoggedInEvent e) {
-        if (e.getEntity() instanceof ServerPlayer p) { Story.onLogin(p); Gates.sync(p); Classes.sync(p, false); Showcases.refresh(p); }
+        if (e.getEntity() instanceof ServerPlayer p) { Story.onLogin(p); Gates.sync(p); Classes.sync(p, false); Showcases.refresh(p); ArmorVis.login(p); }
     }
 
     private static void onLogout(PlayerEvent.PlayerLoggedOutEvent e) {
@@ -171,6 +175,7 @@ public final class GameEvents {
         if (ticks % 5 == 0) for (ServerPlayer p : server.getPlayerList().getPlayers()) Falling.tick(p);
         Falling.follow(server);
         if (server.getTickCount() % 5 == 0) com.pvpciv.combat.Melee.tick(server);
+        SkySpin.tick(server);   // 1.2
         if (server.getTickCount() % 20 == 0) com.pvpciv.combat.Bleed.tick(server);
         if (ticks % 10 == 3) for (ServerPlayer p : server.getPlayerList().getPlayers()) { Marks.tick(p); Taxi.tick(p); }
         if (ticks % 20 == 7) for (ServerPlayer p : server.getPlayerList().getPlayers()) { FoodApp.tick(p); Gates.tick(p); }
@@ -216,6 +221,7 @@ public final class GameEvents {
         if (st.getItem() instanceof com.pvpciv.item.SparkItem) return;
         int before = st.getCount();
         ItemStack rest = com.pvpciv.inv.Bag.insert(p, st.copy());
+        if (!rest.isEmpty()) rest = toHotbar(p, rest);   // 1.2: сумка полна — в свободные клетки хотбара
         if (rest.getCount() == before) {   // 0.11.1: сумка полна — предмет остаётся лежать (раньше уходил в ванильные строки)
             e.setCanPickup(net.neoforged.neoforge.common.util.TriState.FALSE);
             if (p.tickCount % 40 == 0) p.displayClientMessage(Component.literal("Сумка полна").withStyle(ChatFormatting.RED), true);
@@ -227,6 +233,19 @@ public final class GameEvents {
             e.setCanPickup(net.neoforged.neoforge.common.util.TriState.FALSE);
         } else ie.setItem(rest);
         p.level().playSound(null, p.blockPosition(), net.minecraft.sounds.SoundEvents.ITEM_PICKUP, net.minecraft.sounds.SoundSource.PLAYERS, 0.2f, 1.4f + p.getRandom().nextFloat() * 0.4f);
+    }
+
+    private static ItemStack toHotbar(ServerPlayer p, ItemStack st) {
+        var inv = p.getInventory();
+        for (int i = 0; i < 9 && !st.isEmpty(); i++) {
+            ItemStack h = inv.getItem(i);
+            if (!h.isEmpty() && !com.pvpciv.inv.InvLock.isPlug(h) && ItemStack.isSameItemSameComponents(h, st) && h.getCount() < h.getMaxStackSize()) {
+                int n = Math.min(st.getCount(), h.getMaxStackSize() - h.getCount());
+                h.grow(n); st.shrink(n);
+            }
+        }
+        for (int i = 0; i < 9 && !st.isEmpty(); i++) if (inv.getItem(i).isEmpty()) { inv.setItem(i, st.copy()); st.setCount(0); }
+        return st;
     }
 
     /** Никаких ванильных мобов: в мире живут только мобы цивилизации. */
@@ -254,6 +273,7 @@ public final class GameEvents {
         if (!(e.getEntity() instanceof ServerPlayer p) || e.getHand() != net.minecraft.world.InteractionHand.MAIN_HAND) return;
         if (!com.pvpciv.world.CivWorld.is(p.level())) return;
         net.minecraft.core.BlockPos pos = e.getPos();
+        if (harvest(p, pos)) { e.setCanceled(true); return; }   // 1.2: сбор урожая ПКМ с пересадкой
         if (Rocket.onUse(p, pos)) { e.setCanceled(true); return; }   // 0.12: ракета «Заря-5»
         if (com.pvpciv.floor.Belt.onUse(p, pos)) { e.setCanceled(true); return; }   // 1.0: шлюз к поясу астероидов
         if (SkyLift.onF5Console(p, pos)) { e.setCanceled(true); return; }   // 1.0: лифт станции (ремонт адским следом)
@@ -317,7 +337,36 @@ public final class GameEvents {
     }
 
     private static void onPlace(BlockEvent.EntityPlaceEvent e) {
-        if (e.getEntity() instanceof Player p && !p.isCreative()) e.setCanceled(true);
+        if (!(e.getEntity() instanceof Player p) || p.isCreative()) return;
+        // 1.2: торт можно поставить только на пурпурную шерсть (за спиной Луны) — и съесть
+        if (e.getPlacedBlock().is(net.minecraft.world.level.block.Blocks.CAKE)
+                && e.getLevel().getBlockState(e.getPos().below()).is(net.minecraft.world.level.block.Blocks.PURPLE_WOOL)) return;
+        e.setCanceled(true);
+        if (e.getPlacedBlock().is(net.minecraft.world.level.block.Blocks.CAKE))
+            p.displayClientMessage(Component.literal("Торт — только на пурпурную шерсть за спиной Луны.").withStyle(ChatFormatting.LIGHT_PURPLE), true);
+    }
+
+    private static void onTrample(BlockEvent.FarmlandTrampleEvent e) {
+        if (e.getLevel() instanceof net.minecraft.world.level.Level l && com.pvpciv.world.CivWorld.is(l)) e.setCanceled(true);
+    }
+
+    /** 1.2: ПКМ по созревшей культуре — урожай в сумку, грядка засевается заново. */
+    private static boolean harvest(ServerPlayer p, net.minecraft.core.BlockPos pos) {
+        var lvl = p.serverLevel();
+        var st = lvl.getBlockState(pos);
+        if (!(st.getBlock() instanceof net.minecraft.world.level.block.CropBlock crop) || !crop.isMaxAge(st)) return false;
+        var drops = net.minecraft.world.level.block.Block.getDrops(st, lvl, pos, null, p, p.getMainHandItem());
+        net.minecraft.world.item.Item seed = crop.getCloneItemStack(lvl, pos, st).getItem();
+        boolean took = false;
+        for (ItemStack d : drops) {
+            if (!took && d.is(seed)) { d.shrink(1); took = true; }
+            if (!d.isEmpty()) com.pvpciv.inv.Bag.give(p, d);
+        }
+        lvl.setBlock(pos, crop.getStateForAge(0), 3);
+        lvl.playSound(null, pos, net.minecraft.sounds.SoundEvents.CROP_BREAK, net.minecraft.sounds.SoundSource.BLOCKS, 1f, 1f);
+        lvl.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 6, 0.3, 0.2, 0.3, 0);
+        p.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
+        return true;
     }
 
     private static void onToss(ItemTossEvent e) {
@@ -388,6 +437,7 @@ public final class GameEvents {
                         .then(Commands.literal("trophies").executes(c -> { var pl = c.getSource().getPlayerOrException(); for (var tr : Showcases.ALL) com.pvpciv.inv.Bag.give(pl, new net.minecraft.world.item.ItemStack(tr.item().get())); return 1; }))
                         .then(Commands.literal("rift").then(Commands.argument("mana", com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, 100)).executes(c -> { VoidRift.setMana(c.getSource().getPlayerOrException(), com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "mana")); return 1; })))
                         .then(Commands.literal("clearbag").executes(c -> { var h = com.pvpciv.inv.Bag.get(c.getSource().getPlayerOrException()); for (int i = 0; i < h.getSlots(); i++) h.setStackInSlot(i, net.minecraft.world.item.ItemStack.EMPTY); return 1; }))
+                        .then(Commands.literal("hangar").executes(c -> { var p = c.getSource().getPlayerOrException(); var a = com.pvpciv.floor.Floor5.AIRLOCK(); p.teleportTo(com.pvpciv.world.CivWorld.f5(p.server), a.getX() + 0.5, a.getY(), a.getZ() - 6.5, 180, 10); return 1; }))
                         .then(Commands.literal("matter").executes(c -> { var p = c.getSource().getPlayerOrException(); com.pvpciv.game.Classes.giveMatter(p, 9); com.pvpciv.inv.Bag.give(p, new net.minecraft.world.item.ItemStack(com.pvpciv.registry.ModF5.DARK_STAR.get(), 2)); com.pvpciv.inv.Bag.give(p, new net.minecraft.world.item.ItemStack(com.pvpciv.registry.ModF5.HELL_TRAIL.get(), 1)); return 1; }))
                         .then(Commands.literal("back").executes(c -> AdminKit.back(c.getSource().getPlayerOrException(), c.getSource())))
                         .then(Commands.literal("resetgates").executes(c -> AdminKit.resetGates(c.getSource().getPlayerOrException(), c.getSource()))))

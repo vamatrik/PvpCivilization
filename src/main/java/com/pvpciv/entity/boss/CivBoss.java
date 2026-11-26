@@ -137,6 +137,7 @@ public abstract class CivBoss extends Monster implements GeoEntity {
             heal((float) (getMaxHealth() * (0.003 + 0.017 * k)));
             if (tickCount % 100 == 0) lvl.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART, getX(), getY() + getBbHeight(), getZ(), 3, 0.5, 0.3, 0.5, 0);
         }
+        if (tickCount % 80 == 40) retarget(lvl);
         if (--cooldown <= 0 && castTicks <= 0 && getTarget() instanceof ServerPlayer p && p.isAlive() && distanceTo(p) < 20) ability(lvl, p);
         if (getTarget() != null || !victims(lvl, 24).isEmpty()) pressure(lvl);
     }
@@ -146,6 +147,34 @@ public abstract class CivBoss extends Monster implements GeoEntity {
      * Вызывается каждый тик, пока рядом есть игроки. По умолчанию — ничего.
      */
     protected void pressure(ServerLevel lvl) {}
+
+    // ------------------------------------------------------------------ 1.2: смена цели и раздел атак
+    private final java.util.Map<java.util.UUID, Integer> HIT = new java.util.HashMap<>();
+
+    /** Раз в 4 с босс может сменить цель: чаще — на того, кто его недавно бил (не держит одного до смерти). */
+    protected void retarget(ServerLevel lvl) {
+        List<ServerPlayer> vs = victims(lvl, 28);
+        if (vs.size() < 2 || random.nextFloat() > 0.5f) return;
+        double sum = 0;
+        double[] w = new double[vs.size()];
+        for (int i = 0; i < vs.size(); i++) {
+            Integer h = HIT.get(vs.get(i).getUUID());
+            w[i] = 1 + (h != null && tickCount - h < 100 ? 3 : 0) + (vs.get(i) == getTarget() ? 0.5 : 0);
+            sum += w[i];
+        }
+        double r = random.nextDouble() * sum;
+        for (int i = 0; i < vs.size(); i++) { r -= w[i]; if (r <= 0) { setTarget(vs.get(i)); return; } }
+    }
+
+    /** Цели для «многоснарядной» атаки: основная + ещё несколько (до max; 2 игрока — 2 цели, 3+ — до 3). */
+    protected List<ServerPlayer> spread(ServerLevel lvl, ServerPlayer main, int max) {
+        List<ServerPlayer> out = new ArrayList<>();
+        out.add(main);
+        List<ServerPlayer> vs = victims(lvl, 28);
+        java.util.Collections.shuffle(vs, new java.util.Random(random.nextLong()));
+        for (ServerPlayer p : vs) { if (out.size() >= max) break; if (p != main) out.add(p); }
+        return out;
+    }
 
     // ------------------------------------------------------------------ 1.1.2: снаряды и лучи
     /** Снаряд из точки from в игрока (с упреждением по его скорости). */
@@ -344,7 +373,7 @@ public abstract class CivBoss extends Monster implements GeoEntity {
     public boolean hurt(DamageSource src, float amount) {
         if (src.is(net.minecraft.tags.DamageTypeTags.IS_FALL) || src.is(net.minecraft.tags.DamageTypeTags.IS_DROWNING)) return false;
         if (src.getEntity() instanceof net.minecraft.world.entity.Mob m && com.pvpciv.combat.Mobs.level(m) > 0) return false;   // мобы не ранят босса (питомцы игроков — могут)
-        if (src.getEntity() instanceof Player) lastPlayerHit = tickCount;
+        if (src.getEntity() instanceof Player) { lastPlayerHit = tickCount; HIT.put(src.getEntity().getUUID(), tickCount); }
         return super.hurt(src, amount);
     }
 

@@ -65,6 +65,7 @@ public class DismantleMenu extends CivMenu {
             // благословенные звёзды разбор не даёт: они только из контрактов, тайников и боссов (позже — стол инфузии)
             for (int i = 0; i < s; i++) if (r.nextDouble() < 0.3 * mult) stars++;
             if (w.plus) shards = 1 + rr;
+            out.add(ModRegistry.scrapOf(st));   // 1.2: лом своей редкости
         } else if (st.getItem() instanceof com.pvpciv.item.CivArmorItem a) {
             // бета 0.9.8: выход зависит от этажа брони и её плюса; «родной» материал этажа
             int rr = Gear.rarity(st).ordinal(), s = Math.min(10, Gear.stars(st));
@@ -103,12 +104,12 @@ public class DismantleMenu extends CivMenu {
         box.setItem(0, ItemStack.EMPTY);
         MutableComponent msg = Component.literal("Разобрано: ").withStyle(ChatFormatting.GOLD);
         boolean first = true;
-        for (ItemStack g : got) {
+        for (ItemStack g : com.pvpciv.util.Stacks.merged(got)) {
             if (!first) msg.append(Component.literal(", ").withStyle(ChatFormatting.GRAY));
             first = false;
             msg.append(g.getHoverName().copy()).append(Component.literal(" ×" + g.getCount()).withStyle(ChatFormatting.GRAY));
-            Bag.give(sp, g);
         }
+        for (ItemStack g : got) Bag.give(sp, g);
         sp.sendSystemMessage(msg);
         sp.level().playSound(null, sp.blockPosition(), SoundEvents.GRINDSTONE_USE, SoundSource.BLOCKS, 1f, 1f);
         broadcastChanges();

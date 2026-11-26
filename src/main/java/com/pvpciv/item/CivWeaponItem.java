@@ -21,10 +21,18 @@ public class CivWeaponItem extends SwordItem {
     public enum WClass {
         // 0.10: урон в секунду в «своём» режиме ≈ равный: меч и топор/молот — одной рукой, кинжал и сабля — в паре
         // 0.10.3: у рук свой заряд, обе бьют полным уроном → кинжал/сабля в паре = меч/топор/молот одной рукой (≈1.6 × урон тира в секунду)
-        SWORD("Меч", 1.0, -2.4), SABER("Сабля", 0.45, -2.0), DAGGER("Кинжал", 0.40, -1.5),   // 0.11.1: кинжал 0.32→0.40, сабля 0.42→0.45
+        SWORD("Меч", 1.0, -2.4), SABER("Сабля", 0.82, -2.0), DAGGER("Кинжал", 0.66, -1.5),   // 1.2: пара — одна вещь на обе руки: урон за удар уже за две руки (УВС ≈ 1.64)
+          // 0.11.1: кинжал 0.32→0.40, сабля 0.42→0.45
         AXE("Топор", 1.6, -3.0), HAMMER("Молот", 2.0, -3.2);
         public final String title; public final double dmg; public final double speed;
         WClass(String t, double d, double s) { title = t; dmg = d; speed = s; }
+    }
+
+    /** 1.2: парное оружие (сабли и кинжалы, кроме копья Хранительницы и дудочки короля) — одна вещь на обе руки. */
+    public boolean paired() {
+        if (cls != WClass.SABER && cls != WClass.DAGGER) return false;
+        String id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(this).getPath();
+        return !id.equals("keeper_spear") && !id.equals("rat_pipe");
     }
 
     public final int tier;
@@ -97,6 +105,7 @@ public class CivWeaponItem extends SwordItem {
         if (r.ordinal() < minRarity.ordinal()) r = minRarity;
         int rc = r.color;
         tip.add(Component.literal(r.title + " • " + cls.title + " • Тир " + tierName()).withStyle(x -> x.withColor(rc)));
+        if (paired()) tip.add(Component.literal("⚔ Парное: одна вещь — в обеих руках, удары чередуются").withStyle(net.minecraft.ChatFormatting.DARK_AQUA));
         int s = Gear.stars(st);
         StringBuilder stars = new StringBuilder();
         for (int i = 0; i < Gear.MAX_STARS; i++) stars.append(i < s ? "★" : "☆");

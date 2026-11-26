@@ -197,7 +197,7 @@ public final class Belt {
         p.resetFallDistance();
         PacketDistributor.sendToPlayer(p, new Network.PhoneData(22, "{\"cut\":\"arrive\",\"len\":30}"));
         p.connection.send(new net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket(Component.literal("Пояс астероидов").withStyle(ChatFormatting.LIGHT_PURPLE)));
-        p.connection.send(new net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket(Component.literal("Низкая гравитация · ур. 38").withStyle(ChatFormatting.GRAY)));
+        p.connection.send(new net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket(Component.literal("Низкая гравитация · ур. 31").withStyle(ChatFormatting.GRAY)));
         if (!Progress.d(p).gates.contains("belt_seen")) {
             var d = Progress.d(p); d.gates.putInt("belt_seen", 1); p.setData(com.pvpciv.registry.ModRegistry.STORY.get(), d);
             p.sendSystemMessage(Component.literal("✦ Пояс астероидов. Прыжки тут длинные, падать — далеко. В центре на большом астероиде — алтарь Галактического червя.").withStyle(ChatFormatting.LIGHT_PURPLE));
@@ -232,7 +232,7 @@ public final class Belt {
             if (en.getValue() > 0) {
                 p.teleportTo(l, PAD.getX() + 0.5, Y, PAD.getZ() + 0.5, 180, 0);
                 p.connection.send(new net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket(Component.literal("Пояс астероидов").withStyle(ChatFormatting.LIGHT_PURPLE)));
-                p.connection.send(new net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket(Component.literal("Низкая гравитация · ур. 38").withStyle(ChatFormatting.GRAY)));
+                p.connection.send(new net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket(Component.literal("Низкая гравитация · ур. 31").withStyle(ChatFormatting.GRAY)));
                 if (!Progress.d(p).gates.contains("belt_seen")) {
                     var d = Progress.d(p); d.gates.putInt("belt_seen", 1); p.setData(com.pvpciv.registry.ModRegistry.STORY.get(), d);
                     p.sendSystemMessage(Component.literal("✦ Пояс астероидов. Прыжки тут длинные, падать — далеко. В центре на большом астероиде — алтарь Галактического червя.").withStyle(ChatFormatting.LIGHT_PURPLE));

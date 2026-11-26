@@ -24,8 +24,8 @@ public final class ModF5 {
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> STAR_ALLOY = simple("star_alloy", 14, false, 99, "Звёздный сплав. Ковали в невесомости.", "Материал скафандра «Орбита».");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> VOID_SHARD = simple("void_shard", 12, false, 99, "Осколок пустоты. Холодный изнутри.", "Хлам этажа 5.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> CIRCUIT = simple("circuit", 10, false, 99, "Плата со станции. Кто-то её погрыз.", "Хлам этажа 5.");
-    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> ASTRO_CORE = simple("astro_core", 160, true, 16, "Астроядро.", "Сердце ядра брони этажа 5 (алтарь).");
-    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> QUASAR_CELL = simple("quasar_cell", 220, true, 16, "Квазарная ячейка. Светится сквозь пальцы.", "Редкий материал этажа 5.");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> ASTRO_CORE = simple("astro_core", 450, true, 16, "Астроядро.", "Сердце ядра брони этажа 5 (алтарь).");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> QUASAR_CELL = simple("quasar_cell", 1500, true, 16, "Квазарная ячейка. Светится сквозь пальцы.", "Редкий материал этажа 5.");
     public static final DeferredItem<com.pvpciv.item.BagBuckleItem> GRAV_POUCH = ITEMS.register("grav_pouch",
             () -> new com.pvpciv.item.BagBuckleItem(new Item.Properties().stacksTo(16).rarity(net.minecraft.world.item.Rarity.EPIC), 5, 5));
 

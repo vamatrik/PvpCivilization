@@ -5,7 +5,7 @@
   "block.pvpciv.arena_core": "Arena Core",
   "entity.pvpciv.guard": "Timofey the Guard",
   "entity.pvpciv.luna": "Luna",
-  "key.pvpciv.dash": "Skill: Dash",
+  "key.pvpciv.dash": "Skill 1",
   "key.categories.pvpciv": "PvP Civilization",
   "generator.pvpciv.abyss": "PvP Civilization (Abyss)",
   "item.pvpciv.novice_sword": "Меч новичка",
@@ -129,6 +129,7 @@
   "item.pvpciv.phone": "Телефон «Поко X3 Про»",
   "key.pvpciv.skill2": "Навык 2",
   "key.pvpciv.skill3": "Навык 3",
+  "key.pvpciv.skill4": "Навык 4",
   "key.pvpciv.phone": "Телефон (ответить на звонок)",
   "item.pvpciv.potion_heal": "Зелье лечения",
   "item.pvpciv.potion_regen": "Зелье регенерации",
@@ -297,5 +298,13 @@
   "block.pvpciv.console": "Console",
   "block.pvpciv.ritual_core": "Ritual Core",
   "block.pvpciv.ritual_injector": "Dark Injector",
-  "item.pvpciv.void_bolt": "Void Bolt"
+  "item.pvpciv.void_bolt": "Void Bolt",
+  "item.pvpciv.scrap_common": "Лом (обычный)",
+  "item.pvpciv.scrap_uncommon": "Лом (необычный)",
+  "item.pvpciv.scrap_rare": "Лом (редкий)",
+  "item.pvpciv.scrap_epic": "Лом (эпический)",
+  "item.pvpciv.scrap_legendary": "Лом (легендарный)",
+  "item.pvpciv.scrap_mythic": "Лом (мифический)",
+  "block.pvpciv.grip_stone": "Камень (держит)",
+  "block.pvpciv.slick_gravel": "Гравий (скользкий)"
 }

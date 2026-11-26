@@ -197,7 +197,7 @@ public final class LunaTrial {
         if (first) {
             d.gates.putInt("luna_best", st);
             p.setData(ModRegistry.STORY.get(), d);
-            Classes.giveMatter(p, st >= 4 ? 3 : 2);
+            Classes.giveMatter(p, Classes.lunaPoints(st));   // 1.2: очки древа — 4 за первую стадию, потом по 3
             if (st == 2 || st == 4 || st >= 6) loot.add(new ItemStack(ModF5.DARK_STAR.get()));
             money *= 2;
         } else if (st >= 3 && p.getRandom().nextDouble() < 0.10) loot.add(new ItemStack(ModF5.DARK_STAR.get()));
@@ -205,7 +205,7 @@ public final class LunaTrial {
         p.sendSystemMessage(Component.literal("☾ Награда стадии " + st + " (выдам на станции): " + Story.lootLine(loot)).withStyle(ChatFormatting.GOLD));
         Progress.addMoney(p, money, true);
         Progress.addXp(p, Progress.xpFor(d.level, powerLevel(st), 6));
-        title(p, "Пройдено!", "Стадия " + st + (first ? " впервые · тёмная материя ×" + (st >= 4 ? 3 : 2) : " · Луна: «Ещё?»"), ChatFormatting.GOLD);
+        title(p, "Пройдено!", "Стадия " + st + (first ? " впервые · очки древа +" + Classes.lunaPoints(st) : " · Луна: «Ещё?»"), ChatFormatting.GOLD);
         p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 1f, 1.2f);
         if (first && st >= 3) for (ServerPlayer o : p.server.getPlayerList().getPlayers())
             o.sendSystemMessage(Component.literal("☾ " + p.getGameProfile().getName() + " прошёл стадию " + st + " испытания Луны!").withStyle(ChatFormatting.LIGHT_PURPLE));

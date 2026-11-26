@@ -92,12 +92,31 @@ public final class Floor5 extends Builder {
             if (z > hz || z == hz && Math.abs(x - C) < Math.abs(hx - C)) { hx = x; hz = z; }
             if (z < bz || z == bz && Math.abs(x - C) < Math.abs(bx - C)) { bx = x; bz = z; }
         }
+        // 1.2: уровень модуля — по пути от ангара (туда прилетает ракета): чем дальше по коридорам, тем сильнее (было — по кольцу от центра)
+        int[] dist = new int[N * N];
+        java.util.Arrays.fill(dist, -1);
+        int[] deg = new int[N * N];
+        for (int[] l : LINKS) { deg[l[0]]++; deg[l[1]]++; }
+        java.util.ArrayDeque<Integer> q = new java.util.ArrayDeque<>();
+        dist[hx * N + hz] = 0; q.add(hx * N + hz);
+        int maxD = 1;
+        while (!q.isEmpty()) {
+            int u = q.poll();
+            for (int[] l : LINKS) {
+                int v = l[0] == u ? l[1] : l[1] == u ? l[0] : -1;
+                if (v < 0 || dist[v] >= 0) continue;
+                dist[v] = dist[u] + 1; maxD = Math.max(maxD, dist[v]); q.add(v);
+            }
+        }
         Type[] pool = {Type.HABITAT, Type.HABITAT, Type.HYDRO, Type.HYDRO, Type.LAB, Type.LAB, Type.CARGO, Type.CARGO, Type.ENGINE, Type.OBSERVATORY, Type.MEDBAY};
         for (int x = 0; x < N; x++) for (int z = 0; z < N; z++) {
             if (!used[x][z]) continue;
             Type t = x == C && z == C ? Type.ATRIUM : x == hx && z == hz ? Type.HANGAR : x == bx && z == bz ? Type.BRIDGE : pool[r.nextInt(pool.length)];
             int ring = Math.max(Math.abs(x - C), Math.abs(z - C));
-            int lvl = Math.min(32, 23 + ring * 3 + r.nextInt(2));
+            int jitter = r.nextInt(2);
+            int dd = Math.max(0, dist[x * N + z]);
+            int lvl = Math.min(30, 23 + (int) Math.round(dd * 6.0 / maxD) + (deg[x * N + z] == 1 ? 1 : 0) + (dd > 1 ? jitter : 0));
+            if (ring < 0) lvl = 23;
             Module m = new Module(x, z, t, lvl);
             MODULES.add(m);
             if (t == Type.ATRIUM) HUB = m;
@@ -110,6 +129,9 @@ public final class Floor5 extends Builder {
 
     /** 1.1: малая ракета ангара — низ по центру и блоки относительно него. */
     public static BlockPos ROCKET() { return HANGAR_M.center().offset(0, 0, 4); }
+    /** 1.2: пульт в кабине ракеты (от {@link #ROCKET()}); люк — (0, 4..5, −2). */
+    public static final BlockPos ROCKET_CONSOLE_OFF = new BlockPos(0, 4, 1);
+    public static final BlockPos[] ROCKET_HATCH = {new BlockPos(0, 4, -2), new BlockPos(0, 5, -2)};
     public static java.util.Map<BlockPos, BlockState> rocketVoxels() {
         java.util.Map<BlockPos, BlockState> m = new java.util.LinkedHashMap<>();
         for (int y = 0; y < 12; y++) for (int x = -2; x <= 2; x++) for (int z = -2; z <= 2; z++) {
@@ -117,6 +139,11 @@ public final class Floor5 extends Builder {
             if (r > rr || (r < rr - 1.1 && y > 0 && y < 11)) continue;
             m.put(new BlockPos(x, y, z), (y >= 10 ? Blocks.RED_CONCRETE : y % 4 == 2 ? Blocks.BLACK_CONCRETE : Blocks.WHITE_CONCRETE).defaultBlockState());
         }
+        // 1.2: лестница снаружи, люк, пол кабины и пульт внутри
+        m.remove(new BlockPos(0, 4, -2)); m.remove(new BlockPos(0, 5, -2));
+        for (int y = 0; y <= 3; y++) m.put(new BlockPos(0, y, -3), Blocks.LADDER.defaultBlockState().setValue(net.minecraft.world.level.block.LadderBlock.FACING, Direction.NORTH));
+        for (int[] c : new int[][]{{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}}) m.put(new BlockPos(c[0], 3, c[1]), Blocks.IRON_BLOCK.defaultBlockState());
+        m.put(ROCKET_CONSOLE_OFF, com.pvpciv.block.ConsoleBlock.of(com.pvpciv.block.ConsoleBlock.Kind.STATION, Direction.NORTH));
         return m;
     }
 
@@ -140,7 +167,7 @@ public final class Floor5 extends Builder {
         b.fixShapes();
         Belt.build(level);   // 1.0: пояс астероидов
         com.pvpciv.game.Ritual.build(level);   // 1.1: ритуальный зал
-        com.pvpciv.game.StationTeleport.build(level);   // 1.1: телепорты
+        // 1.2: телепорты-площадки «Орбиты» убраны — только врата
     }
 
     // ------------------------------------------------------------------ зоны и спавн

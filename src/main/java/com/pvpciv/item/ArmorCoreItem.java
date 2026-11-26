@@ -40,16 +40,24 @@ public class ArmorCoreItem extends Item {
     public static int tier(ItemStack st) { return st.getOrDefault(ModRegistry.CORE_TIER.get(), 0); }
 
     /** Какой материал нужен броне: этаж 1 — медальон, этаж 2 — фильтр, этаж 3 — печать. */
-    public static int tierFor(double armorTier) { return armorTier < 2 ? 1 : armorTier < 3 ? 2 : 3; }
+    public static int tierFor(double armorTier) { return armorTier < 2 ? 1 : armorTier < 3 ? 2 : armorTier < 4 ? 3 : armorTier < 5 ? 4 : 5; }
+
+    /** 1.2: что кладут в центр алтаря для брони этажа N. */
+    public static String centerName(int t) {
+        return switch (t) { case 1 -> "Медальон инея"; case 2 -> "Фильтр противогаза"; case 3 -> "Нефритовая печать"; case 4 -> "Квантовый чип"; default -> "Астроядро"; };
+    }
+    public static boolean isCenter(ItemStack c) { return tierOfCenter(c) > 0; }
 
     public static int tierOfCenter(ItemStack c) {
         if (c.is(ModRegistry.FROZEN_LOCKET.get())) return 1;
         if (c.is(ModRegistry.GAS_MASK_FILTER.get())) return 2;
         if (c.is(ModRegistry.JADE_SEAL.get())) return 3;
+        if (c.is(com.pvpciv.registry.ModF4.QUANTUM_CHIP.get())) return 4;
+        if (c.is(com.pvpciv.registry.ModF5.ASTRO_CORE.get())) return 5;
         return 0;
     }
 
-    public static String tierName(int t) { return t == 1 ? "медальон инея — броня этажа 1" : t == 2 ? "фильтр — броня этажа 2" : t == 3 ? "нефритовая печать — броня этажа 3" : "универсальное (старое)"; }
+    public static String tierName(int t) { return t == 0 ? "универсальное (старое)" : centerName(t).toLowerCase() + " — броня этажа " + t; }
 
     /** Подходит ли ядро к броне: материал не ниже нужного. */
     public static boolean fits(ItemStack core, double armorTier) { int t = tier(core); return t == 0 || t >= tierFor(armorTier); }
@@ -65,7 +73,7 @@ public class ArmorCoreItem extends Item {
         int l = level(st);
         tip.add(Component.literal("Стол брони: полная полоска опыта + ядро → +1").withStyle(ChatFormatting.GRAY));
         tip.add(Component.literal("Подходит для улучшения до +" + l + " включительно").withStyle(ChatFormatting.DARK_AQUA));
-        tip.add(Component.literal("Материал: " + tierName(tier(st)) + (tier(st) > 0 && tier(st) < 3 ? " и ниже" : "")).withStyle(ChatFormatting.GRAY));
+        tip.add(Component.literal("Материал: " + tierName(tier(st)) + (tier(st) > 1 ? " и ниже" : "")).withStyle(ChatFormatting.GRAY));
     }
 
     @Override public boolean isFoil(ItemStack st) { return level(st) >= 9; }

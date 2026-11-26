@@ -125,6 +125,39 @@ public final class Ritual {
         for (BlockPos p : injectors()) if (l.getBlockEntity(p) instanceof RitualBlockEntity b) { b.lit = true; b.sync(); l.setBlock(p, l.getBlockState(p).setValue(RitualBlock.LIT, true), Block.UPDATE_ALL); }
     }
 
+    // ------------------------------------------------------------------ 1.2: печать тьмы в проёме
+    public static final String SEAL = "pvpciv_seal";
+
+    /** Тёмная завеса в двери зала (блок-дисплеи, сквозь неё можно пройти — но без допуска зал выталкивает). */
+    public static void ensureSeal(MinecraftServer server) {
+        ServerLevel l = CivWorld.f5(server);
+        if (l == null) return;
+        BlockPos d0 = hubOff(7, -16);
+        if (!l.isLoaded(d0) || !l.areEntitiesLoaded(net.minecraft.world.level.ChunkPos.asLong(d0))) return;
+        var have = l.getEntitiesOfClass(net.minecraft.world.entity.Entity.class, new net.minecraft.world.phys.AABB(d0).inflate(6), e -> e.getTags().contains(SEAL));
+        Object[][] parts = {
+                {Blocks.BLACK_STAINED_GLASS, 0f, 0f, 0.35f, 3f, 3f, 0.12f},
+                {Blocks.BLACK_STAINED_GLASS, 0f, 0f, 0.55f, 3f, 3f, 0.12f},
+                {Blocks.PURPLE_STAINED_GLASS, 0.15f, 0.15f, 0.75f, 2.7f, 2.7f, 0.08f},
+                {Blocks.BLACK_STAINED_GLASS, 0f, 0f, 0.9f, 3f, 3f, 0.12f},
+                {Blocks.BLACK_STAINED_GLASS, 0f, 0f, 1.1f, 3f, 3f, 0.12f},
+                {Blocks.BLACK_STAINED_GLASS, 0f, 0f, 1.3f, 3f, 3f, 0.12f},
+                {Blocks.CRYING_OBSIDIAN, 1.3f, 1.3f, 0.8f, 0.4f, 0.4f, 0.4f},
+                {Blocks.SCULK, 0f, 2.8f, 0.35f, 3f, 0.2f, 1.1f},
+                {Blocks.SCULK, 0f, 0f, 0.35f, 0.2f, 3f, 1.1f},
+                {Blocks.SCULK, 2.8f, 0f, 0.35f, 0.2f, 3f, 1.1f}};
+        if (have.size() >= parts.length) return;
+        for (var e : have) e.discard();
+        for (Object[] p : parts) {
+            var e = Rocket.display(l, ((net.minecraft.world.level.block.Block) p[0]).defaultBlockState(), (float) p[4], (float) p[5], (float) p[6]);
+            if (e == null) continue;
+            e.removeTag("pvpciv_rocket_seat");
+            e.addTag(SEAL);
+            e.moveTo(d0.getX() + (float) p[1], d0.getY() + (float) p[2], d0.getZ() + (float) p[3], 0, 0);
+            l.addFreshEntity(e);
+        }
+    }
+
     // ------------------------------------------------------------------ доступ
     public static boolean inside(ServerPlayer p) {
         if (!CivWorld.isF5(p.level())) return false;
@@ -145,6 +178,11 @@ public final class Ritual {
             p.teleportTo(b.getX() + 0.5, Y, b.getZ() + 0.5);
             p.displayClientMessage(Component.literal("Зал запечатан тьмой. Откроется, когда изгонишь Демоницу Пустоты.").withStyle(ChatFormatting.DARK_PURPLE), true);
         }
+        if (server.getTickCount() % 100 == 31) ensureSeal(server);
+        if (server.getTickCount() % 6 == 0) {   // завеса «дышит» тьмой
+            BlockPos d0 = hubOff(8, -15);
+            if (l.isLoaded(d0)) l.sendParticles(ParticleTypes.SQUID_INK, d0.getX() + 0.5, d0.getY() + 1.5, d0.getZ() + 0.5, 2, 1.0, 1.0, 0.2, 0.01);
+        }
         BlockPos c = center();
         if (!l.isLoaded(c) || !(l.getBlockEntity(c) instanceof RitualBlockEntity core) || core.anim <= 0) return;
         animate(l, core);
@@ -163,7 +201,7 @@ public final class Ritual {
             inj.lit = true; inj.sync();
             l.setBlock(pos, l.getBlockState(pos).setValue(RitualBlock.LIT, true), Block.UPDATE_ALL);
             l.playSound(null, pos, SoundEvents.RESPAWN_ANCHOR_CHARGE, SoundSource.BLOCKS, 0.8f, 0.7f + lit(l) * 0.05f);
-            l.sendParticles(ParticleTypes.REVERSE_PORTAL, pos.getX() + 0.5, pos.getY() + 0.9, pos.getZ() + 0.5, 25, 0.2, 0.3, 0.2, 0.05);
+            l.sendParticles(ParticleTypes.REVERSE_PORTAL, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 25, 0.2, 0.2, 0.2, 0.05);
             int n = lit(l);
             sp.displayClientMessage(Component.literal("Инжектор заряжен · " + n + "/16" + (n == 16 ? " — положи оружие +10 на ядро и ПКМ" : "")).withStyle(ChatFormatting.LIGHT_PURPLE), true);
             return;
@@ -231,7 +269,7 @@ public final class Ritual {
             for (int i = 0; i < inj.size(); i++) {
                 BlockPos p = inj.get(i);
                 if (!(l.getBlockEntity(p) instanceof RitualBlockEntity b) || !b.lit) continue;
-                Vec3 tip = Vec3.atBottomCenterOf(p).add(0, 0.9, 0);
+                Vec3 tip = Vec3.atCenterOf(p).add(Vec3.atLowerCornerOf(toCenter(p).getNormal()).scale(0.6));
                 double ph = ((t * 0.06) + i * 0.13) % 1.0;
                 for (int k = 0; k < 3; k++) {
                     Vec3 q = tip.lerp(mid, (ph + k / 3.0) % 1.0);

@@ -29,10 +29,6 @@
    "chance": 0.3
   },
   {
-   "item": "pvpciv:cat_anchor",
-   "chance": 0.15
-  },
-  {
    "item": "pvpciv:module_basic",
    "chance": 0.25
   },

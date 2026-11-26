@@ -32,8 +32,24 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
     @Override
     protected void init() {
         super.init();
-        search = new net.minecraft.client.gui.components.EditBox(font, leftPos + 184, topPos + 41, 80, 11, Component.literal("Поиск"));
-        search.setBordered(true);
+        // 1.2: поиск в стиле мода — тёмная плашка с золотой рамкой и лупой
+        search = new net.minecraft.client.gui.components.EditBox(font, leftPos + 196, topPos + 43, 66, 9, Component.literal("Поиск")) {
+            @Override
+            public void renderWidget(net.minecraft.client.gui.GuiGraphics g, int mx, int my, float pt) {
+                int x0 = getX() - 12, y0 = getY() - 2, x1 = getX() + width + 2, y1 = getY() + height + 1;
+                boolean f = isFocused(), h = isHovered();
+                g.fill(x0, y0, x1, y1, f ? 0xFFE8C060 : h ? 0xFFB08A3A : 0xFF7A5E2A);
+                g.fill(x0 + 1, y0 + 1, x1 - 1, y1 - 1, 0xFF141019);
+                g.fill(x0 + 1, y0 + 1, x1 - 1, y0 + 2, 0x30FFFFFF);
+                int c = f ? 0xFFFFE08A : 0xFFB8A070, ix = x0 + 3, iy = getY();   // лупа
+                g.fill(ix + 1, iy, ix + 4, iy + 1, c); g.fill(ix + 1, iy + 4, ix + 4, iy + 5, c);
+                g.fill(ix, iy + 1, ix + 1, iy + 4, c); g.fill(ix + 4, iy + 1, ix + 5, iy + 4, c);
+                g.fill(ix + 4, iy + 5, ix + 5, iy + 6, c); g.fill(ix + 5, iy + 6, ix + 6, iy + 7, c); g.fill(ix + 6, iy + 7, ix + 7, iy + 8, c);
+                super.renderWidget(g, mx, my, pt);
+            }
+        };
+        search.setBordered(false);
+        search.setTextColor(0xFFF0E6D0);
         search.setMaxLength(24);
         search.setHint(Component.literal("поиск…").withStyle(ChatFormatting.DARK_GRAY));
         search.setValue(query);
@@ -127,6 +143,16 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
             int ax = x + 137, ay = y + 45 + i * 22;
             Skin.slotLocked(g, ax, ay);
         }
+        // 1.2: «глазки» показа брони
+        int mask = minecraft.player == null ? 0 : ClientState.armorHide.getOrDefault(minecraft.player.getId(), 0);
+        for (int i = 0; i < 4; i++) {
+            int ex = x + 105, ey = y + 50 + i * 22;
+            boolean hid = (mask & (1 << i)) != 0, hv = in(mx, my, 105, 50 + i * 22, 7, 8);
+            g.fill(ex, ey, ex + 7, ey + 8, hv ? 0xFF8A70B0 : 0xFF2A2236);
+            g.fill(ex + 1, ey + 2, ex + 6, ey + 6, hid ? 0xFF3A3048 : 0xFFE8ECF4);
+            g.fill(ex + 3, ey + 3, ex + 4, ey + 5, hid ? 0xFF3A3048 : 0xFF202030);
+            if (hid) for (int k = 0; k < 7; k++) g.fill(ex + k, ey + 7 - k, ex + k + 1, ey + 8 - k, 0xFFFF6060);
+        }
         Skin.inset(g, x + 160, y + 38, 108, 126);
         statBlock(g, x + 166, y + 44, 96);
     }
@@ -135,17 +161,46 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
         Skin.inset(g, x + 12, y + 38, 122, 126);
         statBlock(g, x + 18, y + 44, 110);
         Skin.inset(g, x + 138, y + 38, 130, 126);
-        g.drawString(font, "Навыки", x + 144, y + 43, Skin.GOLD_L, false);
-        skill(g, x + 144, y + 55, key(0), skillName(0), 1);
-        skill(g, x + 144, y + 76, key(1), skillName(1), 10);
-        skill(g, x + 144, y + 97, key(2), skillName(2), 35);
-        if (in(mx, my, 142, 53, 126, 64)) g.drawString(font, "выбрать →", x + 268 - font.width("выбрать →") - 4, y + 43, Skin.GOLD_L, false);
-        Skin.button(g, font, x + 142, y + 122, 41, "Титулы", mx, my, true, false);
-        Skin.button(g, font, x + 184, y + 122, 41, "Трофеи", mx, my, true, false);
-        Skin.button(g, font, x + 226, y + 122, 41, "Лодки", mx, my, true, false);
-        Skin.button(g, font, x + 142, y + 142, 41, "Боссы", mx, my, true, false);
-        Skin.button(g, font, x + 184, y + 142, 41, "Альманах", mx, my, true, false);
-        Skin.button(g, font, x + 226, y + 142, 41, "Настройки", mx, my, true, false);
+        g.drawString(font, "Навыки", x + 144, y + 41, Skin.GOLD_L, false);
+        skill(g, x + 144, y + 51, key(0), skillName(0), 1);
+        skill(g, x + 144, y + 68, key(1), skillName(1), 10);
+        skill(g, x + 144, y + 85, key(2), skillName(2), 1);
+        skill(g, x + 144, y + 102, key(3), skillName(3), 1);
+        if (in(mx, my, 142, 50, 126, 70)) g.drawString(font, "выбрать →", x + 268 - font.width("выбрать →") - 4, y + 41, Skin.GOLD_L, false);
+        // 1.2: кнопки листаются (колесо мыши или точки снизу)
+        for (int k = 0; k < 6; k++) {
+            int idx = btnPage * 6 + k;
+            if (idx >= HERO_BTN.length) break;
+            Skin.button(g, font, x + 142 + (k % 3) * 42, y + 122 + (k / 3) * 20, 41, HERO_BTN[idx], mx, my, true, false);
+        }
+        int pages = (HERO_BTN.length + 5) / 6;
+        for (int pg = 0; pg < pages; pg++) g.fill(x + 199 + pg * 8, y + 160, x + 204 + pg * 8, y + 162, pg == btnPage ? Skin.GOLD_L : 0xFF4A4058);
+    }
+
+    private static final String[] HERO_BTN = {"Титулы", "Трофеи", "Лодки", "Журнал", "Альманах", "О себе", "Настройки"};
+    private int btnPage;
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double dx, double dy) {
+        if (menu.tab() == CivInventoryMenu.TAB_STATS && in(mx, my, 138, 118, 130, 46)) {
+            int pages = (HERO_BTN.length + 5) / 6;
+            btnPage = Math.floorMod(btnPage - (int) Math.signum(dy), pages);
+            return true;
+        }
+        return super.mouseScrolled(mx, my, dx, dy);
+    }
+
+    private void heroButton(String name) {
+        switch (name) {
+            case "Титулы" -> minecraft.setScreen(new StubScreens.Titles());
+            case "Трофеи" -> minecraft.setScreen(new StubScreens.Trophies());
+            case "Лодки" -> minecraft.setScreen(new StubScreens.Boats());
+            case "Журнал" -> minecraft.setScreen(new StubScreens.Bosses());
+            case "Альманах" -> net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd("almanac"));
+            case "О себе" -> net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd("about"));
+            case "Настройки" -> minecraft.setScreen(new StubScreens.Settings());
+            default -> {}
+        }
     }
 
     /** 0.10.5: название навыка в слоте (выбирается в меню «Навыки»). */
@@ -161,8 +216,7 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
         boolean open = ClientState.level >= lvl;
         if (open) Skin.slot(g, x + 1, y + 1); else Skin.slotLocked(g, x + 1, y + 1);
         if (open) g.drawCenteredString(font, key, x + 9, y + 5, Skin.GOLD_L);
-        g.drawString(font, open ? name : "с уровня " + lvl, x + 23, y + 1, open ? Skin.TEXT : Skin.FAINT, false);
-        g.drawString(font, "клавиша " + key, x + 23, y + 10, Skin.FAINT, false);
+        g.drawString(font, Skin.fit(font, open ? name : "с уровня " + lvl, 100), x + 23, y + 5, open ? Skin.TEXT : Skin.FAINT, false);   // 1.2: 4 слота — одна строка
     }
 
     private void statBlock(GuiGraphics g, int x, int y, int w) {
@@ -200,6 +254,12 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
     @Override
     protected void renderTooltip(GuiGraphics g, int mx, int my) {
         if (menu.tab() == CivInventoryMenu.TAB_EQUIP) for (int i = 0; i < 4; i++)
+            if (in(mx, my, 105, 50 + i * 22, 7, 8)) {
+                g.renderComponentTooltip(font, List.of(Component.literal("Показ брони").withStyle(ChatFormatting.GOLD),
+                        Component.literal("Скрыть / показать эту часть (только вид — защита остаётся)").withStyle(ChatFormatting.GRAY)), mx, my);
+                return;
+            }
+        if (menu.tab() == CivInventoryMenu.TAB_EQUIP) for (int i = 0; i < 4; i++)
             if (in(mx, my, 136, 44 + i * 22, 18, 18)) {
                 g.renderComponentTooltip(font, List.of(Component.literal("Слот артефакта " + (i + 1)).withStyle(ChatFormatting.GOLD),
                         Component.literal("Откроется на уровне " + ARTIFACT_LEVELS[i]).withStyle(ChatFormatting.GRAY),
@@ -212,6 +272,14 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
     @Override
     public boolean mouseClicked(double mx, double my, int b) {
         for (int i = 0; i < 3; i++) if (in(mx, my, 12 + i * 60, 18, 58, 14)) { click(i); return true; }
+        if (menu.tab() == CivInventoryMenu.TAB_EQUIP && minecraft.player != null) for (int i = 0; i < 4; i++)
+            if (in(mx, my, 105, 50 + i * 22, 7, 8)) {   // 1.2: показ брони
+                int m = ClientState.armorHide.getOrDefault(minecraft.player.getId(), 0) ^ (1 << i);
+                ClientState.armorHide.put(minecraft.player.getId(), m);
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd("armvis:" + m));
+                minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1f));
+                return true;
+            }
         if (menu.tab() == CivInventoryMenu.TAB_BAG) {
             for (int i = 0; i < 6; i++) if (in(mx, my, 183, 55 + i * 13, 82, 13)) { filter = i - 1; refreshSearch(); return true; }
             if (search != null && in(mx, my, 184, 41, 80, 11)) { search.setFocused(true); setFocused(search); return search.mouseClicked(mx, my, b) || true; }
@@ -219,13 +287,13 @@ public class CivInventoryScreen extends CivScreen<CivInventoryMenu> {
             if (in(mx, my, 184, 144, 80, 16)) { click(CivInventoryMenu.BTN_SORT); if (menu.filterMap != null) refreshSearch(); return true; }
         }
         if (menu.tab() == CivInventoryMenu.TAB_STATS) {
-            if (in(mx, my, 142, 53, 126, 64)) { minecraft.setScreen(new SkillsScreen()); return true; }   // 0.10.5: меню навыков
-            if (in(mx, my, 142, 122, 41, 16)) { minecraft.setScreen(new StubScreens.Titles()); return true; }
-            if (in(mx, my, 184, 122, 41, 16)) { minecraft.setScreen(new StubScreens.Trophies()); return true; }
-            if (in(mx, my, 226, 122, 41, 16)) { minecraft.setScreen(new StubScreens.Boats()); return true; }
-            if (in(mx, my, 142, 142, 41, 16)) { minecraft.setScreen(new StubScreens.Bosses()); return true; }
-            if (in(mx, my, 184, 142, 41, 16)) { net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd("almanac")); return true; }
-            if (in(mx, my, 226, 142, 41, 16)) { minecraft.setScreen(new StubScreens.Settings()); return true; }
+            if (in(mx, my, 142, 50, 126, 70)) { minecraft.setScreen(new SkillsScreen()); return true; }   // 0.10.5: меню навыков
+            for (int k = 0; k < 6; k++) {
+                int idx = btnPage * 6 + k;
+                if (idx < HERO_BTN.length && in(mx, my, 142 + (k % 3) * 42, 122 + (k / 3) * 20, 41, 16)) { heroButton(HERO_BTN[idx]); return true; }
+            }
+            int pages = (HERO_BTN.length + 5) / 6;
+            for (int pg = 0; pg < pages; pg++) if (in(mx, my, 197 + pg * 8, 157, 9, 7)) { btnPage = pg; return true; }
         }
         return super.mouseClicked(mx, my, b);
     }

@@ -154,6 +154,7 @@ public final class SkyLift {
         int dur1 = cur == 1 ? 130 : 90;
         PacketDistributor.sendToPlayer(p, new Network.Cinematic(5, dur1, ""));
         from.playSound(null, p.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.2f, 0.6f);
+        com.pvpciv.world.Monorail.hideStation(from, com.pvpciv.world.Monorail.station(cur));   // 1.2: стоячую кабину не видно во время поездки
         LiftCabin c1 = cabin(from, path1.get(0));
         if (c1 == null) { RIDING.remove(p.getUUID()); return; }
         p.startRiding(c1, true);
@@ -161,6 +162,7 @@ public final class SkyLift {
             p.stopRiding();
             if (!p.isAlive() || p.hasDisconnected()) { RIDING.remove(p.getUUID()); return; }
             ServerLevel to = CivWorld.byFloor(p.server, floor);
+            com.pvpciv.world.Monorail.hideStation(to, com.pvpciv.world.Monorail.station(floor));
             java.util.List<Vec3> path2 = com.pvpciv.world.Monorail.pathTo(floor, floor > cur);
             Vec3 s = path2.get(0);
             p.teleportTo(to, s.x, s.y, s.z, 0, 0);

@@ -80,7 +80,7 @@ public class InfusionMenu extends CivMenu {
     public static Kind kind(ItemStack c, List<ItemStack> e) {
         int normal = edges(e, ModRegistry.STAR_W1.get()), blessed = edges(e, ModRegistry.BLESSED_STAR_W1.get());
         if (c.getItem() instanceof CivWeaponItem && Gear.stars(c) >= 4 && normal == 4 && blessed == 0 && e.stream().filter(s -> !s.isEmpty()).count() == 4) return Kind.BLESSED;   // бета 0.9.8: +4 и 4 звезды (было +5 и 8)
-        if ((c.is(ModRegistry.FROZEN_LOCKET.get()) || c.is(ModRegistry.GAS_MASK_FILTER.get()) || c.is(ModRegistry.JADE_SEAL.get())) && coreLevel(e) > 0) return Kind.CORE;
+        if (ArmorCoreItem.isCenter(c) && coreLevel(e) > 0) return Kind.CORE;
         return Kind.NONE;
     }
 

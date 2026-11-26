@@ -112,12 +112,12 @@ public final class ArmorUp {
         }
         int target = lvl + 1;
         if (!coreSlot.is(ModRegistry.ARMOR_CORE.get()) || ArmorCoreItem.level(coreSlot) < coreNeed(target)) {
-            msg(p, (coreSlot.isEmpty() ? "Положи в слот ядро брони +" : "Ядро слабовато — нужно +") + target + " или сильнее (алтарь инфузии в подвале: медальон и " + (target <= 8 ? target + " зв." : (16 - target) + " обычных + " + (target - 8) + " благословенных зв.") + ").", ChatFormatting.RED);
+            msg(p, (coreSlot.isEmpty() ? "Положи в слот ядро брони +" : "Ядро слабовато — нужно +") + target + " или сильнее (алтарь инфузии в подвале: в центр — " + ArmorCoreItem.centerName(ArmorCoreItem.tierFor(((CivArmorItem) armor.getItem()).tier)) + ", по краям " + (target <= 8 ? target + " зв." : (16 - target) + " обычных + " + (target - 8) + " благословенных зв.") + ").", ChatFormatting.RED);
             return;
         }
         if (!ArmorCoreItem.fits(coreSlot, ((CivArmorItem) armor.getItem()).tier)) {
             int need = ArmorCoreItem.tierFor(((CivArmorItem) armor.getItem()).tier);
-            msg(p, "Это ядро из другого материала. Для этой брони нужно ядро, где в центре алтаря — " + (need == 1 ? "Медальон инея" : need == 2 ? "Фильтр противогаза" : "Нефритовая печать") + ".", ChatFormatting.RED);
+            msg(p, "Это ядро из другого материала. Для этой брони нужно ядро, где в центре алтаря — " + ArmorCoreItem.centerName(need) + ".", ChatFormatting.RED);
             return;
         }
         boolean scroll = scrollNeed(target);

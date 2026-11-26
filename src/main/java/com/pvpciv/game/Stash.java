@@ -26,7 +26,7 @@ public final class Stash {
         for (var e : data.stash.entrySet()) {
             if (!e.getKey().endsWith(suffix) || e.getValue() <= now || e.getValue() > now * 2) continue;
             String pre = prefix(p.level());
-            boolean kf = e.getKey().startsWith("f2:") || e.getKey().startsWith("f3:");
+            boolean kf = e.getKey().length() > 3 && e.getKey().charAt(0) == 'f' && e.getKey().charAt(2) == ':';
             if (pre.isEmpty() ? kf : !e.getKey().startsWith(pre)) continue;   // крышки — только тайников своего измерения
             String[] c = e.getKey().substring(kf ? 3 : 0, e.getKey().indexOf('|')).split(",");
             pos.add(BlockPos.asLong(Integer.parseInt(c[0]), Integer.parseInt(c[1]), Integer.parseInt(c[2])));
@@ -42,7 +42,9 @@ public final class Stash {
         return prefix(p.level()) + pos.getX() + "," + pos.getY() + "," + pos.getZ() + "|" + p.getUUID();
     }
 
-    private static String prefix(net.minecraft.world.level.Level l) { return com.pvpciv.world.CivWorld.isF3(l) ? "f3:" : com.pvpciv.world.CivWorld.isF2(l) ? "f2:" : ""; }
+    private static String prefix(net.minecraft.world.level.Level l) {
+        return com.pvpciv.world.CivWorld.isF5(l) ? "f5:" : com.pvpciv.world.CivWorld.isF4(l) ? "f4:" : com.pvpciv.world.CivWorld.isF3(l) ? "f3:" : com.pvpciv.world.CivWorld.isF2(l) ? "f2:" : "";
+    }
 
     /** Минимальный уровень: тайник локации открывается только с её уровня. */
     public static int minLevel(BlockPos pos) {
@@ -83,10 +85,12 @@ public final class Stash {
         try { loot = LootTables.roll(table, lvl.random, 1.0); } finally { LootTables.PREFER = null; }
         MutableComponent msg = Component.literal("Тайник: ").withStyle(ChatFormatting.GOLD);
         boolean first = true;
-        for (ItemStack st : loot) {
+        for (ItemStack st : com.pvpciv.util.Stacks.merged(loot)) {
             if (!first) msg.append(Component.literal(", ").withStyle(ChatFormatting.GRAY));
             first = false;
             msg.append(st.getHoverName().copy()).append(Component.literal(st.getCount() > 1 ? " ×" + st.getCount() : "").withStyle(ChatFormatting.GRAY));
+        }
+        for (ItemStack st : loot) {
             Story.announceRareDrop(lvl, st, p.getGameProfile().getName());
             ItemStack give = st.copy();
             com.pvpciv.inv.Bag.give(p, give);

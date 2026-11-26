@@ -55,9 +55,42 @@ public final class Rocket {
     private static final Map<UUID, Launch> RIDERS = new HashMap<>();
     /** Когда восстановить блок-ракету (игровое время), по площадке. */
     private static final Map<Boolean, Long> RESTORE = new HashMap<>();
+    /** 1.2: люк в крыше ангара (этаж 5) — на время старта: позиция → блок. */
+    private static final Map<BlockPos, BlockState> HATCH = new java.util.LinkedHashMap<>();
+
+    private static void hatch(ServerLevel l, BlockPos o, boolean open) {
+        if (open) {
+            for (int y = 12; y <= 24; y++) for (int x = -4; x <= 4; x++) for (int z = -4; z <= 4; z++) {
+                if (Math.hypot(x, z) > 4.2) continue;
+                BlockPos q = o.offset(x, y, z);
+                BlockState st = l.getBlockState(q);
+                if (st.isAir()) continue;
+                HATCH.put(q, st);
+                l.setBlock(q, Blocks.AIR.defaultBlockState(), 2);
+            }
+            l.playSound(null, o.above(14), SoundEvents.PISTON_EXTEND, SoundSource.BLOCKS, 3f, 0.5f);
+            l.sendParticles(ParticleTypes.CLOUD, o.getX() + 0.5, o.getY() + 14, o.getZ() + 0.5, 60, 3, 0.5, 3, 0.05);
+        } else {
+            for (var e : HATCH.entrySet()) l.setBlock(e.getKey(), e.getValue(), 2);
+            if (!HATCH.isEmpty()) l.playSound(null, o.above(14), SoundEvents.PISTON_CONTRACT, SoundSource.BLOCKS, 3f, 0.5f);
+            HATCH.clear();
+        }
+    }
 
     public static boolean unlocked(com.pvpciv.data.StoryData d) { return (d.trophies & 64) != 0; }
     public static boolean flying(ServerPlayer p) { return RIDERS.containsKey(p.getUUID()); }
+
+    /** 1.2: перестроить ракету на месте (лестница, люк, кабина) — для старых миров. */
+    public static void rebuild(MinecraftServer s) {
+        for (boolean up : new boolean[]{true, false}) {
+            if (PADS.containsKey(up)) continue;
+            ServerLevel l = up ? CivWorld.f4(s) : CivWorld.f5(s);
+            if (l == null) continue;
+            BlockPos o = origin(up);
+            for (var v : voxels(up).entrySet()) l.setBlock(o.offset(v.getKey()), v.getValue(), 2);
+            for (BlockPos h : up ? Floor4.ROCKET_HATCH : Floor5.ROCKET_HATCH) l.setBlock(o.offset(h), Blocks.AIR.defaultBlockState(), 2);
+        }
+    }
 
     private static BlockPos origin(boolean up) { return up ? Floor4.ROCKET() : Floor5.ROCKET(); }
     private static Map<BlockPos, BlockState> voxels(boolean up) { return up ? Floor4.rocketVoxels() : Floor5.rocketVoxels(); }
@@ -66,7 +99,8 @@ public final class Rocket {
     public static boolean onUse(ServerPlayer p, BlockPos pos) {
         boolean f4 = CivWorld.isF4(p.level()) && pos.getZ() == Floor4.COSMO.getZ() - 16 && Math.abs(pos.getX() - Floor4.COSMO.getX()) <= 3
                 && (pos.getY() == Floor4.Y || pos.getY() == Floor4.Y + 1);
-        boolean f5 = CivWorld.isF5(p.level()) && pos.equals(Floor5.HANGAR_CONSOLE());
+        boolean f5 = CivWorld.isF5(p.level()) && (pos.equals(Floor5.HANGAR_CONSOLE()) || pos.equals(Floor5.ROCKET().offset(Floor5.ROCKET_CONSOLE_OFF)));
+        f4 |= CivWorld.isF4(p.level()) && pos.equals(Floor4.ROCKET().offset(Floor4.ROCKET_CONSOLE_OFF));   // 1.2: пульт в кабине
         if (!f4 && !f5) return false;
         if (flying(p)) return true;
         var d = com.pvpciv.progress.Progress.d(p);
@@ -183,6 +217,7 @@ public final class Rocket {
             if (l.getGameTime() < en.getValue() || PADS.containsKey(en.getKey())) return false;
             BlockPos o = origin(en.getKey());
             for (var v : voxels(en.getKey()).entrySet()) l.setBlock(o.offset(v.getKey()), v.getValue(), 2);
+            if (!en.getKey()) hatch(l, o, false);
             l.sendParticles(ParticleTypes.CLOUD, o.getX() + 0.5, o.getY() + 2, o.getZ() + 0.5, 40, 2, 1, 2, 0.02);
             return true;
         });
@@ -213,6 +248,7 @@ public final class Rocket {
                 if (t == T0) p.connection.send(new net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket(Component.literal("ПУСК").withStyle(ChatFormatting.RED, ChatFormatting.BOLD)));
             }
             if (t == 1) L.l.playSound(null, BlockPos.containing(base), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 2f, 0.6f);
+            if (t == T0 - 25 && !L.up) hatch(L.l, L.origin, true);   // 1.2: раньше ракета улетала сквозь потолок ангара
             if (t > T0 - 15) {
                 double k = Math.min(1, (t - T0 + 15) / 20.0);
                 L.l.sendParticles(ParticleTypes.FLAME, base.x, base.y, base.z, (int) (8 + 25 * k), 0.8, 0.2, 0.8, 0.03 + 0.08 * k);

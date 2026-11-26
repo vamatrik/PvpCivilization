@@ -110,9 +110,10 @@ public final class ClientPayloads {
             }
             case 18 -> {   // навыки
                 var sel = j.getAsJsonArray("sel");
-                for (int i = 0; i < 3 && i < sel.size(); i++) ClientState.skillSel[i] = sel.get(i).getAsString();
+                for (int i = 0; i < 4 && i < sel.size(); i++) ClientState.skillSel[i] = sel.get(i).getAsString();
                 ClientState.skillsAll = j.getAsJsonArray("all");
             }
+            case 28 -> com.pvpciv.client.Poses.set(j.get("e").getAsInt(), j.get("t").getAsInt());   // 1.2: поза «руки вверх» (карманный телепорт)
             case 11 -> {   // перезарядка слота
                 int sl = j.has("slot") ? j.get("slot").getAsInt() : 2;
                 long ms = j.get("cd").getAsLong() * 1000;
@@ -134,7 +135,9 @@ public final class ClientPayloads {
             case 12 -> { if (mc.screen instanceof com.pvpciv.client.screen.WordScreen ws) ws.reject(); }
             case 10 -> { if (mc.screen instanceof com.pvpciv.client.screen.WordScreen ws) ws.data(j); else mc.setScreen(new com.pvpciv.client.screen.WordScreen(j)); }
             case 8 -> { ClientState.gatesFixed.clear(); for (var el : j.getAsJsonArray("fixed")) ClientState.gatesFixed.add(el.getAsString()); }
-            case 6 -> ClientState.pvpShield = j.has("pvpShield") && j.get("pvpShield").getAsBoolean();
+            case 6 -> { ClientState.pvpShield = j.has("pvpShield") && j.get("pvpShield").getAsBoolean(); ClientState.armPvp = j.has("armPvp") && j.get("armPvp").getAsBoolean(); }
+            case 30 -> mc.setScreen(new com.pvpciv.client.screen.AboutScreen(j));   // 1.2: «О себе»
+            case 29 -> ClientState.armorHide.put(j.get("e").getAsInt(), j.get("m").getAsInt());
             case 3 -> ClientState.callUntil = System.currentTimeMillis() + (j.has("sec") ? j.get("sec").getAsInt() : 10) * 1000L;
             case 4 -> ClientState.callUntil = 0;
             case 5 -> {

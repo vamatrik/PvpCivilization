@@ -147,7 +147,7 @@ public final class Mobs {
         set(m, Attributes.FOLLOW_RANGE, m instanceof net.minecraft.world.entity.monster.AbstractSkeleton ? 20 : 28);   // бета 12.11: лучники не тянутся за тобой через пол-карты
         m.setHealth((float) hp);
         m.setPersistenceRequired();
-        m.addTag("bal99");
+        m.addTag("bal99"); m.addTag("bal12");
         if (elite) {
             m.setGlowingTag(true);
             set(m, Attributes.SCALE, 1.25);

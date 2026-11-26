@@ -23,18 +23,22 @@ public class GateScreen extends PlainScreen {
     private final Scroll ls = new Scroll();
 
     public GateScreen(JsonObject d) {
-        super(d.get("from").getAsString().equals("home") ? "Врата общежития" : "Врата телепортации", 360, 220, false);
+        super(d.get("from").getAsString().equals("home") ? "Врата общежития" : d.get("from").getAsString().startsWith("pocket-") ? "Карманный телепорт" : "Врата телепортации", 360, 220, false);
         this.d = d;
         this.from = d.get("from").getAsString();
         Gates.Gate g = Gates.byId(from);
-        floor = g == null ? 1 : g.floor();
+        floor = g == null ? pocketFloor() : g.floor();
     }
 
     private int st(String id) { return d.getAsJsonObject("st").has(id) ? d.getAsJsonObject("st").get(id).getAsInt() : 0; }
     private boolean home() { return from.equals("home"); }
+    /** 1.2: карманный телепорт — «врата» этажа, где стоишь. */
+    private boolean pocket() { return from.startsWith("pocket-"); }
+    private int pocketFloor() { try { return pocket() ? Math.max(1, Integer.parseInt(from.substring(7))) : 1; } catch (NumberFormatException e) { return 1; } }
+    private int fromFloor() { Gates.Gate g = Gates.byId(from); return g != null ? g.floor() : pocket() ? pocketFloor() : -1; }
     private int homeLvl() { return d.get("home").getAsInt(); }
     private List<Gates.Gate> list() { return Gates.ALL.stream().filter(g -> g.floor() == floor).toList(); }
-    private boolean floorOpen(int f) { return home() ? f <= homeLvl() && (f == 1 || d.get("lift").getAsBoolean()) && (f < 3 || (d.has("lift3") && d.get("lift3").getAsBoolean())) && (f < 4 || (d.has("lift4") && d.get("lift4").getAsBoolean())) && (f < 5 || (d.has("lift5") && d.get("lift5").getAsBoolean())) : Gates.byId(from) != null && Gates.byId(from).floor() == f; }
+    private boolean floorOpen(int f) { return home() ? f <= homeLvl() && (f == 1 || d.get("lift").getAsBoolean()) && (f < 3 || (d.has("lift3") && d.get("lift3").getAsBoolean())) && (f < 4 || (d.has("lift4") && d.get("lift4").getAsBoolean())) && (f < 5 || (d.has("lift5") && d.get("lift5").getAsBoolean())) : fromFloor() > 0 && (f <= fromFloor() || (f <= homeLvl() && (f == 1 || d.get("lift").getAsBoolean()) && (f < 3 || (d.has("lift3") && d.get("lift3").getAsBoolean())) && (f < 4 || (d.has("lift4") && d.get("lift4").getAsBoolean())) && (f < 5 || (d.has("lift5") && d.get("lift5").getAsBoolean())))); }
 
     @Override
     protected void drawContent(GuiGraphics g, int mx, int my, float pt) {
@@ -84,11 +88,11 @@ public class GateScreen extends PlainScreen {
             y += Skin.para(g, font, s == 0 ? "Найди их в мире — подойди ближе." : gt.desc(), cx + 6, y, cw - 12, 10, 4, Skin.TEXT, false) + 4;
             if (s == 1) y += Skin.para(g, font, "Починка у самих врат: " + Gates.costText(gt.costs(), gt.money()), cx + 6, y, cw - 12, 10, 4, 0xFFE0A050, false);
             boolean can = s == 2 && floorOpen(gt.floor()) && !gt.id().equals(from);
-            int cd = d.get("cd").getAsInt();
+            int cd = pocket() ? 0 : d.get("cd").getAsInt();
             String b = gt.id().equals(from) ? "Ты здесь" : s != 2 ? "Не работают" : !floorOpen(gt.floor()) ? "Не достают" : cd > 0 ? "Остывают " + cd + " с" : "Перенестись";
             Skin.button(g, font, cx + 6, ly + lh - 22, cw - 12, b, mx, my, can && cd <= 0, true);
         }
-        if (!home()) Skin.button(g, font, left + 248, top + 17, 100, "В общежитие", mx, my, d.get("cd").getAsInt() <= 0, false);
+        if (!home()) Skin.button(g, font, left + 248, top + 17, 100, "В общежитие", mx, my, pocket() || d.get("cd").getAsInt() <= 0, false);
         if (drop) {
             int x = left + DX, y = top + 34, ww = DW + 60;
             g.pose().pushPose(); g.pose().translate(0, 0, 300);

@@ -21,10 +21,11 @@ public final class ClientInit {
     public static final KeyMapping SKILL2 = new KeyMapping("key.pvpciv.skill2", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, "key.categories.pvpciv");
     public static final KeyMapping SKILL3 = new KeyMapping("key.pvpciv.skill3", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, "key.categories.pvpciv");
     public static final KeyMapping PHONE = new KeyMapping("key.pvpciv.phone", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Y, "key.categories.pvpciv");
-    public static final KeyMapping[] SKILL_KEYS = {DASH, SKILL2, SKILL3};
+    public static final KeyMapping SKILL4 = new KeyMapping("key.pvpciv.skill4", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_H, "key.categories.pvpciv");
+    public static final KeyMapping[] SKILL_KEYS = {DASH, SKILL2, SKILL3, SKILL4};
 
     public static void init(IEventBus modBus) {
-        modBus.addListener((RegisterKeyMappingsEvent e) -> { e.register(DASH); e.register(SKILL2); e.register(SKILL3); e.register(PHONE); });
+        modBus.addListener((RegisterKeyMappingsEvent e) -> { e.register(DASH); e.register(SKILL2); e.register(SKILL3); e.register(SKILL4); e.register(PHONE); });
         modBus.addListener((net.neoforged.neoforge.client.event.ModelEvent.RegisterAdditional e) -> e.register(StashRenderer.LID));
         // 0.12: космическое небо этажа 5
         modBus.addListener((net.neoforged.neoforge.client.event.RegisterDimensionSpecialEffectsEvent e) -> e.register(SpaceSky.ID, new SpaceSky()));
@@ -201,7 +202,10 @@ public final class ClientInit {
             while (mc.options.keyJump.consumeClick())
                 net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.pvpciv.net.Network.PhoneCmd("mash"));
         });   // 0.10.3: буфер клика
-        NeoForge.EVENT_BUS.addListener(ClientCombat::onRenderHand);                       // 0.10.3: взмахи без рук
+        NeoForge.EVENT_BUS.addListener(ClientCombat::onRenderHand);
+        NeoForge.EVENT_BUS.addListener(ClientCombat::onPlayerPre);
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.RenderLivingEvent.Post<?, ?> e) -> EliteAura.onRender(e));   // 1.2: аура элиток   // 1.2: парное оружие — копия во второй руке (вид от третьего лица)
+        NeoForge.EVENT_BUS.addListener(ClientCombat::onPlayerPost);                       // 0.10.3: взмахи без рук
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> ClientState.reset());
     }
 
@@ -289,7 +293,7 @@ public final class ClientInit {
                     mc.font.width("Поко X3 Про"), mc.font.width("Золотая морковь"), mc.font.width("Жетоны: 200"), mc.font.width("★✦"));
         }
         while (PHONE.consumeClick()) if (mc.player != null && mc.screen == null) PacketDistributor.sendToServer(new Network.PhoneCmd("open"));
-        for (int k = 1; k <= 2; k++) while (SKILL_KEYS[k].consumeClick()) {
+        for (int k = 1; k <= 3; k++) while (SKILL_KEYS[k].consumeClick()) {
             if (mc.player == null) continue;
             PacketDistributor.sendToServer(new Network.PhoneCmd("skill:" + (k + 1)));   // 0.10.5: слоты 2 и 3 — выбранный навык
             if (true) continue;

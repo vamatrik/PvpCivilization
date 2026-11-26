@@ -19,7 +19,7 @@ import java.util.List;
 public final class Hud {
     private static final String[] ZONE_GEM = {"green", "amber", "red"};
     private static final String[] ZONE_SUB = {"Безопасная зона", "PvE-зона: монстры", "PvP-зона: игроки могут атаковать!"};
-    private static final int[] SKILL_LEVELS = {1, 10, 35};   // 0.9.0
+    private static final int[] SKILL_LEVELS = {1, 10, 1, 1};   // 0.9.0; 1.2: слоты 3–4 — из древа классов
 
     /** 0.10.7: в паре — шкала «следующего удара» под прицелом: заряд руки, чья очередь (стрелка — какая рука), вспышка в окно. */
     private static void nextHitBar(GuiGraphics g, int w, int h) {
@@ -100,6 +100,7 @@ public final class Hud {
         if (ClientState.zoneType == 2) pvpFrame(g, w, h);
         blood(g, w, h);
         grab(g, font, w, h);
+        pocket(g, font, w, h);
         Cutscene.overlay(g, w, h);
         comboLabel(g, font, w, h);
         nextHitBar(g, w, h);
@@ -171,7 +172,7 @@ public final class Hud {
             ny += qh + 3;
         }
 
-        if (ClientState.stage == 0 || now < ClientState.objectiveFlashUntil + 500) {
+        if (!ClientState.objective.isEmpty() && (ClientState.stage == 0 || now < ClientState.objectiveFlashUntil + 500)) {
             List<FormattedCharSequence> lines = font.split(Component.literal(ClientState.objective), pw - 16);
             Skin.plate(g, x, ny, pw, 10 + lines.size() * 10);
             int ly = ny + 5;
@@ -388,9 +389,9 @@ public final class Hud {
         int kx = hx + hw + 4;
         ItemStack main = mc.player.getMainHandItem();
         boolean wskill = main.getItem() instanceof com.pvpciv.item.CivWeaponItem cw && cw.skill != null;
-        Skin.plate(g, kx, hy, wskill ? 92 : 70, 28);
+        Skin.plate(g, kx, hy, wskill ? 112 : 90, 28);
         if (wskill) {
-            int ix = kx + 7 + 3 * 20 + 2, iy = hy + 6;
+            int ix = kx + 7 + 4 * 20 + 2, iy = hy + 6;
             Skin.slot(g, ix, iy);
             g.renderItem(main, ix, iy);
             float cf = mc.player.getCooldowns().getCooldownPercent(main.getItem(), 0);
@@ -407,16 +408,16 @@ public final class Hud {
             g.drawString(font, "ПКМ", 0, 0, Skin.GOLD_L, true);
             g.pose().popPose();
         }
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 4; i++) {
             int ix = kx + 7 + i * 20, iy = hy + 6;
-            boolean open = ClientState.level >= SKILL_LEVELS[i];
+            boolean open = ClientState.level >= SKILL_LEVELS[i] && (i < 2 || !ClientState.skillSel[i].isEmpty());
             if (!open) { Skin.slotLocked(g, ix, iy); continue; }
             Skin.slot(g, ix, iy);
             // 0.10.5: значок выбранного навыка и его перезарядка
             String sid = ClientState.skillSel[i], icon = "";
             for (var el : ClientState.skillsAll) { var o = el.getAsJsonObject(); if (o.get("id").getAsString().equals(sid)) icon = o.get("icon").getAsString(); }
             if (!icon.isEmpty()) {
-                int col = i == 0 ? Skin.ICE : i == 1 ? 0xFFE0405A : Skin.GOLD_L;
+                int col = i == 0 ? Skin.ICE : i == 1 ? 0xFFE0405A : i == 2 ? 0xFFC090FF : Skin.GOLD_L;
                 g.drawCenteredString(font, icon, ix + 8, iy + 2, col);
                 long left = ClientState.skillReady[i] - System.currentTimeMillis();
                 if (left > 0 && ClientState.skillCdMs[i] > 0) {
@@ -459,12 +460,17 @@ public final class Hud {
         float p = ev.getProgress();
         int bw = 150, bx = x + 91 - bw / 2;
         if (ev.getName().getString().startsWith("Ноэль ▌")) return linkedBar(g, ev, x, y, bx, bw, p);
-        boolean rage = p < 0.5f;
-        if (rage) Skin.glow(g, x + 91, y + 7, 60, (0x20 + (int) (0x18 * Math.sin(System.currentTimeMillis() / 180.0))) << 24 | 0xFF3010);
+        String nm0 = ev.getName().getString();
+        boolean mana = nm0.contains("мана");   // 1.2: демоница — полоса маны (голубая)
+        boolean rage = !mana && (p < 0.5f || nm0.contains("ЯРОСТЬ"));
+        if (rage) Skin.glow(g, x + 91, y + 7, 70, (0x28 + (int) (0x20 * Math.sin(System.currentTimeMillis() / 140.0))) << 24 | 0xFF3010);
+        if (mana) Skin.glow(g, x + 91, y + 7, 60, (0x1C + (int) (0x14 * Math.sin(System.currentTimeMillis() / 260.0))) << 24 | 0x3080FF);
         g.drawCenteredString(font, ev.getName(), x + 91, y - 9, 0xFFFFFFFF);
-        Skin.bar(g, bx, y, bw, p, rage ? 0xFFFF6030 : 0xFFE03040, rage ? 0xFF7A1408 : 0xFF6A0C18, null);
+        Skin.bar(g, bx, y, bw, p, mana ? 0xFF60C8FF : rage ? 0xFFFF6030 : 0xFFE03040, mana ? 0xFF103C9A : rage ? 0xFF7A1408 : 0xFF6A0C18, null);
+        if (rage) fire(g, bx, y, bw, p);
+        if (mana) shimmer(g, bx, y, bw, p);
         if (rage) Skin.spr(g, "crack", bx + 12, y, 40, 12, 0xB0FFFFFF);
-        if (p < 0.25f) Skin.spr(g, "crack", bx + 92, y, 40, 12, 0xB0FFFFFF);
+        if (!mana && p < 0.25f) Skin.spr(g, "crack", bx + 92, y, 40, 12, 0xB0FFFFFF);
         Skin.icon(g, "skull", bx - 5, y); Skin.icon(g, "skull", bx + bw - 7, y);
         // 0.10.5: HP на полосе босса — ищем ближайшего босса с тем же именем (полоса знает только долю)
         String nm = ev.getName().getString();
@@ -479,6 +485,45 @@ public final class Hud {
                 : Math.round(p * 100) + "%";
         g.drawCenteredString(font, hp, x + 91, y + 2, 0xFFFFFFFF);
         return 28;
+    }
+
+    /** 1.2: ярость — полоса горит: бегущие языки пламени по заливке и искры над рамкой. */
+    private static void fire(GuiGraphics g, int bx, int y, int bw, float p) {
+        long t = System.currentTimeMillis();
+        int fw = Math.round((bw - 6) * Math.max(0, Math.min(1, p)));
+        for (int i = 0; i < fw; i += 2) {
+            double w = Math.sin((i * 0.35) - t / 90.0) * 0.5 + Math.sin((i * 0.13) + t / 210.0) * 0.5;
+            int a = (int) (40 + 60 * (w * 0.5 + 0.5));
+            int col = w > 0.3 ? 0xFFE060 : 0xFF8A20;
+            g.fill(bx + 3 + i, y + 2, bx + 5 + i, y + 10, a << 24 | col);
+        }
+        // искры и язычки над полосой
+        for (int k = 0; k < 18; k++) {
+            int seed = k * 7919;
+            double life = ((t / 16.0 + seed % 97) % 40) / 40.0;   // 0..1
+            int sx = bx + 4 + Math.floorMod(seed * 31 + (int) (t / 700) * 13 * (k + 1), Math.max(1, Math.max(fw, 20) - 2));
+            int sy = y + 3 - (int) (life * 11);
+            int a = (int) (230 * (1 - life));
+            int col = life < 0.35 ? 0xFFF0A0 : life < 0.7 ? 0xFF9A30 : 0xD03010;
+            int sz = life < 0.4 ? 2 : 1;
+            g.fill(sx, sy, sx + sz, sy + sz, a << 24 | col);
+        }
+    }
+
+    /** 1.2: мана демоницы — голубое мерцание по заливке. */
+    private static void shimmer(GuiGraphics g, int bx, int y, int bw, float p) {
+        long t = System.currentTimeMillis();
+        int fw = Math.round((bw - 6) * Math.max(0, Math.min(1, p)));
+        int head = (int) ((t / 12) % (bw + 30)) - 15;
+        for (int i = 0; i < fw; i++) {
+            int d = Math.abs(i - head);
+            if (d < 12) g.fill(bx + 3 + i, y + 2, bx + 4 + i, y + 10, ((12 - d) * 9) << 24 | 0xD0F4FF);
+        }
+        for (int k = 0; k < 8; k++) {
+            double life = ((t / 30.0 + k * 13) % 30) / 30.0;
+            int sx = bx + 4 + Math.floorMod(k * 37 + (int) (t / 900) * 11, Math.max(1, Math.max(fw, 20) - 2));
+            g.fill(sx, y + 2 - (int) (life * 6), sx + 1, y + 3 - (int) (life * 6), ((int) (200 * (1 - life))) << 24 | 0x9AD8FF);
+        }
     }
 
     /** 0.11: связанные жизни Ноэля и Лианы — полоса из двух сегментов: слева Ноэль (фиолетовый), справа Лиана (зелёный). */
@@ -499,6 +544,20 @@ public final class Hud {
         g.drawCenteredString(font, nt, bx + half / 2, y + 2, 0xFFFFFFFF);
         g.drawCenteredString(font, lt.isEmpty() ? "✝" : lt, bx + half + 2 + half / 2, y + 2, 0xFFFFFFFF);
         return 28;
+    }
+
+    /** 1.2: каст карманного телепорта — фиолетовые края экрана и полоска. */
+    private static void pocket(GuiGraphics g, Font font, int w, int h) {
+        var p = Minecraft.getInstance().player;
+        if (p == null) return;
+        float k = com.pvpciv.client.Poses.progress(p);
+        if (k < 0 || k >= 1) return;
+        int a = (int) (0x70 * k);
+        g.fillGradient(0, 0, w, 40, a << 24 | 0x6020C0, 0x006020C0);
+        g.fillGradient(0, h - 40, w, h, 0x006020C0, a << 24 | 0x6020C0);
+        int bw = 120, bx = w / 2 - bw / 2, by = h / 2 + 24;
+        g.drawCenteredString(font, "Карманный телепорт…", w / 2, by - 12, 0xFFD0A0FF);
+        Skin.bar(g, bx, by, bw, k, 0xFFB070FF, 0xFF4A1A80, null);
     }
 
     /** 0.11: проглочен Лианой — зелёная пелена и полоса «жми пробел». */

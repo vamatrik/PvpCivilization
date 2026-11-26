@@ -67,7 +67,10 @@ public class LootTables extends SimpleJsonResourceReloadListener {
                 Rarity min = e.has("min_rarity") ? Rarity.valueOf(e.get("min_rarity").getAsString()) : Rarity.COMMON;
                 if (it instanceof CivWeaponItem w && w.minRarity.ordinal() > min.ordinal()) min = w.minRarity;
                 boolean mythic = e.has("mythic") && e.get("mythic").getAsBoolean();
-                out.add(Gear.withRarity(new ItemStack(it), Rarity.roll(rnd, min, mythic)));
+                Rarity r = Rarity.roll(rnd, min, mythic);
+                // 1.2: вторая локация этажа (таблицы floorNb_*) — редкость чуть выше: обычное в 35% случаев перебрасывается от необычного
+                if (r == Rarity.COMMON && table.matches("floor\\db_.*") && rnd.nextDouble() < 0.35) r = Rarity.roll(rnd, Rarity.UNCOMMON, mythic);
+                out.add(Gear.withRarity(new ItemStack(it), r));
             } else {
                 Item it = item(e.get("item").getAsString());
                 if (it == Items.AIR) continue;

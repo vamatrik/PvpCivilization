@@ -82,7 +82,7 @@ public class WormBoss extends CivBoss {
             case INTRO -> intro(lvl);
             case ORBIT -> orbit(lvl);
             case SWALLOW -> swallowTick(lvl);
-            case DASH_AIM -> { hover(dashFrom, 0.7); if (t % 15 == 0 && t < 45) for (ServerPlayer p : victims(lvl, 60)) fan(lvl, mouth(), p, 3, 12, bolt(), dmg() * 0.3f, 1.1f); if (t >= 50) { st = St.DASH; t = 0; dashHit.clear(); lvl.playSound(null, blockPosition(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.HOSTILE, 3f, 0.7f); } }
+            case DASH_AIM -> { hover(dashFrom, 0.9); if (t % 12 == 0 && t < 30) for (ServerPlayer p : pick(victims(lvl, 60), 5)) fan(lvl, mouth(), p, 3, 12, bolt(), dmg() * 0.3f, 1.1f); if (t >= 32) { /* 1.2: задержка 50 → 32 */ st = St.DASH; t = 0; dashHit.clear(); lvl.playSound(null, blockPosition(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.HOSTILE, 3f, 0.7f); } }
             case DASH -> dashTick(lvl);
             case STUNNED -> {
                 if (t % 10 == 0) lvl.sendParticles(ParticleTypes.CRIT, getX(), getY() + 2, getZ(), 10, 1, 0.5, 1, 0.1);
@@ -90,6 +90,7 @@ public class WormBoss extends CivBoss {
             }
         }
         holesTick(lvl);
+        raysTick(lvl);
         // хвост
         trail.addFirst(position());
         while (trail.size() > 400) trail.removeLast();
@@ -148,11 +149,11 @@ public class WormBoss extends CivBoss {
             actions++;
             ServerPlayer target = vs.get(random.nextInt(vs.size()));
             if (actions % 3 == 0) aimDash(lvl, target);
-            else switch (random.nextInt(enraged ? 5 : 4)) {
+            else switch (random.nextInt(enraged ? 6 : 5)) {
                 case 0 -> startSwallow(lvl, vs);
                 case 1 -> bombard(lvl, vs);
                 case 2 -> spheres(lvl, vs);
-                case 3 -> lasers(lvl, vs, enraged ? 3 : 2);
+                case 3, 4 -> lasers(lvl, vs, 1);
                 default -> holes(lvl);   // чёрные дыры — редко и только в ярости
             }
         }
@@ -162,45 +163,105 @@ public class WormBoss extends CivBoss {
     private net.minecraft.world.item.ItemStack bolt() { if (BOLT == null) BOLT = new net.minecraft.world.item.ItemStack(com.pvpciv.registry.ModV11.VOID_BOLT.get()); return BOLT; }
     private Vec3 mouth() { return position().add(getLookAngle().scale(1.5)).add(0, 1.0, 0); }
 
+    /** 1.2: цели стрельбы — не больше 5 игроков за раз (каждую секунду набор тасуется). */
+    private List<ServerPlayer> shotTargets = new ArrayList<>();
+    private List<ServerPlayer> pick(List<ServerPlayer> vs, int cap) {
+        if (vs.size() <= cap) return vs;
+        List<ServerPlayer> l = new ArrayList<>(vs);
+        java.util.Collections.shuffle(l, new java.util.Random(random.nextLong()));
+        return l.subList(0, cap);
+    }
+
+    private static net.minecraft.world.item.ItemStack SEEKER;
+    private net.minecraft.world.item.ItemStack seeker() { if (SEEKER == null) SEEKER = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FIRE_CHARGE); return SEEKER; }
+
+    /**
+     * 1.2 (по отзыву): червь почти без пауз стреляет магическими сгустками по прямой в каждого (до 5 игроков);
+     * в ярости часть сгустков — огненные с лёгким самонаведением. Узоры (веер, кольцо) — для разнообразия поверх потока.
+     */
     private void firePattern(ServerLevel lvl, List<ServerPlayer> vs) {
         Vec3 m = mouth();
         float d = dmg();
-        switch (pattern) {
-            case 0 -> {   // поток
-                if (t % (enraged ? 4 : 6) == 0) {
-                    for (ServerPlayer p : vs) bolt(lvl, m, p, bolt(), d * 0.28f, 1.25f, 2.5f);
-                    lvl.playSound(null, blockPosition(), SoundEvents.SHULKER_SHOOT, SoundSource.HOSTILE, 1.4f, 0.8f + random.nextFloat() * 0.4f);
-                }
+        if (t % 20 == 1 || shotTargets.isEmpty()) shotTargets = pick(vs, 5);
+        if (t % (enraged ? 6 : 8) == 0) {
+            for (ServerPlayer p : shotTargets) {
+                if (!p.isAlive()) continue;
+                if (enraged && random.nextFloat() < 0.22f) {
+                    BossShot s = bolt(lvl, m, p, seeker(), d * 0.3f, 0.85f, 1f);
+                    s.homing = p; s.turn = 0.045; s.trail = ParticleTypes.FLAME;
+                } else bolt(lvl, m, p, bolt(), d * 0.26f, 1.2f, 2f);
             }
+            lvl.playSound(null, blockPosition(), SoundEvents.SHULKER_SHOOT, SoundSource.HOSTILE, 1.2f, 0.8f + random.nextFloat() * 0.4f);
+        }
+        switch (pattern) {
             case 1 -> {   // веер
-                if (t % (enraged ? 14 : 20) == 0) {
-                    for (ServerPlayer p : vs) fan(lvl, m, p, enraged ? 7 : 5, 9, bolt(), d * 0.32f, 1.05f);
+                if (t % (enraged ? 22 : 30) == 0) {
+                    for (ServerPlayer p : shotTargets) fan(lvl, m, p, enraged ? 7 : 5, 9, bolt(), d * 0.3f, 1.0f);
                     lvl.playSound(null, blockPosition(), SoundEvents.BLAZE_SHOOT, SoundSource.HOSTILE, 1.6f, 0.6f);
                 }
             }
             case 2 -> {   // кольцо (наклонено вниз — к астероидам)
-                if (t % (enraged ? 16 : 24) == 0) {
-                    ringBurst(lvl, m, enraged ? 18 : 14, 0.25, bolt(), d * 0.3f, 0.9f);
-                    if (enraged) ringBurst(lvl, m, 12, 0.55, bolt(), d * 0.3f, 0.8f);
+                if (t % (enraged ? 24 : 34) == 0) {
+                    ringBurst(lvl, m, enraged ? 18 : 14, 0.25, bolt(), d * 0.28f, 0.9f);
                     lvl.playSound(null, blockPosition(), SoundEvents.ENDER_DRAGON_SHOOT, SoundSource.HOSTILE, 1.8f, 0.7f);
                 }
-                if (t % 9 == 0) for (ServerPlayer p : vs) bolt(lvl, m, p, bolt(), d * 0.25f, 1.2f, 4f);
             }
-            default -> {   // лучи
-                if (t % (enraged ? 28 : 40) == 5) lasers(lvl, vs, 1);
-                if (t % 12 == 0) for (ServerPlayer p : vs) bolt(lvl, m, p, bolt(), d * 0.25f, 1.2f, 4f);
-            }
+            default -> {}
         }
     }
 
-    /** Лучи в каждого игрока (n залпов подряд, с паузой 10 тиков): прицел — 18 тиков. */
+    // ---- 1.2: луч копится во рту и ведёт игрока с запаздыванием (до 3 игроков)
+    private static final class Ray { final ServerPlayer p; Vec3 aim; int t; com.pvpciv.entity.FxEntity fx; Ray(ServerPlayer p, Vec3 aim) { this.p = p; this.aim = aim; } }
+    private final List<Ray> rays = new ArrayList<>();
+    private int rayCharge = -1;
+    private static final int RAY_CHARGE = 34, RAY_LEN = 60;
+
     private void lasers(ServerLevel lvl, List<ServerPlayer> vs, int n) {
-        for (int k = 0; k < n; k++) later(k * 10, () -> {
-            if (!isAlive()) return;
-            Vec3 from = mouth();
-            for (ServerPlayer p : victims(lvl, 60))
-                beam(lvl, from, p.position().add(0, 1, 0), 18, 1.2, 14, dmg() * 0.9f, GLOW, pp -> knock(pp, from, 0.5, 0.2));
-        });
+        if (rayCharge >= 0 || !rays.isEmpty()) return;
+        rayCharge = 0;
+        triggerAnim("main", "roar");
+        if (enraged || random.nextBoolean()) com.pvpciv.game.SkySpin.start(lvl, c(), 90, 70);
+        lvl.playSound(null, blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.HOSTILE, 3f, 0.6f);
+        for (ServerPlayer p : vs) p.connection.send(new net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket(Component.literal("⚠ Червь копит луч — не стой на месте!").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD)));
+    }
+
+    private void raysTick(ServerLevel lvl) {
+        Vec3 m = mouth();
+        if (rayCharge >= 0) {   // заряд: свет стягивается в пасть
+            rayCharge++;
+            for (int i = 0; i < 6; i++) {
+                Vec3 o = new Vec3(random.nextGaussian(), random.nextGaussian(), random.nextGaussian()).normalize().scale(3.5);
+                lvl.sendParticles(ParticleTypes.END_ROD, m.x + o.x, m.y + o.y, m.z + o.z, 0, -o.x, -o.y, -o.z, 0.08);
+            }
+            if (rayCharge % 6 == 0) lvl.sendParticles(new net.minecraft.core.particles.DustParticleOptions(GLOW, 2.5f), m.x, m.y, m.z, 6, 0.2, 0.2, 0.2, 0);
+            if (rayCharge >= RAY_CHARGE) {
+                rayCharge = -1;
+                for (ServerPlayer p : pick(victims(lvl, 60), enraged ? 3 : 2)) {
+                    Ray r = new Ray(p, p.position().add(0, 1, 0).add(p.getDeltaMovement().scale(-6)));
+                    r.fx = com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.BEAM, m, 0.7f, RAY_LEN + 4, light(GLOW), 0xFFFFFF);
+                    rays.add(r);
+                }
+                lvl.playSound(null, blockPosition(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 2.5f, 1.3f);
+            }
+            return;
+        }
+        for (var it = rays.iterator(); it.hasNext(); ) {
+            Ray r = it.next();
+            r.t++;
+            Vec3 want = r.p.isAlive() ? r.p.position().add(0, 1, 0) : r.aim;
+            r.aim = r.aim.add(want.subtract(r.aim).scale(enraged ? 0.075 : 0.06));   // ведёт с запаздыванием
+            Vec3 dir = r.aim.subtract(m);
+            Vec3 end = m.add(dir.normalize().scale(Math.max(dir.length() + 12, 30)));
+            if (r.fx != null) { r.fx.setPos(m.x, m.y, m.z); r.fx.to(end); }
+            if (r.t % 3 == 0) for (int i = 1; i <= 8; i++) { Vec3 q = m.lerp(end, i / 8.0); lvl.sendParticles(ParticleTypes.END_ROD, q.x, q.y, q.z, 1, 0.15, 0.15, 0.15, 0.01); }
+            if (r.t % 6 == 0) for (ServerPlayer p : victims(lvl, 80)) {
+                if (distToSegment(p.position().add(0, p.getBbHeight() * 0.5, 0), m, end) < 1.1) {
+                    p.invulnerableTime = 0;
+                    p.hurt(damageSources().indirectMagic(this, this), dmg() * 0.45f);
+                }
+            }
+            if (r.t >= RAY_LEN) { if (r.fx != null) r.fx.discard(); it.remove(); }
+        }
     }
 
     // ---- глотает астероид
@@ -353,15 +414,16 @@ public class WormBoss extends CivBoss {
         Vec3 tp = target.position();
         Vec3 dir = tp.subtract(c).multiply(1, 0, 1);
         dir = dir.lengthSqr() < 1 ? new Vec3(1, 0, 0) : dir.normalize();
-        dashFrom = c.subtract(dir.scale(26)).add(0, tp.y - c.y + 1.2, 0);
+        dashFrom = c.subtract(dir.scale(26)).add(0, 1.2, 0);   // 1.2: таран всегда в главный остров (раньше — на высоте игрока, бывало мимо)
         dashTo = c.add(dir.scale(8)).add(0, 0.5, 0);
         st = St.DASH_AIM;
         t = 0;
+        if (enraged) com.pvpciv.game.SkySpin.start(lvl, c, 90, 50);
         // линия-предупреждение по земле: от края через цель к центру
         for (int i = 0; i <= 17; i++) {
             Vec3 at = dashFrom.lerp(dashTo, i / 17.0);
-            final Vec3 a = new Vec3(at.x, tp.y, at.z);
-            com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.ZONE, a, 2.0f, 50, com.pvpciv.entity.FxEntity.rgb(RED), light(RED));
+            final Vec3 a = new Vec3(at.x, c.y, at.z);
+            com.pvpciv.entity.FxEntity.spawn(lvl, com.pvpciv.entity.FxEntity.ZONE, a, 2.0f, 34, com.pvpciv.entity.FxEntity.rgb(RED), light(RED));
         }
         for (ServerPlayer p : victims(lvl, 60)) {
             p.connection.send(new net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket(Component.literal("⚠ ТАРАН! Уходи с красной линии!").withStyle(ChatFormatting.RED, ChatFormatting.BOLD)));
@@ -456,6 +518,7 @@ public class WormBoss extends CivBoss {
 
     @Override
     protected void onEnrage(ServerLevel lvl) {
+        com.pvpciv.game.SkySpin.start(lvl, c(), 90, 90);
         for (ServerPlayer p : victims(lvl, 70)) p.sendSystemMessage(Component.literal("☄ Галактический червь в ярости: быстрее и злее!").withStyle(ChatFormatting.LIGHT_PURPLE));
     }
 

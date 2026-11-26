@@ -24,9 +24,9 @@ public final class ModF4 {
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> BIOGEL = simple("biogel", 8, false, 99, "Биогель из Оранжереи.", "Хлам этажа 4.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> CRYO_SHARD = simple("cryo_shard", 10, false, 99, "Осколок криоканистры.", "Хлам этажа 4.");
     // ---- редкие
-    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> QUANTUM_CHIP = simple("quantum_chip", 110, true, 16, "Квантовый чип NaZa.", "Сердце ядра брони этажа 4 (алтарь).");
-    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> PLASMA_CELL = simple("plasma_cell", 140, true, 16, "Плазменная ячейка. Тёплая.", "Редкий материал этажа 4.");
-    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> VINE_HEART = simple("vine_heart", 200, true, 16, "Сердце Лианы. Бьётся.", "Очень редкий материал.");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> QUANTUM_CHIP = simple("quantum_chip", 300, true, 16, "Квантовый чип NaZa.", "Сердце ядра брони этажа 4 (алтарь).");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> PLASMA_CELL = simple("plasma_cell", 400, true, 16, "Плазменная ячейка. Тёплая.", "Редкий материал этажа 4.");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> VINE_HEART = simple("vine_heart", 1000, true, 16, "Сердце Лианы. Бьётся.", "Очень редкий материал.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> NAZA_TROPHY = simple("naza_trophy", 0, true, 1, "Трофей: доктор Ноэль и Лиана повержены.", "Для витрины в квартире.");
     public static final DeferredItem<com.pvpciv.item.SimpleCivItem> NAZA_BADGE = simple("naza_badge", 0, true, 1, "Пропуск сотрудника NaZa.", "Даёт Чарователь. Открывает молекулярный стол.");
 
@@ -44,9 +44,9 @@ public final class ModF4 {
     public static final DeferredItem<com.pvpciv.item.EnchModuleItem> MODULE_ADVANCED = ITEMS.register("module_advanced",
             () -> new com.pvpciv.item.EnchModuleItem(new Item.Properties().stacksTo(16), 3));
     // ---- катализаторы (по желанию)
-    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> CAT_FOCUS = simple("cat_focus", 40, false, 16, "Катализатор «Фокус».", "Зачарование: +1 вариант на выбор.");
-    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> CAT_ANCHOR = simple("cat_anchor", 60, false, 16, "Стабилизатор «Якорь».", "Зачарование: можно оставить старое.");
-    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> CAT_RESONATOR = simple("cat_resonator", 80, true, 16, "Резонатор.", "Зачарование: варианты сильнее (+1 ранг).");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> CAT_FOCUS = simple("cat_focus", 40, false, 16, "Катализатор «Фокус».", "Положи в слот стола: каждый синтез тратит 1 — +1 вариант на выбор.");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> CAT_ANCHOR = simple("cat_anchor", 60, false, 16, "Стабилизатор «Якорь».", "Больше не нужен: старое зачарование теперь можно оставить всегда. Продай скупщику.");
+    public static final DeferredItem<com.pvpciv.item.SimpleCivItem> CAT_RESONATOR = simple("cat_resonator", 80, true, 16, "Резонатор.", "Положи в слот стола: каждый синтез тратит 1 — +1 ранг случайному варианту.");
 
     // ---- прибор Стеллы
     public static final DeferredItem<com.pvpciv.item.PhaseAnchorItem> PHASE_ANCHOR = ITEMS.register("phase_anchor",

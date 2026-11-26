@@ -52,8 +52,19 @@ public final class Melee {
         return 20.0 / Math.max(0.05, sp);
     }
 
-    public static boolean dual(LivingEntity p) {
-        return p.getMainHandItem().getItem() instanceof CivWeaponItem && p.getOffhandItem().getItem() instanceof CivWeaponItem;
+    /** 1.2: два разных оружия в руках больше не работают — сабли и кинжалы стали парной вещью (одна вещь на обе руки). */
+    public static boolean dual(LivingEntity p) { return false; }
+
+    /** 1.2: парное оружие (сабли, кинжалы) в основной руке — вторая рука держит копию, удары чередуются (визуально). */
+    public static boolean pair(ItemStack st) { return st.getItem() instanceof CivWeaponItem w && w.paired(); }
+    public static boolean pair(LivingEntity p) { return pair(p.getMainHandItem()); }
+    private static final java.util.Map<java.util.UUID, Boolean> FLIP = new java.util.HashMap<>();
+    /** Чья очередь в паре: false — основная рука, true — вторая (переключается каждым ударом). */
+    public static boolean flip(ServerPlayer p) {
+        if (!pair(p)) return false;
+        boolean f = !FLIP.getOrDefault(p.getUUID(), true);
+        FLIP.put(p.getUUID(), f);
+        return f;
     }
 
     // ------------------------------------------------------------------ рука удара (клиент сообщает перед ударом)
@@ -179,8 +190,9 @@ public final class Melee {
         double base = p.getAttributeValue(Attributes.ATTACK_DAMAGE) * (charge >= 0.6f ? 1.0 : 0.2 + 0.8 * charge * charge);   // 0.10.8: заряжен — полный
         p.resetAttackStrengthTicker();
         afterMain(p);
-        p.swing(InteractionHand.MAIN_HAND, true);
-        slash(p, st, false);
+        boolean f = flip(p);
+        p.swing(f ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND, true);
+        slash(p, st, f);
         hitArc(p, a, base, null);
     }
 
@@ -192,7 +204,8 @@ public final class Melee {
         try {
             int n = 0;
             for (LivingEntity e : p.serverLevel().getEntitiesOfClass(LivingEntity.class, p.getBoundingBox().inflate(a.range + 1), x -> x != p && x != skip && x.isAlive())) {
-                if (!(e instanceof net.minecraft.world.entity.monster.Enemy) && Mobs.level(e) <= 0 && !(e instanceof ServerPlayer)) continue;
+                if (e instanceof ServerPlayer) continue;   // 1.2: сплеш по игрокам убран — в PvP бьёт только прямой удар
+                if (!(e instanceof net.minecraft.world.entity.monster.Enemy) && Mobs.level(e) <= 0) continue;
                 Vec3 to = e.getBoundingBox().getCenter().subtract(eye);
                 double d = to.length();
                 if (d > a.range + e.getBbWidth() * 0.5) continue;
@@ -214,6 +227,13 @@ public final class Melee {
 
     public static void tick(MinecraftServer s) {
         for (ServerPlayer p : s.getPlayerList().getPlayers()) {
+            // 1.2: оружие во второй руке не работает — убираем в сумку (парное оружие само занимает обе руки)
+            if (p.tickCount % 10 == 0 && p.getOffhandItem().getItem() instanceof CivWeaponItem && !p.isCreative()) {
+                ItemStack off = p.getOffhandItem().copy();
+                p.setItemSlot(net.minecraft.world.entity.EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+                com.pvpciv.inv.Bag.give(p, off);
+                p.displayClientMessage(net.minecraft.network.chat.Component.literal("Вторая рука — не для оружия: сабли и кинжалы парные сами по себе. Убрано в сумку.").withStyle(net.minecraft.ChatFormatting.GRAY), true);
+            }
             var inst = p.getAttribute(Attributes.ATTACK_SPEED);
             if (inst == null) continue;
             double k = dual(p) ? dualSpeed(p.getMainHandItem()) : 1.0;

@@ -69,7 +69,19 @@ public final class StationTeleport {
 
     private static int idx(BlockPos pos) { List<Pad> ps = pads(); for (int i = 0; i < ps.size(); i++) if (ps.get(i).console.equals(pos)) return i; return -1; }
 
+    /** 1.2: площадки «Орбиты» убраны — на станции одна система (врата). Пульт и табличка снимаются, маяк гаснет. */
+    public static void decommission(ServerLevel l) {
+        if (l == null) return;
+        for (Pad p : pads()) {
+            BlockPos k = p.console, f = k.relative(p.face, 2);
+            l.setBlock(k, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+            l.setBlock(k.above(1), Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+            l.setBlock(f.below(), Blocks.LIGHT_BLUE_STAINED_GLASS.defaultBlockState(), 2);
+        }
+    }
+
     public static boolean onUse(ServerPlayer p, BlockPos pos) {
+        if (true) return false;   // 1.2: отключено (см. decommission)
         if (!CivWorld.isF5(p.level())) return false;
         int i = idx(pos);
         if (i < 0) return false;

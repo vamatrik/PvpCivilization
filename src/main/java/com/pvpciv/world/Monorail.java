@@ -41,65 +41,86 @@ public final class Monorail {
     public static Vec3 S5() { var c = com.pvpciv.floor.Floor5.HUB.center(); return new Vec3(c.getX() + 0.5, com.pvpciv.floor.Floor5.Y, c.getZ() + 0.5); }
     public static Vec3 f5(double s) { return S5().add(0, s, 0); }
     public static List<Vec3> f5Path(double from, double to) { List<Vec3> l = new ArrayList<>(); int n = 24; for (int i = 0; i <= n; i++) l.add(f5(from + (to - from) * i / n)); return l; }
-    public static List<Vec3> pathFrom(int floor, boolean up) { return floor == 1 ? roofPath(0, 110) : floor == 2 ? f2Path(0, up ? 60 : -60) : floor == 3 ? f3Path(0, up ? 60 : -60) : floor == 5 ? f5Path(0, -50) : f4Path(0, -60); }
+    public static List<Vec3> pathFrom(int floor, boolean up) { return floor == 1 ? roofPath(0, 110) : floor == 2 ? f2Path(0, up ? 60 : -60) : floor == 3 ? f3Path(0, up ? 60 : -60) : floor == 5 ? f5Path(0, -50) : f4Path(0, up ? 60 : -60); }
     /** Прибытие: поднимаясь — из бездны снизу, спускаясь — с неба сверху. */
-    public static List<Vec3> pathTo(int floor, boolean up) { return floor == 1 ? roofPath(110, 0) : floor == 2 ? f2Path(up ? -60 : 60, 0) : floor == 3 ? f3Path(up ? -60 : 60, 0) : floor == 5 ? f5Path(-50, 0) : f4Path(-60, 0); }
+    public static List<Vec3> pathTo(int floor, boolean up) { return floor == 1 ? roofPath(110, 0) : floor == 2 ? f2Path(up ? -60 : 60, 0) : floor == 3 ? f3Path(up ? -60 : 60, 0) : floor == 5 ? f5Path(-50, 0) : f4Path(up ? -60 : 60, 0); }
 
     public static List<Vec3> roofPath(double from, double to) { List<Vec3> l = new ArrayList<>(); int n = 24; for (int i = 0; i <= n; i++) l.add(roof(from + (to - from) * i / n)); return l; }
     public static List<Vec3> f2Path(double from, double to) { List<Vec3> l = new ArrayList<>(); int n = 24; for (int i = 0; i <= n; i++) l.add(f2(from + (to - from) * i / n)); return l; }
+
+    /** Станция этажа (где стоит кабина). */
+    public static Vec3 station(int floor) { return switch (floor) { case 1 -> S1; case 2 -> S2; case 3 -> S3; case 4 -> S4; default -> S5(); }; }
+
+    /** 1.2: на время поездки стоячая кабина уезжает вниз (не видна рядом с едущей), потом ensure вернёт её. */
+    public static void hideStation(ServerLevel l, Vec3 at) {
+        for (LiftCabin c : l.getEntitiesOfClass(LiftCabin.class, new AABB(at, at).inflate(3), c -> !c.ride())) c.teleportTo(at.x, at.y - 300, at.z);
+        HIDDEN.put(l.dimension().location() + "@" + (int) at.x + "," + (int) at.z, l.getGameTime() + 200);
+    }
+    private static final java.util.Map<String, Long> HIDDEN = new java.util.HashMap<>();
+
+    /**
+     * 1.2: рельс проверяется посегментно — пропавший сегмент (с 1.1 на крыше пропадала большая часть пути) ставится заново.
+     * Сегмент a→b есть, если рядом с его серединой стоит наш дисплей.
+     */
+    private static void seg(ServerLevel l, Vec3 a, Vec3 b) {
+        Vec3 mid = a.add(b).scale(0.5);
+        if (!loaded(l, mid)) return;
+        if (l.getEntitiesOfClass(Display.ItemDisplay.class, new AABB(mid, mid).inflate(0.6), e -> e.getTags().contains(TAG)).isEmpty()) segment(l, a, b);
+    }
 
     public static void ensure(MinecraftServer server) {
         ServerLevel w1 = CivWorld.level(server), l2 = CivWorld.f2(server);
         if (loaded(w1, S1)) {
             station(w1, S1);
-            // рельс начинается над крышей зала: нижние сегменты проходили сквозь кабину (бета 12.11)
-            for (var e : w1.getEntitiesOfClass(Display.ItemDisplay.class, new AABB(-3, RoofBuilder.RY - 2, -38, 4, RoofBuilder.RY + 6, -24), e -> e.getTags().contains(TAG))) e.discard();
-            // бета 0.8.7: рельс снова соединён с залом — выходит из проёма в стеклянном потолке (кабину не задевает)
-            // бета 0.9.6: «немного не доходит до лифта» — рельс начинается прямо над крышей кабины
-            Vec3 neck = roof((3.2 + 12) / 2).add(0, -0.45, 0);
-            if (w1.getEntitiesOfClass(Display.ItemDisplay.class, new AABB(neck, neck).inflate(0.3), e -> e.getTags().contains(TAG)).isEmpty()) {
-                Vec3 old = roof(9.5).add(0, -0.45, 0);
-                for (var e : w1.getEntitiesOfClass(Display.ItemDisplay.class, new AABB(old, old).inflate(0.3), e -> e.getTags().contains(TAG))) e.discard();
-                segment(w1, roof(3.2).add(0, -0.45, 0), roof(12).add(0, -0.45, 0));
-            }
-            if (w1.getEntitiesOfClass(Display.ItemDisplay.class, new AABB(S1.x - 8, S1.y - 8, S1.z - 12, S1.x + 8, S1.y + 16, S1.z + 4), e -> e.getTags().contains(TAG)).isEmpty())
-                for (double t = 12; t < 170; t += 6) segment(w1, roof(t).add(0, -0.45, 0), roof(t + 6).add(0, -0.45, 0));
+            seg(w1, roof(3.2).add(0, -0.45, 0), roof(12).add(0, -0.45, 0));
         }
-        if (CivWorld.isF2(l2) && loaded(l2, S2)) {
-            station(l2, S2);
-            if (l2.getEntitiesOfClass(Display.ItemDisplay.class, new AABB(S2.x - 8, S2.y - 10, S2.z - 8, S2.x + 8, S2.y + 10, S2.z + 8), e -> e.getTags().contains(TAG)).isEmpty())
-                for (double s = -80; s < 160; s += 6) segment(l2, f2(s).add(0, 1.4, -1.9), f2(s + 6).add(0, 1.4, -1.9));
+        for (double t = 12; t < 170; t += 6) seg(w1, roof(t).add(0, -0.45, 0), roof(t + 6).add(0, -0.45, 0));
+        if (CivWorld.isF2(l2)) {
+            if (loaded(l2, S2)) station(l2, S2);
+            for (double s = -80; s < 160; s += 6) seg(l2, f2(s).add(0, 1.4, -1.9), f2(s + 6).add(0, 1.4, -1.9));
         }
     }
 
     public static void ensure3(MinecraftServer server) {
         ServerLevel l3 = CivWorld.f3(server);
-        if (!CivWorld.isF3(l3) || !loaded(l3, S3)) return;
-        station(l3, S3);
-        if (l3.getEntitiesOfClass(Display.ItemDisplay.class, new AABB(S3.x - 8, S3.y - 12, S3.z - 8, S3.x + 8, S3.y, S3.z + 8), e -> e.getTags().contains(TAG)).isEmpty())
-            for (double s = -80; s < -6; s += 6) segment(l3, f3(s).add(0, 1.4, -1.9), f3(s + 6).add(0, 1.4, -1.9));
+        if (!CivWorld.isF3(l3)) return;
+        if (loaded(l3, S3)) station(l3, S3);
+        for (double s = -80; s < -6; s += 6) seg(l3, f3(s).add(0, 1.4, -1.9), f3(s + 6).add(0, 1.4, -1.9));
+        // 1.2: рельс и вверх — сквозь стеклянный колодец библиотеки
+        for (double s = 6; s < 66; s += 6) seg(l3, f3(s).add(0, 1.4, -1.9), f3(s + 6).add(0, 1.4, -1.9));
     }
 
     public static void ensure5(MinecraftServer server) {
         ServerLevel l5 = CivWorld.f5(server);
         Vec3 s5 = S5();
-        if (l5 == null || !com.pvpciv.game.LiftShaft.isOpen(server) || !loaded(l5, s5)) return;
-        station(l5, s5);
-        if (l5.getEntitiesOfClass(Display.ItemDisplay.class, new AABB(s5.x - 8, s5.y - 14, s5.z - 8, s5.x + 8, s5.y, s5.z + 8), e -> e.getTags().contains(TAG)).isEmpty())
-            for (double s = -44; s < -2; s += 6) segment(l5, f5(s).add(0, 1.4, -1.9), f5(Math.min(-1.2, s + 6)).add(0, 1.4, -1.9));
+        if (l5 == null || !com.pvpciv.game.LiftShaft.isOpen(server)) return;
+        if (loaded(l5, s5)) station(l5, s5);
+        for (double s = -44; s < -2; s += 6) seg(l5, f5(s).add(0, 1.4, -1.9), f5(Math.min(-1.2, s + 6)).add(0, 1.4, -1.9));
     }
 
     public static void ensure4(MinecraftServer server) {
         ServerLevel l4 = CivWorld.f4(server);
-        if (!CivWorld.isF4(l4) || !loaded(l4, S4)) return;
-        station(l4, S4);
-        if (l4.getEntitiesOfClass(Display.ItemDisplay.class, new AABB(S4.x - 8, S4.y - 12, S4.z - 8, S4.x + 8, S4.y, S4.z + 8), e -> e.getTags().contains(TAG)).isEmpty())
-            for (double s = -80; s < -6; s += 6) segment(l4, f4(s).add(0, 1.4, -1.9), f4(s + 6).add(0, 1.4, -1.9));
+        if (!CivWorld.isF4(l4)) return;
+        if (loaded(l4, S4)) station(l4, S4);
+        for (double s = -80; s < -6; s += 6) seg(l4, f4(s).add(0, 1.4, -1.9), f4(s + 6).add(0, 1.4, -1.9));
+        // 1.2: вверх — к станции «Орбита». Пока лифт станции не починен — обломанный, загнутый конец
+        if (com.pvpciv.game.LiftShaft.isOpen(server)) {
+            for (var e : l4.getEntitiesOfClass(Display.ItemDisplay.class, new AABB(S4.x - 4, S4.y + 5, S4.z - 6, S4.x + 4, S4.y + 20, S4.z + 4), e -> e.getTags().contains(TAG + "_broken"))) e.discard();
+            for (double s = 6; s < 66; s += 6) seg(l4, f4(s).add(0, 1.4, -1.9), f4(s + 6).add(0, 1.4, -1.9));
+        } else if (loaded(l4, S4) && l4.getEntitiesOfClass(Display.ItemDisplay.class, new AABB(S4.x - 4, S4.y + 5, S4.z - 6, S4.x + 4, S4.y + 20, S4.z + 4), e -> e.getTags().contains(TAG + "_broken")).isEmpty()) {
+            Vec3 a = f4(6).add(0, 1.4, -1.9), b = f4(12).add(0, 1.4, -1.9), c = b.add(1.2, 2.2, 0.9);
+            segment(l4, a, b).addTag(TAG + "_broken");
+            segment(l4, b, c).addTag(TAG + "_broken");
+        }
     }
 
     private static boolean loaded(ServerLevel l, Vec3 p) { return l.areEntitiesLoaded(net.minecraft.world.level.ChunkPos.asLong(net.minecraft.core.BlockPos.containing(p))); }
 
     private static void station(ServerLevel l, Vec3 at) {
+        Long h = HIDDEN.get(l.dimension().location() + "@" + (int) at.x + "," + (int) at.z);
+        boolean riding = !l.getEntitiesOfClass(LiftCabin.class, new AABB(at, at).inflate(4), LiftCabin::ride).isEmpty();
+        if (riding || (h != null && h > l.getGameTime())) return;   // идёт поездка — стоячая кабина спрятана
+        for (LiftCabin c : l.getEntitiesOfClass(LiftCabin.class, new AABB(at.x - 3, at.y - 305, at.z - 3, at.x + 3, at.y - 295, at.z + 3), c -> !c.ride())) c.teleportTo(at.x, at.y, at.z);
         var list = l.getEntitiesOfClass(LiftCabin.class, new AABB(at, at).inflate(3), c -> !c.ride());
         for (int i = 1; i < list.size(); i++) list.get(i).discard();
         if (!list.isEmpty()) return;
@@ -110,9 +131,9 @@ public final class Monorail {
     }
 
     /** Один 3D-сегмент между точками a и b. */
-    private static void segment(ServerLevel l, Vec3 a, Vec3 b) {
+    private static Display.ItemDisplay segment(ServerLevel l, Vec3 a, Vec3 b) {
         Display.ItemDisplay d = EntityType.ITEM_DISPLAY.create(l);
-        if (d == null) return;
+        if (d == null) return null;
         Vec3 mid = a.add(b).scale(0.5), dir = b.subtract(a);
         double len = dir.length();
         dir = dir.normalize();
@@ -135,6 +156,7 @@ public final class Monorail {
         d.load(withPos(t, mid));
         d.addTag(TAG);
         l.addFreshEntity(d);
+        return d;
     }
 
     private static CompoundTag withPos(CompoundTag t, Vec3 p) {

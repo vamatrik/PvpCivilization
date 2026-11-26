@@ -14,7 +14,11 @@ public final class Balance {
     private Balance() {}
 
     // ------------------------------------------------------------ мобы
-    public static double mobHp(int lvl) { return 30 * Math.pow(1.2, lvl - 1); }
+    /** 1.2: «мягче рост тира» — оружие ×1.6 за тир (было ×2.4), мобы ×1.125 за уровень (было ×1.2): оружие босса хорошо и этажом выше. */
+    public static final double MOB_G = 1.125;
+    public static double mobHp(int lvl) { return 30 * Math.pow(MOB_G, lvl - 1); }
+    /** Шкала 0.9.9–1.1 (для пересчёта уже живущих мобов). */
+    public static double hp11(int lvl) { return 30 * Math.pow(1.2, lvl - 1); }
     public static double mobDmg(int lvl) { return 4 * Math.pow(1.19, lvl - 1); }
     /** Старая шкала (до 0.9.9) — для пересчёта уже живущих мобов. */
     public static double oldHp(int lvl) { return 20 * Math.pow(1.065, lvl - 1); }
@@ -24,7 +28,9 @@ public final class Balance {
     /** Полное базовое HP игрока на уровне (включая ванильные 20). */
     public static double playerHp(int lvl) { return 30 * Math.pow(1.17, lvl - 1); }   // 1.0.1: было 1.18 — часть здоровья теперь даёт броня (в %)
     /** 1.0.1: тир 5 ×1.4 — мобы этажа 5 (ур. 23–32) растут быстрее тира; при +5..+7 мобов станции ~как этажа 4 при тех же звёздах. */
-    public static double weaponDmg(double tier) { return 7 * Math.pow(2.4, tier - 1) * (1 + 0.4 * Math.max(0, Math.min(1, tier - 4))); }
+    public static double weaponDmg(double tier) { return 7 * Math.pow(1.6, tier - 1) * (1 + 0.4 * Math.max(0, Math.min(1, tier - 4))); }
+    /** 1.2: в PvP здоровье игроков осталось прежним — удар игрока по игроку возвращаем к старой шкале тира (×2.4). */
+    public static double pvpTier(double tier) { return Math.pow(2.4 / 1.6, Math.max(0, tier - 1)); }
     /** Броня (число) и HP за полный комплект тира (части делят по долям). 0.10.2: броня — вычитается из удара. */
     public static double armorDef(double tier) { return 1.7 * Math.pow(2.4, tier - 1); }
     public static double armorHp(double tier) { return 12 * Math.pow(2.2, tier - 1.5); }
@@ -34,7 +40,7 @@ public final class Balance {
     /** 1.1: природная броня растёт вровень с уроном мобов (~12% от удара моба своего уровня); было 0.4·1.17^(L−1) — к 35 ур. отставала вдвое. */
     public static double levelArmor(int lvl) { return 0.5 * Math.pow(1.19, lvl - 1); }
     /** Броня моба уровня L (обычного типа). */
-    public static double mobArmor(int lvl) { return 0.35 * Math.pow(1.2, lvl - 1); }
+    public static double mobArmor(int lvl) { return 0.35 * Math.pow(MOB_G, lvl - 1); }
 
     /** Броня мода на вещах (без уровня). */
     public static double gearArmor(LivingEntity e) {

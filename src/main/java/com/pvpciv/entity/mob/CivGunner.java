@@ -119,7 +119,7 @@ public class CivGunner extends CivSkeleton {
             float spread = 0.035f;
             Vec3 dir = aim.add((g.random.nextFloat() - 0.5f) * spread, (g.random.nextFloat() - 0.5f) * spread, (g.random.nextFloat() - 0.5f) * spread).normalize();
             Vec3 from = eye.add(dir.scale(0.7)).add(0, -0.15, 0);
-            Vec3 end = endOf(lvl, from, dir);
+            Vec3 end = com.pvpciv.floor.BossManager.domeClip(lvl, from, endOf(lvl, from, dir));   // 1.2: пули не проходят сквозь купол арены
             // попадание по игроку на отрезке
             Player hitP = null; double best = 1e9;
             for (Player p : lvl.getEntitiesOfClass(Player.class, new AABB(from, end).inflate(1))) {
@@ -132,7 +132,7 @@ public class CivGunner extends CivSkeleton {
                 if (exo(hitP)) dmg *= 0.9;   // 0.11: экзокостюм держит пули
                 com.pvpciv.combat.Balance.PEN = 0.5;   // 0.10.2: пули пробивают половину брони
                 var v0 = hitP.getDeltaMovement();
-                double kb = g.f5() ? (g.elite() ? 0.45 : 0) : 0.25;
+                double kb = g.elite() ? 0.35 : 0;   // 1.2: обычные стрелки не толкают и не «станят» ни на одном этаже
                 NO_KB = kb == 0;   // 1.1: обычные стрелки станции — ни отдачи, ни «рывка» скорости (ощущалось как стан)
                 try { hitP.hurt(g.damageSources().mobAttack(g), (float) dmg); } finally { com.pvpciv.combat.Balance.PEN = 0; NO_KB = false; }
                 if (kb > 0) {

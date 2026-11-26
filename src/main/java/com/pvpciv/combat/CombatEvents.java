@@ -45,12 +45,19 @@ public final class CombatEvents {
                 // 1.1.1: незаряженный удар основной рукой (закликивание, рассинхрон) — не проходит и на сервере
                 if (sp.getAttackStrengthScale(0.5f) < 0.8f && !sp.isCreative()) { e.setCanceled(true); return; }
                 Melee.noteCharge(sp, sp.getAttackStrengthScale(0.5f));   // 0.10.8: заряд этого удара — для полного урона
-                Melee.slash(sp, sp.getMainHandItem(), false); Melee.afterMain(sp);
+                Melee.slash(sp, sp.getMainHandItem(), Melee.flip(sp)); Melee.afterMain(sp);
             }
         });
         bus.addListener(CombatEvents::onXpDrop);
         bus.addListener(CombatEvents::onMobTick);
         bus.addListener(com.pvpciv.game.Leash::onTarget);
+        // 1.2: древо классов — невидимого ассасина не выбрать целью; урон сбивает карманный телепорт
+        bus.addListener((net.neoforged.neoforge.event.entity.living.LivingChangeTargetEvent e) -> {
+            if (!e.getEntity().level().isClientSide && com.pvpciv.game.Classes.blockTarget(e.getNewAboutToBeSetTarget())) e.setCanceled(true);
+        });
+        bus.addListener((net.neoforged.neoforge.event.entity.living.LivingDamageEvent.Post e) -> {
+            if (e.getEntity() instanceof ServerPlayer sp && e.getNewDamage() > 0 && e.getSource().getEntity() != null && com.pvpciv.game.Classes.pocketCasting(sp)) com.pvpciv.game.Classes.pocketInterrupt(sp);
+        });
         bus.addListener(CombatEvents::onJoin);
     }
 
@@ -117,7 +124,8 @@ public final class CombatEvents {
                         : "Этот игрок выключил PvP с теми, кто на " + PVP_GAP + "+ уровней выше").withStyle(ChatFormatting.GRAY), true);
                 return;
             }
-            e.setAmount(e.getAmount() * (float) Melee.chargeFix(attacker, e) * (float) (1 + 0.015 * (la - 1)) * (float) Melee.handMul(attacker));
+            double tierK = Melee.striking(attacker).getItem() instanceof com.pvpciv.item.CivWeaponItem cw ? Balance.pvpTier(cw.tierValue()) : 1.0;
+            e.setAmount(e.getAmount() * (float) Melee.chargeFix(attacker, e) * (float) (1 + 0.015 * (la - 1)) * (float) Melee.handMul(attacker) * (float) tierK);
             crit(e, attacker, victim);
             e.setAmount(com.pvpciv.game.Classes.onAttack(attacker, victim, e.getAmount(), e.getSource().getDirectEntity() == attacker));
             if (e.getSource().getDirectEntity() == attacker) e.setAmount(com.pvpciv.game.Classes.onDefend(victim, attacker, e.getAmount()));
@@ -150,7 +158,7 @@ public final class CombatEvents {
             // стрелы лучников — от уровня моба (раньше ванильные ≈4 на любом уровне)
             if (e.getSource().getDirectEntity() instanceof net.minecraft.world.entity.projectile.AbstractArrow
                     && mob instanceof com.pvpciv.entity.mob.CivSkeleton && !(mob instanceof com.pvpciv.entity.mob.CivGunner))
-                e.setAmount((float) (mob.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) * 1.4));   // бета 12.11: лучники бьют сильнее (стреляют реже, чем бьют в ближнем бою)
+                e.setAmount((float) (mob.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) * (mob.isCurrentlyGlowing() || mob.getTags().stream().anyMatch(t -> t.startsWith("civelite_")) ? 1.1 : 1.4)));   // 1.2: элитный (крупный) лучник — ×1.1: и так ×1.3 урона, а мороз от каждой стрелы   // бета 12.11: лучники бьют сильнее (стреляют реже, чем бьют в ближнем бою)
             int dl = Mobs.level(mob) - Progress.d(p).level;
             if (com.pvpciv.game.Enchanting.dodge(p)) { e.setCanceled(true); return; }
             e.setAmount((float) (e.getAmount() * levelTaken(dl) * crowd(p, mob)));
@@ -231,9 +239,12 @@ public final class CombatEvents {
         if (e.getSource().getDirectEntity() == p) com.pvpciv.game.Enchanting.onDealt(p, dmg);
         Long ct = CRIT_MARK.remove(target.getUUID());
         boolean bigCrit = ct != null && lvl.getGameTime() - ct <= 1;   // крит Юки — крупное красное число
+        Long cm = COUNTER_MARK.remove(target.getUUID());
+        boolean counter = cm != null && lvl.getGameTime() - cm <= 1;
         String txt = Balance.fmt(dmg);
         int cmb = Melee.combo(p);
         Component c = bigCrit ? Component.literal("✦" + txt + "!").withStyle(x -> x.withColor(0xFF2A2A).withBold(true))
+                : counter ? Component.literal(txt).withStyle(x -> x.withColor(0x6AC8FF).withBold(true))
                 : cmb > 0 ? Component.literal(txt).withStyle(x -> x.withColor(comboColor(cmb)).withBold(true))   // удар комбо: от светло-жёлтого (×1) к насыщенному оранжевому (×10)
                 : crit ? Component.literal(txt + "!").withStyle(x -> x.withColor(0xFFC830).withBold(true))
                 : Component.literal(txt).withStyle(x -> x.withColor(0xFFFFFF));
@@ -353,6 +364,8 @@ public final class CombatEvents {
 
     /** Цель → тик крита Юки (для крупного красного числа). */
     private static final java.util.Map<java.util.UUID, Long> CRIT_MARK = new java.util.HashMap<>();
+    /** 1.2: цель → тик контрудара (число урона — голубое, без отдельной надписи). */
+    public static final java.util.Map<java.util.UUID, Long> COUNTER_MARK = new java.util.HashMap<>();
 
     private static void onXpDrop(LivingExperienceDropEvent e) {
         if (e.getEntity() instanceof Mob mob && Mobs.level(mob) > 0) e.setCanceled(true);
@@ -379,6 +392,17 @@ public final class CombatEvents {
             if (dA != null) dA.setBaseValue(dA.getBaseValue() * kd);
             m.setHealth(Math.max(1f, m.getMaxHealth() * frac));
             m.addTag("bal99");
+            m.addTag("bal12");
+        }
+        // 1.2: новая шкала HP мобов (×1.125 за уровень) — пересчитать уже живущих
+        if (en instanceof Mob m && !m.getTags().contains("bal12") && Mobs.level(m) > 0) {
+            int l = Mobs.level(m);
+            double kh = Balance.mobHp(l) / Balance.hp11(l);
+            var hpA = m.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+            float frac = m.getMaxHealth() > 0 ? m.getHealth() / m.getMaxHealth() : 1f;
+            if (hpA != null) hpA.setBaseValue(hpA.getBaseValue() * kh);
+            m.setHealth(Math.max(1f, m.getMaxHealth() * frac));
+            m.addTag("bal12");
         }
         if (en.getTags().contains("pvpciv_dmgnum")) {
             if (!LIVE_NUMBERS.contains(en.getUUID())) e.setCanceled(true);

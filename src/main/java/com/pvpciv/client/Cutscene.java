@@ -96,7 +96,7 @@ public final class Cutscene {
                 int col = ((int) (255 * fa) << 24) | 0xFF60E0;
                 g.drawString(font, name, -font.width(name) / 2, 0, col, true);
                 g.pose().popPose();
-                String sub = "Пожиратель астероидов · ур. 38";
+                String sub = "Пожиратель астероидов · ур. 31";
                 g.drawCenteredString(font, sub, w / 2, (int) (h / 2f + 20), ((int) (255 * fa) << 24) | 0xC0B0E0);
                 return;
             }
